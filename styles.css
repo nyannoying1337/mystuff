@@ -1,11 +1,21 @@
 :root {
     --bg-color: #0a0a0a;
     --text-color: #ffffff;
-    --card-bg: #1a1a1a;
-    --hover-color: #2a2a2a;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --hover-color: rgba(255, 255, 255, 0.05);
     --steam-color: #00adee;
     --osu-color: #ff66aa;
     --discord-color: #7289da;
+    --blur-amount: 16px;
+    --card-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glow-1: rgba(0, 173, 238, 0.15);
+    --glow-2: rgba(255, 102, 170, 0.15);
+    --glow-3: rgba(114, 137, 218, 0.15);
+}
+
+/* Modern smooth scrolling */
+html {
+    scroll-behavior: smooth;
 }
 
 * {
@@ -19,6 +29,56 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.background-shapes {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.shape {
+    position: absolute;
+    filter: blur(120px);
+    transition: all 2s ease;
+}
+
+.shape-1 {
+    width: 600px;
+    height: 600px;
+    background: var(--glow-1);
+    top: -300px;
+    left: -200px;
+    animation: floatAnimation1 25s infinite alternate;
+    opacity: 0.7;
+}
+
+.shape-2 {
+    width: 500px;
+    height: 500px;
+    background: var(--glow-2);
+    bottom: -200px;
+    right: -100px;
+    animation: floatAnimation2 18s infinite alternate-reverse;
+    opacity: 0.7;
+}
+
+.shape-3 {
+    width: 400px;
+    height: 400px;
+    background: var(--glow-3);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: floatAnimation3 20s infinite;
+    opacity: 0.7;
 }
 
 .container {
@@ -35,11 +95,16 @@ header {
 h1 {
     font-size: 3rem;
     margin-bottom: 1rem;
-    background: linear-gradient(45deg, var(--steam-color), var(--osu-color), var(--discord-color));
+    background: linear-gradient(45deg, 
+        var(--steam-color), 
+        var(--osu-color), 
+        var(--discord-color),
+        var(--steam-color));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: gradient 5s ease infinite;
+    background-size: 300% 300%;
+    animation: gradientText 5s ease infinite;
 }
 
 .subtitle {
@@ -47,68 +112,181 @@ h1 {
     color: #888;
 }
 
-.social-grid {
+.header-content {
+    position: relative;
+    padding: 2rem;
+    margin-bottom: 4rem;
+    background: var(--card-bg);
+    border-radius: 20px;
+    backdrop-filter: blur(var(--blur-amount));
+    border: var(--card-border);
+}
+
+.header-decoration {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: linear-gradient(90deg, 
+        transparent,
+        var(--steam-color),
+        var(--osu-color),
+        var(--discord-color),
+        transparent
+    );
+}
+
+.grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
-    padding: 1rem;
+    perspective: 1000px;
 }
 
+/* Card and Link Styles */
 .social-card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    text-decoration: none;
-    color: var(--text-color);
-    transition: transform 0.3s ease, background-color 0.3s ease;
     position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 2.5rem;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(var(--blur-amount));
+    transform-style: preserve-3d;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    text-decoration: none;
     overflow: hidden;
+}
+
+.social-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        800px circle at var(--mouse-x) var(--mouse-y),
+        rgba(255, 255, 255, 0.1),
+        transparent 40%
+    );
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.social-card:hover::before {
+    opacity: 1;
 }
 
 .social-card:hover {
     transform: translateY(-5px);
-    background-color: var(--hover-color);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.card-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
 }
 
 .social-card i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2.5rem;
+    transition: transform 0.3s ease;
+}
+
+.social-card:hover i {
+    transform: scale(1.1) translateY(-5px);
 }
 
 .social-card h2 {
     font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    margin: 0;
+    background: linear-gradient(
+        45deg,
+        var(--text-color) 30%,
+        rgba(255, 255, 255, 0.7)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .social-card p {
-    color: #888;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
 }
 
-.steam i {
-    color: var(--steam-color);
+/* Platform-specific colors */
+.steam i { color: var(--steam-color); }
+.osu i { color: var(--osu-color); }
+.discord i { color: var(--discord-color); }
+
+@keyframes gradientText {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-.osu i {
-    color: var(--osu-color);
+@keyframes backgroundShift {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
-.discord i {
-    color: var(--discord-color);
-}
-
-@keyframes gradient {
+/* Animations */
+@keyframes floatAnimation1 {
     0% {
-        background-position: 0% 50%;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        border-radius: 60% 40% 30% 70%;
     }
     50% {
-        background-position: 100% 50%;
+        transform: translate(100px, 100px) rotate(180deg) scale(1.1);
+        border-radius: 30% 60% 70% 40%;
     }
     100% {
-        background-position: 0% 50%;
+        transform: translate(-50px, 150px) rotate(360deg) scale(0.9);
+        border-radius: 50% 50% 40% 60%;
     }
 }
 
+@keyframes floatAnimation2 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(0.9);
+        border-radius: 40% 60% 70% 30%;
+    }
+    50% {
+        transform: translate(-100px, -50px) rotate(-180deg) scale(1.1);
+        border-radius: 60% 40% 30% 70%;
+    }
+    100% {
+        transform: translate(50px, -100px) rotate(-360deg) scale(1);
+        border-radius: 40% 60% 50% 50%;
+    }
+}
+
+@keyframes floatAnimation3 {
+    0% {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        border-radius: 50% 50% 50% 50%;
+    }
+    33% {
+        transform: translate(-40%, -60%) scale(1.1) rotate(120deg);
+        border-radius: 60% 40% 70% 30%;
+    }
+    66% {
+        transform: translate(-60%, -40%) scale(0.9) rotate(240deg);
+        border-radius: 30% 60% 40% 70%;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1) rotate(360deg);
+        border-radius: 50% 50% 50% 50%;
+    }
+}
+
+/* Media Queries */
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
@@ -118,7 +296,19 @@ h1 {
         font-size: 2rem;
     }
     
-    .social-grid {
+    .header-content {
+        padding: 1.5rem;
+    }
+    
+    .social-card {
+        padding: 2rem;
+    }
+    
+    .shape {
+        filter: blur(100px);
+    }
+    
+    .grid-container {
         grid-template-columns: 1fr;
     }
-} 
+}
