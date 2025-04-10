@@ -1,7 +1,6 @@
 :root {
     --bg-color: #0f0f13;
     --text-color: #ffffff;
-<<<<<<< HEAD
     --steam-color: #00adee;
     --osu-color: #ff66aa;
     --discord-color: #7289da;
@@ -11,16 +10,8 @@
     --youtube-color: #FF0000;
 }
 
-/* Modern smooth scrolling */
 html {
     scroll-behavior: smooth;
-=======
-    --card-bg: #1a1a1a;
-    --hover-color: #2a2a2a;
-    --steam-color: #00adee;
-    --osu-color: #ff66aa;
-    --discord-color: #7289da;
->>>>>>> 6213162e49ab462f318cd95a94aee34c60d8f70e
 }
 
 * {
@@ -30,9 +21,6 @@ html {
 }
 
 body {
-<<<<<<< HEAD
-    margin: 0;
-    padding: 0;
     min-height: 100vh;
     background: var(--bg-color);
     color: var(--text-color);
@@ -41,6 +29,13 @@ body {
     place-items: center;
 }
 
+.container {
+    width: 100%;
+    max-width: 600px;
+    padding: 2rem;
+}
+
+/* Background Shapes */
 .background-shapes {
     position: fixed;
     width: 100%;
@@ -54,6 +49,7 @@ body {
 .shape {
     position: absolute;
     filter: blur(120px);
+    opacity: 0.7;
     transition: all 2s ease;
 }
 
@@ -64,7 +60,6 @@ body {
     top: -300px;
     left: -200px;
     animation: floatAnimation1 25s infinite alternate;
-    opacity: 0.7;
 }
 
 .shape-2 {
@@ -74,7 +69,6 @@ body {
     bottom: -200px;
     right: -100px;
     animation: floatAnimation2 18s infinite alternate-reverse;
-    opacity: 0.7;
 }
 
 .shape-3 {
@@ -85,70 +79,65 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     animation: floatAnimation3 20s infinite;
-    opacity: 0.7;
 }
 
+@keyframes floatAnimation1 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(0.9);
+        border-radius: 40% 60% 70% 30%;
+    }
+    50% {
+        transform: translate(-100px, -50px) rotate(-180deg) scale(1.1);
+        border-radius: 60% 40% 30% 70%;
+    }
+    100% {
+        transform: translate(50px, -100px) rotate(-360deg) scale(1);
+        border-radius: 40% 60% 50% 50%;
+    }
+}
+
+@keyframes floatAnimation2 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(0.9);
+        border-radius: 40% 60% 70% 30%;
+    }
+    50% {
+        transform: translate(-100px, -50px) rotate(-180deg) scale(1.1);
+        border-radius: 60% 40% 30% 70%;
+    }
+    100% {
+        transform: translate(50px, -100px) rotate(-360deg) scale(1);
+        border-radius: 40% 60% 50% 50%;
+    }
+}
+
+@keyframes floatAnimation3 {
+    0% {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        border-radius: 50% 50% 50% 50%;
+    }
+    33% {
+        transform: translate(-40%, -60%) scale(1.1) rotate(120deg);
+        border-radius: 60% 40% 70% 30%;
+    }
+    66% {
+        transform: translate(-60%, -40%) scale(0.9) rotate(240deg);
+        border-radius: 30% 60% 40% 70%;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1) rotate(360deg);
+        border-radius: 50% 50% 50% 50%;
+    }
+}
+
+/* Bubbles */
 .bubbles {
     position: fixed;
     width: 100%;
     height: 100%;
     z-index: -2;
-=======
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    line-height: 1.6;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-}
-
-header {
-    text-align: center;
-    margin-bottom: 4rem;
-}
-
-h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    background: linear-gradient(45deg, var(--steam-color), var(--osu-color), var(--discord-color));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: gradient 5s ease infinite;
-}
-
-.subtitle {
-    font-size: 1.2rem;
-    color: #888;
-}
-
-.social-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    padding: 1rem;
-}
-
-.social-card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    text-decoration: none;
-    color: var(--text-color);
-    transition: transform 0.3s ease, background-color 0.3s ease;
-    position: relative;
->>>>>>> 6213162e49ab462f318cd95a94aee34c60d8f70e
-    overflow: hidden;
-    top: 0;
-    left: 0;
-}
-
-<<<<<<< HEAD
 .bubble {
     position: absolute;
     bottom: -100px;
@@ -161,8 +150,6 @@ h1 {
 }
 
 .bubble:nth-child(1) {
-    width: 40px;
-    height: 40px;
     left: 10%;
     animation-duration: 8s;
 }
@@ -239,12 +226,21 @@ h1 {
     animation-delay: 3s;
 }
 
-.container {
-    width: 100%;
-    max-width: 600px;
-    padding: 2rem;
+@keyframes rise {
+    0% {
+        bottom: -100px;
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(100px);
+    }
+    100% {
+        bottom: 1080px;
+        transform: translateX(-200px);
+    }
 }
 
+/* Profile Header */
 .profile-header {
     text-align: center;
     margin-bottom: 3rem;
@@ -283,6 +279,28 @@ h1 {
     margin-top: 0.5rem;
 }
 
+@keyframes borderRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Link Cards */
 .links-container {
     display: flex;
     flex-direction: column;
@@ -341,150 +359,75 @@ h1 {
     font-size: 0.9rem;
 }
 
-/* Platform-specific styles */
-.steam .icon { background: linear-gradient(135deg, #171a21, #2a475e); }
-.osu .icon { background: linear-gradient(135deg, #ff66aa, #ff1744); }
-.discord .icon { background: linear-gradient(135deg, #7289da, #5865f2); }
-.twitter .icon { background: linear-gradient(135deg, #1DA1F2, #0d8bd9); }
-.xbox .icon { background: linear-gradient(135deg, #107C10, #0d5d0d); }
-.mal .icon { background: linear-gradient(135deg, #2E51A2, #1c3573); }
-.youtube .icon { background: linear-gradient(135deg, #FF0000, #cc0000); }
-
-.steam::before { background: var(--steam-color); }
-.osu::before { background: var(--osu-color); }
-.discord::before { background: var(--discord-color); }
-.twitter::before { background: var(--twitter-color); }
-.xbox::before { background: var(--xbox-color); }
-.mal::before { background: var(--mal-color); }
-.youtube::before { background: var(--youtube-color); }
-
-@keyframes borderRotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Platform Specific Styles */
+.steam .icon {
+    background: linear-gradient(135deg, #171a21, #2a475e);
 }
 
-@keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+.osu .icon {
+    background: linear-gradient(135deg, #ff66aa, #ff1744);
 }
 
-@keyframes floatAnimation1 {
-=======
-.social-card:hover {
-    transform: translateY(-5px);
-    background-color: var(--hover-color);
+.discord .icon {
+    background: linear-gradient(135deg, #7289da, #5865f2);
 }
 
-.social-card i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+.twitter .icon {
+    background: linear-gradient(135deg, #1DA1F2, #0d8bd9);
 }
 
-.social-card h2 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+.xbox .icon {
+    background: linear-gradient(135deg, #107C10, #0d5d0d);
 }
 
-.social-card p {
-    color: #888;
+.mal .icon {
+    background: linear-gradient(135deg, #2E51A2, #1c3573);
 }
 
-.steam i {
-    color: var(--steam-color);
+.youtube .icon {
+    background: linear-gradient(135deg, #FF0000, #cc0000);
 }
 
-.osu i {
-    color: var(--osu-color);
+.steam::before {
+    background: var(--steam-color);
 }
 
-.discord i {
-    color: var(--discord-color);
+.osu::before {
+    background: var(--osu-color);
 }
 
-@keyframes gradient {
->>>>>>> 6213162e49ab462f318cd95a94aee34c60d8f70e
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
+.discord::before {
+    background: var(--discord-color);
 }
 
-<<<<<<< HEAD
-@keyframes floatAnimation2 {
-    0% {
-        transform: translate(0, 0) rotate(0deg) scale(0.9);
-        border-radius: 40% 60% 70% 30%;
-    }
-    50% {
-        transform: translate(-100px, -50px) rotate(-180deg) scale(1.1);
-        border-radius: 60% 40% 30% 70%;
-    }
-    100% {
-        transform: translate(50px, -100px) rotate(-360deg) scale(1);
-        border-radius: 40% 60% 50% 50%;
-    }
+.twitter::before {
+    background: var(--twitter-color);
 }
 
-@keyframes floatAnimation3 {
-    0% {
-        transform: translate(-50%, -50%) scale(1) rotate(0deg);
-        border-radius: 50% 50% 50% 50%;
-    }
-    33% {
-        transform: translate(-40%, -60%) scale(1.1) rotate(120deg);
-        border-radius: 60% 40% 70% 30%;
-    }
-    66% {
-        transform: translate(-60%, -40%) scale(0.9) rotate(240deg);
-        border-radius: 30% 60% 40% 70%;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(1) rotate(360deg);
-        border-radius: 50% 50% 50% 50%;
-    }
+.xbox::before {
+    background: var(--xbox-color);
 }
 
-@keyframes rise {
-    0% {
-        bottom: -100px;
-        transform: translateX(0);
-    }
-    50% {
-        transform: translateX(100px);
-    }
-    100% {
-        bottom: 1080px;
-        transform: translateX(-200px);
-    }
+.mal::before {
+    background: var(--mal-color);
 }
 
+.youtube::before {
+    background: var(--youtube-color);
+}
+
+/* Media Queries */
 @media (max-width: 480px) {
-=======
-@media (max-width: 768px) {
->>>>>>> 6213162e49ab462f318cd95a94aee34c60d8f70e
     .container {
         padding: 1rem;
     }
 
-    .description {
-        display: none;
+        .profile-header h1 {
+            font-size: 2rem;
+        }
     }
 
-    .profile-header h1 {
-        font-size: 2rem;
-    }
-<<<<<<< HEAD
-}
-=======
     
-    .social-grid {
-        grid-template-columns: 1fr;
-    }
-} 
->>>>>>> 6213162e49ab462f318cd95a94aee34c60d8f70e
+    
+    
+    
