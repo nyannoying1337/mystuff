@@ -3,7 +3,7 @@ const STEAM_API_KEY = import.meta.env.VITE_STEAM_API_KEY;
 const STEAM_ID = '76561198045384584';
 
 // Debug mode
-const DEBUG = true;
+const DEBUG = false;
 
 // CORS Proxy
 const CORS_PROXY = 'https://corsproxy.io/?';
@@ -17,7 +17,6 @@ function debugLog(...args) {
 async function fetchSteamGames() {
     debugLog('Fetching Steam games...');
     const apiUrl = `${CORS_PROXY}https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=true&include_played_free_games=true`;
-    debugLog('API URL:', apiUrl);
     
     try {
         // Show loading state
