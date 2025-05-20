@@ -5,7 +5,7 @@ export default defineConfig({
     open: "/index.html",
   },
   build: {
-    outDir: "../dist",
+    outDir: "./dist",
     emptyOutDir: true
   }
 });
