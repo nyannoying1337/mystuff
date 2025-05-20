@@ -95,14 +95,5 @@ function showError(message) {
 
 // Initialize Steam data when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    debugLog('Initializing Steam API...');
-    if (!STEAM_API_KEY) {
-        showError('Steam API key not configured');
-        return;
-    }
-    if (!STEAM_ID) {
-        showError('Steam ID not configured');
-        return;
-    }
     fetchSteamGames();
 }); 
