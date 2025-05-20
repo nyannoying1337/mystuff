@@ -15,13 +15,7 @@ export type SteamResult = {
     topGames: string[]
 }
 
-app.use(
-  '*',
-  cors({
-    origin: ['*'],
-    allowMethods: ["GET"]
-  })
-)
+app.use(cors())
 
 app.get('/my-steam', async (c) => {
     const CACHE_KEY = "steam:profile"

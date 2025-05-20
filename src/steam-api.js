@@ -3,10 +3,7 @@ const STEAM_API_KEY = import.meta.env.VITE_STEAM_API_KEY;
 const STEAM_ID = '76561198045384584';
 
 // Debug mode
-const DEBUG = false;
-
-// CORS Proxy
-const CORS_PROXY = 'https://corsproxy.io/?';
+const DEBUG = true;
 
 function debugLog(...args) {
     if (DEBUG) {
