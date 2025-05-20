@@ -52,8 +52,7 @@ app.get('/my-steam', async (c) => {
     const totalPlaytime = games.reduce((total, game) => total + (game.playtime_forever || 0), 0);
     const totalHours = Math.round(totalPlaytime / 60); // Convert minutes to hours
     const topGames = games
-        .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-        .slice(0, 5);
+  
 
 
     const result = { totalHours, totalPlaytime, topGames }
