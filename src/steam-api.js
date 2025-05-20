@@ -16,7 +16,7 @@ function debugLog(...args) {
 
 async function fetchSteamGames() {
     debugLog('Fetching Steam games...');
-    const apiUrl = `${CORS_PROXY}https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=true&include_played_free_games=true`;
+    const apiUrl = `https://api-ice.nyannoying.workers.dev/my-steam`;
     
     try {
         // Show loading state
@@ -30,49 +30,13 @@ async function fetchSteamGames() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        /**
+         * @type {import("../api/src/index").SteamResult}
+         */
         const data = await response.json();
-        debugLog('Raw API Response:', data);
-        
-        // Check for API errors
-        if (data.error) {
-            throw new Error(`Steam API Error: ${data.error.message || 'Unknown error'}`);
-        }
-        
-        if (!data.response) {
-            throw new Error('Invalid response format: missing response object');
-        }
-        
-        if (!data.response.games) {
-            throw new Error('No games found in response');
-        }
-        
-        const games = data.response.games;
-        debugLog('Number of games found:', games.length);
-        
-        if (games.length === 0) {
-            throw new Error('No games found in library');
-        }
-        
-        // Calculate total playtime
-        const totalPlaytime = games.reduce((total, game) => total + (game.playtime_forever || 0), 0);
-        const totalHours = Math.round(totalPlaytime / 60); // Convert minutes to hours
-        
-        debugLog('Total playtime (minutes):', totalPlaytime);
-        debugLog('Total playtime (hours):', totalHours);
         
         // Update the stats
-        updateStats(games.length, totalHours);
-        
-        // Show top 5 most played games
-        const topGames = games
-            .sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-            .slice(0, 5);
-        
-        debugLog('Top 5 most played games:', topGames.map(game => ({
-            name: game.name,
-            hours: Math.round((game.playtime_forever || 0) / 60)
-        })));
-        
+        updateStats(data.topGames.length, data.totalHours);
     } catch (error) {
         console.error('Error fetching Steam games:', error);
         showError(`Failed to fetch Steam games: ${error.message}`);

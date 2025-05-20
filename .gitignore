@@ -12,3 +12,6 @@ Thumbs.db
 node_modules/ 
 
 .env
+api/.wrangler
+*.vars
+api/worker-configuration.d.ts
