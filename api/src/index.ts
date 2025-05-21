@@ -67,7 +67,6 @@ app.get('/my-steam', async (c) => {
     // Sort games by playtime to get top games (names only)
     const topGames = games
         .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-        .slice(0, 5)
         .map((game: any) => game.name);
 
     const result = { 
@@ -89,7 +88,7 @@ app.get('/my-steam-avatar', async (c) => {
     const CACHE_KEY = "steam:avatar"
     const CACHE_DURATION = 3600;
 
-    const cachedRes = await c.env.KV.get<{ avatarUrl: string }>(CACHE_KEY, { type: "json" })
+    const cachedRes = await c.env.KV.get(CACHE_KEY, { type: "json" })
 
     if (cachedRes) {
         return c.json(cachedRes)
