@@ -1,0 +1,10 @@
+name = "api-ice"
+main = "src/index.ts"
+compatibility_date = "2024-03-19"
+
+[vars]
+STEAM_API_KEY = ""  # You'll need to set this in the Cloudflare dashboard
+
+[[kv_namespaces]]
+binding = "KV"
+id = ""  # You'll need to create a KV namespace and add its ID here 

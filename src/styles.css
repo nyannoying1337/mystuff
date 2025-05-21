@@ -139,20 +139,23 @@ body {
 .avatar {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background: var(--gradient-1);
+    background: var(--steam-color);
     padding: 3px;
-    animation: borderRotate 4s linear infinite;
+    transition: transform 0.3s ease;
+}
+
+.avatar:hover {
+    transform: scale(1.05);
 }
 
 .avatar-inner {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
     background: var(--bg-color);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .status-indicator {
@@ -302,6 +305,8 @@ body {
 .xbox .icon { color: var(--xbox-color); }
 .mal .icon { color: var(--mal-color); }
 .youtube .icon { color: var(--youtube-color); }
+.twitch .icon { color: #9147ff; }
+.github .icon { color: #333; }
 
 /* Animations */
 @keyframes borderRotate {
