@@ -119,4 +119,32 @@ app.get('/my-steam-avatar', async (c) => {
     return c.json(result)
 })
 
+app.get('/my-steam-level', async (c) => {
+    const CACHE_KEY = "steam:level"
+    const CACHE_DURATION = 3600;
+
+    const cachedRes = await c.env.KV.get(CACHE_KEY, { type: "json" })
+    if (cachedRes) {
+        return c.json(cachedRes)
+    }
+
+    const STEAM_API_KEY = c.env.STEAM_API_KEY
+    const STEAM_ID = '76561198045384584';
+    const apiUrl = `https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}`;
+
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+        return c.json({
+            error: true,
+            status: response.status,
+        })
+    }
+
+    const data = await response.json();
+    const result = { steamLevel: data.response.player_level };
+
+    await c.env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_DURATION })
+    return c.json(result)
+})
+
 export default app
