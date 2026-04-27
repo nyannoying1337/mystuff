@@ -3,7 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2024-03-19"
 
 [vars]
-STEAM_API_KEY = ""  # You'll need to set this in the Cloudflare dashboard
+STEAM_API_KEY = ""     # Set in Cloudflare dashboard
+OSU_CLIENT_ID = ""     # osu! OAuth app client ID — https://osu.ppy.sh/home/account/edit
+OSU_CLIENT_SECRET = "" # osu! OAuth app client secret
 
 [[kv_namespaces]]
 binding = "KV"

@@ -1,147 +1,227 @@
-<div class="terminal-window">
-  <div class="terminal-header">
-    <span class="window-controls">
-      <span class="control red"></span>
-      <span class="control yellow"></span>
-      <span class="control green"></span>
-    </span>
-    <span class="theme-switcher">
-      <button class="theme-btn theme-green" data-theme="green" title="Green"></button>
-      <button class="theme-btn theme-amber" data-theme="amber" title="Amber"></button>
-      <button class="theme-btn theme-blue" data-theme="blue" title="Blue"></button>
-      <button class="theme-btn theme-magenta" data-theme="magenta" title="Magenta"></button>
-    </span>
-    <span class="terminal-title">user@nyannoying: ~</span>
-  </div>
-  <div class="terminal-body">
-    <main class="container">
-      <section class="profile-section">
-        <div class="profile-card">
-          <div class="avatar-container">
-            <div class="avatar">
-              <div class="avatar-inner"></div>
-            </div>
+<div class="osu-page">
+
+  <!-- Navbar -->
+  <nav class="osu-nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">
+        <svg class="osu-cookie" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="14" r="12.5" stroke="#ff66aa" stroke-width="2"/>
+          <circle cx="14" cy="14" r="7" stroke="#ff66aa" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="2.5" fill="#ff66aa"/>
+        </svg>
+        <span>osu!</span>
+      </a>
+      <span class="nav-tagline">nyannoying's corner</span>
+    </div>
+  </nav>
+
+  <!-- Profile Hero -->
+  <div class="profile-hero">
+    <div class="cover-bg" id="cover-bg"></div>
+    <div class="profile-bar">
+      <div class="profile-bar-inner">
+        <div class="avatar-section">
+          <img class="profile-avatar" id="profile-avatar" src="/static/nya.jpg" alt="nyannoying" />
+        </div>
+        <div class="profile-info">
+          <div class="username-row">
+            <h1 class="profile-username">nyannoying</h1>
+            <span class="wave">≝^•⩊•^≜</span>
           </div>
-          <h1>Hey there! <span class="wave">≝^•⩊•^≜</span></h1>
-          <p class="bio">I am a idiot, lets hang out</p>
-          <div class="stats">
-            <div class="stat-item">
-              <span class="stat-value">1000+</span>
-              <span class="stat-label">Hours Gaming</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">50+</span>
-              <span class="stat-label">Games</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">...</span>
-              <span class="stat-label">Last played</span>
-            </div>
+          <p class="profile-bio">I am a idiot, lets hang out</p>
+          <div class="profile-tags">
+            <span class="profile-tag">
+              <i class="fas fa-music"></i> osu! player
+            </span>
+            <span class="profile-tag">
+              <i class="fab fa-steam"></i> steam enjoyer
+            </span>
           </div>
         </div>
-      </section>
-      <section class="links-section">
-        <div class="links-grid">
-          <a href="https://steamcommunity.com/id/nyannoying/" class="link-card steam">
-            <div class="card-content">
-              <span class="icon"><i class="fab fa-steam"></i></span>
-              <div class="card-text">
-                <span class="platform">Steam</span>
-                <span class="description">Moneypit</span>
-              </div>
-            </div>
-            <div class="card-hover-effect"></div>
-          </a>
-
-            <a href="https://osu.ppy.sh/users/7486592" class="link-card osu">
-                <div class="card-content">
-                    <span class="icon"><i class="fas fa-music"></i></span>
-                    <div class="card-text">
-                        <span class="platform">osu!</span>
-                        <span class="description">Click the circles.</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://discord.com/users/173796735699779585" class="link-card discord">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-discord"></i></span>
-                    <div class="card-text">
-                        <span class="platform">Discord</span>
-                        <span class="description">Let's hang out</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://twitter.com/_nyannoying" class="link-card twitter">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-twitter"></i></span>
-                    <div class="card-text">
-                        <span class="platform">Twitter</span>
-                        <span class="description">Certified Shitposter</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://account.xbox.com/profile?gamertag=IceCrusher#1060" class="link-card xbox">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-xbox"></i></span>
-                    <div class="card-text">
-                        <span class="platform">Xbox</span>
-                        <span class="description">Join me on Xbox Live</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://myanimelist.net/profile/nyannoying" class="link-card mal">
-                <div class="card-content">
-                    <span class="icon"><i class="fas fa-book-reader"></i></span>
-                    <div class="card-text">
-                        <span class="platform">MyAnimeList</span>
-                        <span class="description">uwu</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://youtube.com/@nyannoying" class="link-card youtube">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-youtube"></i></span>
-                    <div class="card-text">
-                        <span class="platform">YouTube</span>
-                        <span class="description">Silly stuff, barely used</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://twitch.tv/nyannoying" class="link-card twitch">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-twitch"></i></span>
-                    <div class="card-text">
-                        <span class="platform">Twitch</span>
-                        <span class="description">Live streams & VODs</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-
-            <a href="https://github.com/nyannoying1337" class="link-card github">
-                <div class="card-content">
-                    <span class="icon"><i class="fab fa-github"></i></span>
-                    <div class="card-text">
-                        <span class="platform">GitHub</span>
-                        <span class="description">My code & projects</span>
-                    </div>
-                </div>
-                <div class="card-hover-effect"></div>
-            </a>
-        </div>
-      </section>
-    </main>
+      </div>
+    </div>
   </div>
+
+  <!-- Page Content -->
+  <div class="content-area">
+
+    <!-- osu! Stats -->
+    <section class="content-section">
+      <h2 class="section-heading">
+        <svg class="section-icon osu-cookie-sm" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10.5" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        </svg>
+        osu! Statistics
+        <a href="https://osu.ppy.sh/users/7486592" class="section-link" target="_blank" rel="noopener">
+          view profile →
+        </a>
+      </h2>
+
+      <div class="osu-stats-card">
+        <div class="rank-banner">
+          <div class="rank-item">
+            <span class="rank-hash">#</span>
+            <span class="rank-number" id="osu-global-rank">—</span>
+            <span class="rank-label">Global Rank</span>
+          </div>
+          <div class="rank-divider"></div>
+          <div class="rank-item">
+            <span class="rank-hash">#</span>
+            <span class="rank-number" id="osu-country-rank">—</span>
+            <span class="rank-label" id="osu-country-label">Country Rank</span>
+          </div>
+          <div class="rank-pp-badge">
+            <span class="pp-value" id="osu-pp">—</span>
+            <span class="pp-label">pp</span>
+          </div>
+        </div>
+
+        <div class="osu-detail-stats">
+          <div class="detail-row">
+            <span class="detail-label">Hit Accuracy</span>
+            <span class="detail-value" id="osu-accuracy">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Level</span>
+            <span class="detail-value" id="osu-level">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Play Count</span>
+            <span class="detail-value" id="osu-playcount">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Play Time</span>
+            <span class="detail-value" id="osu-playtime">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Maximum Combo</span>
+            <span class="detail-value" id="osu-maxcombo">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Steam Stats -->
+    <section class="content-section">
+      <h2 class="section-heading">
+        <i class="fab fa-steam section-icon"></i>
+        Steam Statistics
+        <a href="https://steamcommunity.com/id/nyannoying/" class="section-link" target="_blank" rel="noopener">
+          view profile →
+        </a>
+      </h2>
+
+      <div class="steam-stats-card">
+        <div class="steam-stat-item">
+          <span class="steam-stat-value" id="steam-hours">—</span>
+          <span class="steam-stat-label">Hours Gaming</span>
+        </div>
+        <div class="steam-stat-divider"></div>
+        <div class="steam-stat-item">
+          <span class="steam-stat-value" id="steam-games">—</span>
+          <span class="steam-stat-label">Games Owned</span>
+        </div>
+        <div class="steam-stat-divider"></div>
+        <div class="steam-stat-item steam-last-played-item">
+          <span class="steam-stat-value steam-last-played-name" id="steam-last-played">—</span>
+          <span class="steam-stat-label" id="steam-last-played-label">Last Played</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Social Links -->
+    <section class="content-section">
+      <h2 class="section-heading">
+        <i class="fas fa-link section-icon"></i>
+        Links
+      </h2>
+
+      <div class="links-grid">
+        <a href="https://steamcommunity.com/id/nyannoying/" class="link-card steam" target="_blank" rel="noopener">
+          <i class="fab fa-steam link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">Steam</span>
+            <span class="link-desc">Moneypit</span>
+          </div>
+        </a>
+
+        <a href="https://osu.ppy.sh/users/7486592" class="link-card osu" target="_blank" rel="noopener">
+          <svg class="link-icon osu-link-icon" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10.5" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+          <div class="link-text">
+            <span class="link-name">osu!</span>
+            <span class="link-desc">Click the circles.</span>
+          </div>
+        </a>
+
+        <a href="https://discord.com/users/173796735699779585" class="link-card discord" target="_blank" rel="noopener">
+          <i class="fab fa-discord link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">Discord</span>
+            <span class="link-desc">Let's hang out</span>
+          </div>
+        </a>
+
+        <a href="https://twitter.com/_nyannoying" class="link-card twitter" target="_blank" rel="noopener">
+          <i class="fab fa-twitter link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">Twitter</span>
+            <span class="link-desc">Certified Shitposter</span>
+          </div>
+        </a>
+
+        <a href="https://account.xbox.com/profile?gamertag=IceCrusher#1060" class="link-card xbox" target="_blank" rel="noopener">
+          <i class="fab fa-xbox link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">Xbox</span>
+            <span class="link-desc">Join me on Xbox Live</span>
+          </div>
+        </a>
+
+        <a href="https://myanimelist.net/profile/nyannoying" class="link-card mal" target="_blank" rel="noopener">
+          <i class="fas fa-book-reader link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">MyAnimeList</span>
+            <span class="link-desc">uwu</span>
+          </div>
+        </a>
+
+        <a href="https://youtube.com/@nyannoying" class="link-card youtube" target="_blank" rel="noopener">
+          <i class="fab fa-youtube link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">YouTube</span>
+            <span class="link-desc">Silly stuff, barely used</span>
+          </div>
+        </a>
+
+        <a href="https://twitch.tv/nyannoying" class="link-card twitch" target="_blank" rel="noopener">
+          <i class="fab fa-twitch link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">Twitch</span>
+            <span class="link-desc">Live streams & VODs</span>
+          </div>
+        </a>
+
+        <a href="https://github.com/nyannoying1337" class="link-card github" target="_blank" rel="noopener">
+          <i class="fab fa-github link-icon"></i>
+          <div class="link-text">
+            <span class="link-name">GitHub</span>
+            <span class="link-desc">My code & projects</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="osu-footer">
+    <p>made with <span class="footer-heart">♥</span> by nyannoying &nbsp;·&nbsp; powered by osu! api & steam api</p>
+  </footer>
+
 </div>
