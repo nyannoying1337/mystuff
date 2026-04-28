@@ -59,16 +59,18 @@ function updateSteamStats(gameCount, totalHours, lastPlayedGame, steamLevel, top
         levelEl.classList.remove('loading');
     }
 
-    // Top 3 most-played games
+    // Top 3 most-played games — handle both {name,hours}[] and legacy string[]
     const topGamesContainer = document.getElementById('steam-top-games');
     if (topGamesContainer && Array.isArray(topGames) && topGames.length > 0) {
-        topGamesContainer.innerHTML = topGames.map((game, i) => `
-            <div class="top-game-row">
+        topGamesContainer.innerHTML = topGames.slice(0, 3).map((game, i) => {
+            const name  = typeof game === 'string' ? game : (game.name  ?? '—');
+            const hours = typeof game === 'string' ? null  : (game.hours ?? null);
+            return `<div class="top-game-row">
                 <span class="top-game-rank">#${i + 1}</span>
-                <span class="top-game-name">${escapeHtml(game.name)}</span>
-                <span class="top-game-hours">${game.hours.toLocaleString()}h</span>
-            </div>
-        `).join('');
+                <span class="top-game-name">${escapeHtml(name)}</span>
+                ${hours != null ? `<span class="top-game-hours">${hours.toLocaleString()}h</span>` : ''}
+            </div>`;
+        }).join('');
     }
 }
 
