@@ -677,3 +677,158 @@ body {
     display: none;
   }
 }
+
+/* ── Profile Meta Row ────────────────────────────────────────── */
+.profile-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.profile-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.profile-meta-item i {
+  color: var(--pink);
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.profile-meta-sep {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  user-select: none;
+}
+
+#osu-title-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+  background: var(--pink-subtle);
+  border: 1px solid var(--border);
+  color: var(--pink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-right: 0.2rem;
+}
+
+/* ── Steam Level Badge ───────────────────────────────────────── */
+.steam-level-item {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.steam-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1b2838 0%, #2a475e 100%);
+  border: 2px solid #c7d5e0;
+  box-shadow: 0 0 12px rgba(199, 213, 224, 0.15);
+}
+
+.steam-level-number {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #c7d5e0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── Steam card top / top-games panel ───────────────────────── */
+.steam-card-top {
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: none;
+}
+
+.steam-top-games-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.steam-top-games-header {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.top-game-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+
+.top-game-row:last-child {
+  border-bottom: none;
+}
+
+.top-game-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.top-game-rank {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--pink);
+  width: 1.8rem;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.top-game-name {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.top-game-hours {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .steam-level-item {
+    flex: unset;
+    min-width: 40%;
+    padding: 0;
+  }
+
+  .steam-top-games-header,
+  .top-game-row {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}

@@ -37,6 +37,23 @@
               <i class="fab fa-steam"></i> steam enjoyer
             </span>
           </div>
+          <div class="profile-meta-row" id="profile-meta-row" style="display:none;">
+            <span id="osu-title-badge" style="display:none;"></span>
+            <span class="profile-meta-item">
+              <i class="fas fa-users"></i>
+              <span id="osu-follower-count">—</span> followers
+            </span>
+            <span class="profile-meta-sep">·</span>
+            <span class="profile-meta-item">
+              <i class="fas fa-calendar-alt"></i>
+              <span id="osu-join-date">—</span>
+            </span>
+            <span class="profile-meta-sep">·</span>
+            <span class="profile-meta-item">
+              <i class="fas fa-star"></i>
+              <span id="osu-ranked-score">—</span> ranked score
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -113,7 +130,7 @@
         </a>
       </h2>
 
-      <div class="steam-stats-card">
+      <div class="steam-stats-card steam-card-top">
         <div class="steam-stat-item">
           <span class="steam-stat-value" id="steam-hours">—</span>
           <span class="steam-stat-label">Hours Gaming</span>
@@ -127,6 +144,22 @@
         <div class="steam-stat-item steam-last-played-item">
           <span class="steam-stat-value steam-last-played-name" id="steam-last-played">—</span>
           <span class="steam-stat-label" id="steam-last-played-label">Last Played</span>
+        </div>
+        <div class="steam-stat-divider"></div>
+        <div class="steam-stat-item steam-level-item">
+          <span class="steam-level-badge">
+            <span class="steam-level-number" id="steam-level-value">—</span>
+          </span>
+          <span class="steam-stat-label">Steam Level</span>
+        </div>
+      </div>
+
+      <div class="steam-top-games-card">
+        <div class="steam-top-games-header">Most Played</div>
+        <div id="steam-top-games">
+          <div class="top-game-row"><span class="top-game-rank">#1</span><span class="top-game-name loading">—</span><span class="top-game-hours loading">—</span></div>
+          <div class="top-game-row"><span class="top-game-rank">#2</span><span class="top-game-name loading">—</span><span class="top-game-hours loading">—</span></div>
+          <div class="top-game-row"><span class="top-game-rank">#3</span><span class="top-game-name loading">—</span><span class="top-game-hours loading">—</span></div>
         </div>
       </div>
     </section>

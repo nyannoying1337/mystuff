@@ -19,7 +19,7 @@ async function fetchOsuStats() {
 }
 
 function renderOsuStats(data) {
-    setText('osu-global-rank', data.globalRank ? `#${data.globalRank.toLocaleString()}`.replace('#', '') : '—');
+    setText('osu-global-rank', data.globalRank ? data.globalRank.toLocaleString() : '—');
     setText('osu-country-rank', data.countryRank ? data.countryRank.toLocaleString() : '—');
     setText('osu-pp', data.pp ? data.pp.toLocaleString() : '—');
     setText('osu-accuracy', data.accuracy ? `${data.accuracy}%` : '—');
@@ -33,7 +33,7 @@ function renderOsuStats(data) {
         if (label) label.textContent = `${data.country} Rank`;
     }
 
-    // Update cover if available
+    // Update cover image with osu! profile cover
     if (data.coverUrl) {
         const cover = document.getElementById('cover-bg');
         if (cover) {
@@ -47,6 +47,29 @@ function renderOsuStats(data) {
     if (data.avatarUrl) {
         const avatar = document.getElementById('profile-avatar');
         if (avatar) avatar.src = data.avatarUrl;
+    }
+
+    // Profile meta row: follower count, join date, ranked score, title
+    const metaRow = document.getElementById('profile-meta-row');
+    if (metaRow) {
+        if (data.followerCount != null) {
+            setText('osu-follower-count', data.followerCount.toLocaleString());
+        }
+        if (data.joinDate) {
+            const formatted = new Date(data.joinDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            setText('osu-join-date', `Joined ${formatted}`);
+        }
+        if (data.rankedScore) {
+            setText('osu-ranked-score', data.rankedScore.toLocaleString());
+        }
+        if (data.title) {
+            const titleEl = document.getElementById('osu-title-badge');
+            if (titleEl) {
+                titleEl.textContent = data.title;
+                titleEl.style.display = '';
+            }
+        }
+        metaRow.style.display = '';
     }
 
     removeLoading();
@@ -68,22 +91,21 @@ function setText(id, value) {
 
 function setOsuLoading(isLoading) {
     const ids = ['osu-global-rank', 'osu-country-rank', 'osu-pp', 'osu-accuracy',
-                 'osu-level', 'osu-playcount', 'osu-playtime', 'osu-maxcombo'];
+                 'osu-level', 'osu-playcount', 'osu-playtime', 'osu-maxcombo',
+                 'osu-follower-count', 'osu-join-date', 'osu-ranked-score'];
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            if (isLoading) {
-                el.classList.add('loading');
-            } else {
-                el.classList.remove('loading');
-            }
+            if (isLoading) el.classList.add('loading');
+            else           el.classList.remove('loading');
         }
     });
 }
 
 function setOsuError() {
     const ids = ['osu-global-rank', 'osu-country-rank', 'osu-pp', 'osu-accuracy',
-                 'osu-level', 'osu-playcount', 'osu-playtime', 'osu-maxcombo'];
+                 'osu-level', 'osu-playcount', 'osu-playtime', 'osu-maxcombo',
+                 'osu-follower-count', 'osu-join-date', 'osu-ranked-score'];
     ids.forEach(id => setText(id, '—'));
 }
 
