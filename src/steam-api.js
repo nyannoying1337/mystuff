@@ -16,7 +16,10 @@ async function fetchSteamGames() {
         const data = await gamesRes.json();
         const steamLevel = levelRes.ok ? ((await levelRes.json()).steamLevel ?? null) : null;
 
-        updateSteamStats(data.gameCount, data.totalHours, data.lastPlayedGame, steamLevel, data.topGames);
+        // gameCount was added in backend v2; fall back to topGames.length for old Workers
+        const gameCount = data.gameCount ?? (Array.isArray(data.topGames) ? data.topGames.length : 0);
+
+        updateSteamStats(gameCount, data.totalHours, data.lastPlayedGame, steamLevel, data.topGames);
     } catch (err) {
         console.error('Steam API error:', err);
         setSteamError();
