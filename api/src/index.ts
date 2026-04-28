@@ -13,11 +13,12 @@ const app = new Hono<{ Bindings: Bindings }>()
 export type SteamResult = {
     totalHours: number,
     totalPlaytime: number,
-    topGames: string[],
+    gameCount: number,
+    topGames: { name: string, hours: number }[],
     lastPlayedGame: {
         name: string,
         lastPlayed: number
-    }
+    } | null
 }
 
 export type OsuResult = {
@@ -34,6 +35,10 @@ export type OsuResult = {
     playCount: number,
     playTime: number,
     maxCombo: number,
+    followerCount: number,
+    joinDate: string | null,
+    rankedScore: number,
+    title: string | null,
 }
 
 app.use(cors())
@@ -54,7 +59,16 @@ async function getOsuToken(env: Bindings): Promise<string> {
         })
     })
 
+    if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`osu! OAuth failed (${response.status}): ${errBody}`)
+    }
+
     const data = await response.json() as { access_token: string, expires_in: number }
+    if (!data.access_token) {
+        throw new Error(`osu! OAuth: missing access_token in response`)
+    }
+
     await env.KV.put(CACHE_KEY, data.access_token, { expirationTtl: data.expires_in - 60 })
     return data.access_token
 }
@@ -97,6 +111,10 @@ app.get('/my-osu', async (c) => {
         playCount: data.statistics?.play_count ?? 0,
         playTime: data.statistics?.play_time ?? 0,
         maxCombo: data.statistics?.maximum_combo ?? 0,
+        followerCount: data.follower_count ?? 0,
+        joinDate: data.join_date ?? null,
+        rankedScore: data.statistics?.ranked_score ?? 0,
+        title: data.title ?? null,
     }
 
     await c.env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_DURATION })
@@ -104,11 +122,10 @@ app.get('/my-osu', async (c) => {
 })
 
 app.get('/my-steam', async (c) => {
-    const CACHE_KEY = "steam:profile"
+    const CACHE_KEY = "steam:profile:v2"
     const CACHE_DURATION = 3600;
 
     const cachedRes = await c.env.KV.get<SteamResult>(CACHE_KEY, { type: "json" })
-
     if (cachedRes) {
         return c.json(cachedRes)
     }
@@ -120,10 +137,7 @@ app.get('/my-steam', async (c) => {
     const response = await fetch(apiUrl);
 
     if (!response.ok) {
-        return c.json({
-            error: true,
-            status: response.status,
-        })
+        return c.json({ error: true, status: response.status })
     }
 
     const data = await response.json() as any;
@@ -143,13 +157,16 @@ app.get('/my-steam', async (c) => {
         return latest;
     }, null);
 
-    const topGames = games
-        .sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0))
-        .map((game: any) => game.name);
+    const sorted = games.sort((a: any, b: any) => (b.playtime_forever || 0) - (a.playtime_forever || 0));
 
-    const result = {
+    const topGames = sorted
+        .slice(0, 3)
+        .map((game: any) => ({ name: game.name, hours: Math.round((game.playtime_forever || 0) / 60) }));
+
+    const result: SteamResult = {
         totalHours,
         totalPlaytime,
+        gameCount: games.length,
         topGames,
         lastPlayedGame: lastPlayedGame && lastPlayedGame.rtime_last_played ? {
             name: lastPlayedGame.name,
