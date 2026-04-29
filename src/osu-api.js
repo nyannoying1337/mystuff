@@ -114,3 +114,60 @@ function removeLoading() {
 }
 
 document.addEventListener('DOMContentLoaded', fetchOsuStats);
+
+const OSU_RECENT_URL = 'https://api-ice.nyannoying.workers.dev/my-osu-recent';
+
+async function fetchOsuRecent() {
+    try {
+        const response = await fetch(OSU_RECENT_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const plays = await response.json();
+        renderOsuRecent(plays);
+    } catch (err) {
+        console.error('osu! recent plays error:', err);
+        const container = document.getElementById('osu-recent-plays');
+        if (container) container.innerHTML = '<div class="recent-play-row"><span class="recent-play-rank">—</span><div class="recent-play-info"><span class="recent-play-title">Failed to load</span></div></div>';
+    }
+}
+
+function renderOsuRecent(plays) {
+    const container = document.getElementById('osu-recent-plays');
+    if (!container) return;
+    if (!Array.isArray(plays) || plays.length === 0) {
+        container.innerHTML = '<div class="recent-play-row"><span class="recent-play-meta" style="padding:0.75rem 1.5rem">No recent plays</span></div>';
+        return;
+    }
+    container.innerHTML = plays.map(play => {
+        const rankClass = `rank-${play.rank.toLowerCase()}`;
+        const mods = play.mods.length > 0 ? play.mods.join(' ') : '';
+        const ppText = play.pp != null ? `${play.pp.toLocaleString()}pp` : '';
+        const meta = [play.accuracy + '%', ppText, mods].filter(Boolean).join(' · ');
+        const timeAgo = formatTimeAgo(play.playedAt);
+        return `<div class="recent-play-row">
+            <span class="recent-play-rank ${rankClass}">${escapeHtml(play.rank)}</span>
+            <div class="recent-play-info">
+                <span class="recent-play-title">${escapeHtml(play.beatmapArtist)} - ${escapeHtml(play.beatmapTitle)} [${escapeHtml(play.difficultyName)}]</span>
+                <span class="recent-play-meta">${escapeHtml(meta)}</span>
+            </div>
+            <span class="recent-play-time">${escapeHtml(timeAgo)}</span>
+        </div>`;
+    }).join('');
+}
+
+function formatTimeAgo(isoString) {
+    if (!isoString) return '';
+    const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', fetchOsuRecent);
