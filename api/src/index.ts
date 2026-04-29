@@ -52,7 +52,7 @@ async function getOsuToken(env: Bindings): Promise<string> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            client_id: env.OSU_CLIENT_ID,
+            client_id: Number(env.OSU_CLIENT_ID),
             client_secret: env.OSU_CLIENT_SECRET,
             grant_type: 'client_credentials',
             scope: 'public'
@@ -122,7 +122,7 @@ app.get('/my-osu', async (c) => {
 })
 
 app.get('/my-steam', async (c) => {
-    const CACHE_KEY = "steam:profile:v2"
+    const CACHE_KEY = "steam:profile:v3"
     const CACHE_DURATION = 3600;
 
     const cachedRes = await c.env.KV.get<SteamResult>(CACHE_KEY, { type: "json" })
@@ -141,10 +141,10 @@ app.get('/my-steam', async (c) => {
     }
 
     const data = await response.json() as any;
-    const games = data.response.games;
+    const games: any[] | undefined = data.response?.games;
 
-    if (games.length === 0) {
-        throw new Error('No games found in library');
+    if (!games || games.length === 0) {
+        return c.json({ error: true, message: 'No games found or Steam API key not configured' }, 500 as any)
     }
 
     const totalPlaytime = games.reduce((total: number, game: any) => total + (game.playtime_forever || 0), 0);
