@@ -1,6 +1,7 @@
 name = "api-ice"
 main = "src/index.ts"
 compatibility_date = "2024-03-19"
+account_id = "ef52eb2af8fd5beafe4de71335a9c6c3"
 
 [vars]
 STEAM_API_KEY = ""     # Set in Cloudflare dashboard
