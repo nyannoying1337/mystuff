@@ -10,6 +10,30 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+export type OsuRecentPlay = {
+    beatmapTitle: string,
+    beatmapArtist: string,
+    difficultyName: string,
+    rank: string,
+    accuracy: string,
+    pp: number | null,
+    mods: string[],
+    playedAt: string,
+}
+
+export type SteamStatusResult = {
+    avatarUrl: string,
+    personaState: number,
+    currentGame: string | null,
+    lastLogoff: number | null,
+}
+
+export type SteamRecentGame = {
+    name: string,
+    playtime2weeks: number,
+    appId: number,
+}
+
 export type SteamResult = {
     totalHours: number,
     totalPlaytime: number,
@@ -74,7 +98,7 @@ async function getOsuToken(env: Bindings): Promise<string> {
 }
 
 app.get('/my-osu', async (c) => {
-    const CACHE_KEY = "osu:profile"
+    const CACHE_KEY = "osu:profile:v2"
     const CACHE_DURATION = 3600
 
     const cached = await c.env.KV.get<OsuResult>(CACHE_KEY, { type: "json" })
@@ -178,9 +202,85 @@ app.get('/my-steam', async (c) => {
     return c.json(result)
 })
 
+app.get('/my-osu-recent', async (c) => {
+    try {
+    const CACHE_KEY = "osu:recent"
+    const CACHE_DURATION = 300
+
+    const cached = await c.env.KV.get<OsuRecentPlay[]>(CACHE_KEY, { type: "json" })
+    if (cached) return c.json(cached)
+
+    const token = await getOsuToken(c.env)
+    const OSU_USER_ID = '7486592'
+
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${OSU_USER_ID}/scores/recent?limit=5&include_fails=0`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'x-api-version': '20220705'
+        }
+    })
+
+    if (!response.ok) {
+        const body = await response.text()
+        return c.json({ error: true, status: response.status, body }, response.status as any)
+    }
+
+    const rawData = await response.json() as any
+    const data: any[] = Array.isArray(rawData) ? rawData : (rawData?.scores ?? [])
+
+    const result: OsuRecentPlay[] = data.map((score: any) => ({
+        beatmapTitle: score.beatmapset?.title ?? '',
+        beatmapArtist: score.beatmapset?.artist ?? '',
+        difficultyName: score.beatmap?.version ?? '',
+        rank: score.rank ?? '',
+        accuracy: ((score.accuracy ?? 0) * 100).toFixed(2),
+        pp: score.pp != null ? Math.round(score.pp) : null,
+        mods: Array.isArray(score.mods)
+            ? score.mods.map((m: any) => typeof m === 'string' ? m : (m?.acronym ?? '')).filter(Boolean)
+            : [],
+        playedAt: score.ended_at ?? score.created_at ?? '',
+    }))
+
+    await c.env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_DURATION })
+    return c.json(result)
+    } catch (err: any) {
+        return c.json({ error: true, message: err?.message ?? String(err) }, 500)
+    }
+})
+
+app.get('/my-steam-recent', async (c) => {
+    const CACHE_KEY = "steam:recent"
+    const CACHE_DURATION = 300
+
+    const cached = await c.env.KV.get<SteamRecentGame[]>(CACHE_KEY, { type: "json" })
+    if (cached) return c.json(cached)
+
+    const STEAM_API_KEY = c.env.STEAM_API_KEY
+    const STEAM_ID = '76561198045384584'
+    const apiUrl = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&count=5`
+
+    const response = await fetch(apiUrl)
+    if (!response.ok) {
+        return c.json({ error: true, status: response.status })
+    }
+
+    const data = await response.json() as any
+    const games: any[] = data.response?.games ?? []
+
+    const result: SteamRecentGame[] = games.map((g: any) => ({
+        name: g.name,
+        playtime2weeks: g.playtime_2weeks ?? 0,
+        appId: g.appid,
+    }))
+
+    await c.env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_DURATION })
+    return c.json(result)
+})
+
 app.get('/my-steam-avatar', async (c) => {
-    const CACHE_KEY = "steam:avatar"
-    const CACHE_DURATION = 3600;
+    const CACHE_KEY = "steam:avatar:v2"
+    const CACHE_DURATION = 60;
 
     const cachedRes = await c.env.KV.get(CACHE_KEY, { type: "json" })
     if (cachedRes) {
@@ -199,7 +299,12 @@ app.get('/my-steam-avatar', async (c) => {
     const data = await response.json() as any;
     const player = data.response.players[0];
 
-    const result = { avatarUrl: player.avatarfull }
+    const result: SteamStatusResult = {
+        avatarUrl: player.avatarfull,
+        personaState: player.personastate ?? 0,
+        currentGame: player.gameextrainfo ?? null,
+        lastLogoff: player.lastlogoff ?? null,
+    }
     await c.env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_DURATION })
     return c.json(result)
 })

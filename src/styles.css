@@ -819,6 +819,124 @@ body {
   flex-shrink: 0;
 }
 
+/* ── osu! recent plays ───────────────────────────────────────── */
+.osu-recent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-top: 0;
+}
+
+.osu-recent-header {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.recent-play-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+
+.recent-play-row:last-child { border-bottom: none; }
+.recent-play-row:hover { background: rgba(255, 255, 255, 0.03); }
+
+.recent-play-rank {
+  font-size: 0.8rem;
+  font-weight: 800;
+  width: 2rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.recent-play-rank.rank-xh,
+.recent-play-rank.rank-x  { color: #e0d0a0; }
+.recent-play-rank.rank-sh,
+.recent-play-rank.rank-s  { color: #f0c060; }
+.recent-play-rank.rank-a  { color: #6abf69; }
+.recent-play-rank.rank-b  { color: #5b9bd5; }
+.recent-play-rank.rank-c  { color: #b06ac0; }
+.recent-play-rank.rank-d,
+.recent-play-rank.rank-f  { color: #d05050; }
+
+.recent-play-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-play-title {
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-play-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.recent-play-time {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Steam status bar ────────────────────────────────────────── */
+.steam-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.steam-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-dim);
+}
+
+.steam-status-dot.online  { background: #57ab5a; }
+.steam-status-dot.ingame  { background: #3db3c0; }
+.steam-status-dot.away    { background: #c9a227; }
+.steam-status-dot.busy    { background: #d05050; }
+.steam-status-dot.offline { background: #666; }
+
+/* ── Steam recently played ───────────────────────────────────── */
+.steam-recent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+
 @media (max-width: 700px) {
   .steam-level-item {
     flex: unset;

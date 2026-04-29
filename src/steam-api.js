@@ -101,3 +101,74 @@ function setSteamError() {
 }
 
 document.addEventListener('DOMContentLoaded', fetchSteamGames);
+
+const STEAM_STATUS_URL = 'https://api-ice.nyannoying.workers.dev/my-steam-avatar';
+const STEAM_RECENT_URL = 'https://api-ice.nyannoying.workers.dev/my-steam-recent';
+
+async function fetchSteamStatus() {
+    try {
+        const res = await fetch(STEAM_STATUS_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderSteamStatus(data);
+    } catch (err) {
+        console.error('Steam status error:', err);
+    }
+}
+
+function renderSteamStatus(data) {
+    const dot  = document.getElementById('steam-status-dot');
+    const text = document.getElementById('steam-status-text');
+    if (!dot || !text) return;
+
+    if (data.currentGame) {
+        dot.className = 'steam-status-dot ingame';
+        text.textContent = `In-Game: ${data.currentGame}`;
+        return;
+    }
+
+    const states = {
+        0: { cls: 'offline', label: 'Offline' },
+        1: { cls: 'online',  label: 'Online' },
+        2: { cls: 'busy',    label: 'Busy' },
+        3: { cls: 'away',    label: 'Away' },
+        4: { cls: 'away',    label: 'Snooze' },
+        5: { cls: 'online',  label: 'Looking to Trade' },
+        6: { cls: 'online',  label: 'Looking to Play' },
+    };
+    const state = states[data.personaState] ?? { cls: 'offline', label: 'Offline' };
+    dot.className = `steam-status-dot ${state.cls}`;
+    text.textContent = state.label;
+}
+
+async function fetchSteamRecent() {
+    try {
+        const res = await fetch(STEAM_RECENT_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const games = await res.json();
+        renderSteamRecent(games);
+    } catch (err) {
+        console.error('Steam recent error:', err);
+    }
+}
+
+function renderSteamRecent(games) {
+    const container = document.getElementById('steam-recent-games');
+    if (!container) return;
+    if (!Array.isArray(games) || games.length === 0) {
+        container.innerHTML = '<div class="top-game-row"><span class="top-game-name">No recent activity</span></div>';
+        return;
+    }
+    container.innerHTML = games.map((game, i) => {
+        const hours = Math.round(game.playtime2weeks / 60);
+        const hoursText = hours > 0 ? `${hours.toLocaleString()}h` : '<1h';
+        return `<div class="top-game-row">
+            <span class="top-game-rank">#${i + 1}</span>
+            <span class="top-game-name">${escapeHtml(game.name)}</span>
+            <span class="top-game-hours">${hoursText}</span>
+        </div>`;
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', fetchSteamStatus);
+document.addEventListener('DOMContentLoaded', fetchSteamRecent);
