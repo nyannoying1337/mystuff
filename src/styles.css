@@ -1,4 +1,4 @@
-/* osu!-inspired design system */
+/* site design system */
 :root {
   --pink:          #ff66aa;
   --pink-dark:     #cc3388;
@@ -30,7 +30,7 @@ body {
 }
 
 /* ── Navbar ─────────────────────────────────────────────────── */
-.osu-nav {
+.site-nav {
   position: sticky;
   top: 0;
   z-index: 100;
@@ -55,18 +55,18 @@ body {
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   text-decoration: none;
   color: var(--pink);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   letter-spacing: -0.02em;
 }
 
-.osu-cookie {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
+.nav-tilde {
+  font-size: 1.4rem;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 .nav-tagline {
@@ -539,6 +539,112 @@ body {
 .link-card.youtube:hover { border-color: #ff4444; }
 .link-card.twitch:hover { border-color: #9146ff; }
 .link-card.github:hover { border-color: #e4e4e4; }
+
+/* ── Blog / Notes ────────────────────────────────────────────── */
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.post-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pink);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fade-up 0.45s ease forwards;
+  animation-delay: 0.1s;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.post-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.post-title {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.post-date {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-tags {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.post-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 99px;
+  background: var(--pink-subtle);
+  border: 1px solid var(--border);
+  color: var(--pink);
+  letter-spacing: 0.03em;
+}
+
+.post-chevron {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.post-card.expanded .post-chevron {
+  transform: rotate(180deg);
+}
+
+.post-body {
+  display: none;
+  padding: 0 1.5rem 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.post-card.expanded .post-body {
+  display: block;
+}
+
+.post-content {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  margin: 0.85rem 0 0;
+}
+
+.posts-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}
 
 /* ── Footer ──────────────────────────────────────────────────── */
 .osu-footer {
