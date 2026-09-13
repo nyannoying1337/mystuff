@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import mcstatus.common.Snapshots;
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
@@ -60,6 +61,7 @@ public class McStatusServer implements DedicatedServerModInitializer {
 	private String workerUrl;
 	private String pushToken;
 	private String serverName;
+	private String siteUrl;
 	private int intervalSeconds;
 	private boolean shareItemNames;
 
@@ -70,6 +72,7 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		workerUrl = props.getProperty("worker_url", "").replaceAll("/+$", "");
 		pushToken = props.getProperty("push_token", "");
 		serverName = props.getProperty("server_name", "Minecraft server");
+		siteUrl = props.getProperty("site_url", "").trim();
 		intervalSeconds = Math.max(5, Integer.parseInt(props.getProperty("interval_seconds", "10").trim()));
 		shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
 		if (workerUrl.isEmpty() || pushToken.isEmpty()) {
@@ -77,6 +80,8 @@ public class McStatusServer implements DedicatedServerModInitializer {
 			return;
 		}
 		ServerTickEvents.END_SERVER_TICK.register(this::tick);
+		LinkCommands links = new LinkCommands(http, workerUrl, pushToken, siteUrl);
+		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> links.register(dispatcher));
 		LOG.info("publishing {} to {} every {}s", serverName, workerUrl, intervalSeconds);
 	}
 
@@ -225,6 +230,8 @@ public class McStatusServer implements DedicatedServerModInitializer {
 				# The Worker to publish to, and its PUSH_TOKEN secret.
 				worker_url=
 				push_token=
+				# The server page (site/server.html) for /mcstatus link and /mcstatus admin.
+				site_url=
 				# Shown at the top of the admin page.
 				server_name=Minecraft server
 				interval_seconds=10

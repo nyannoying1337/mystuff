@@ -46,6 +46,16 @@ const link = await call(`/server/link?key=admin-key-123&uuid=${ALICE}`);
 assert.equal(link.status, 200);
 assert.equal((await link.json()).key, aliceKey);
 
+// --- the server mod's /mcstatus command gets links with the push token
+const links = (body, token = "push-secret") => call("/server/links", {
+  method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
+});
+assert.equal((await links({ admin: true }, "wrong")).status, 401, "only the server can ask");
+assert.equal((await links({ admin: true }, aliceKey)).status, 401, "a player key is not the push token");
+assert.equal((await (await links({ admin: true })).json()).key, "admin-key-123");
+assert.equal((await (await links({ uuid: ALICE })).json()).key, aliceKey);
+assert.equal((await links({ uuid: "not-a-uuid" })).status, 400);
+
 // --- pushes need the push token; players are stored as separate rows
 assert.equal((await call("/server/status", { method: "POST", body: "{}" })).status, 401);
 const first = await (await push([{ uuid: ALICE, name: "Alice", online: true, position: [1, 2, 3] }, { uuid: BOB, name: "Bob", online: false }])).json();

@@ -177,6 +177,27 @@ export async function handleServer(request, env, url, path) {
     return store(env).fetch(new Request(request.url, { headers }));
   }
 
+  // For the server mod's /mcstatus command: the server proves itself with the
+  // push token and gets the key to put in a clickable chat link. The admin key
+  // and the link secret never have to be copied into the server's config.
+  if (path === "/server/links" && request.method === "POST") {
+    const header = request.headers.get("Authorization") || "";
+    if (!safeEqual(header.startsWith("Bearer ") ? header.slice(7) : "", env.PUSH_TOKEN)) return json({ error: "unauthorized" }, 401);
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "body must be json" }, 400);
+    }
+    const noStore = { "Cache-Control": "no-store" };
+    if (body?.admin === true) {
+      return env.ADMIN_KEY ? json({ key: env.ADMIN_KEY }, 200, noStore) : json({ error: "ADMIN_KEY not set" }, 503);
+    }
+    if (!UUID.test(body?.uuid || "")) return json({ error: "uuid or admin required" }, 400);
+    if (!env.PLAYER_LINK_SECRET) return json({ error: "PLAYER_LINK_SECRET not set" }, 503);
+    return json({ key: await playerKey(env, body.uuid) }, 200, noStore);
+  }
+
   if (path === "/server/link" && request.method === "GET") {
     const viewer = await viewerFor(env, url.searchParams.get("key"));
     if (viewer?.role !== "admin") return json({ error: "admin key required" }, 401);

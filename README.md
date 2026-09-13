@@ -5,6 +5,8 @@
 > Local test: `cd mod && gradlew runServer` (config in `mod/run/config/mc-status-server.properties`),
 > `cd worker && npx wrangler dev --port 8789` (secrets `PUSH_TOKEN`, `VIEW_KEY`, `ADMIN_KEY`,
 > `PLAYER_LINK_SECRET` in `worker/.dev.vars`), serve `site/` on port 8766, then join `localhost`.
+> In game: `/mcstatus admin` (server admins) sends a clickable admin link, `/mcstatus link` a player's own page,
+> `/mcstatus link <player>` (moderators) someone else's. Set `site_url` in the server's config.
 > Tests: `node tests/test_server_worker.mjs`.
 
 # mc-status
