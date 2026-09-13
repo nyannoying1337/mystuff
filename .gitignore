@@ -1,6 +1,8 @@
 agent/config.toml
 agent/.venv/
 map/work/
+site/assets/mc/
+site/.cache/
 .wrangler/
 node_modules/
 __pycache__/

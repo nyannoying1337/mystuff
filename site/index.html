@@ -13,18 +13,11 @@
   --panel: #c6c6c6;
   --panel-light: #ffffff;
   --panel-dark: #555555;
-  --slot: #8b8b8b;
   --slot-dark: #373737;
   --ink: #3f3f3f;
   --ink-dim: #6d6d6d;
-  --void: #1d1d1d;
   --xp: #7fb238;
   --xp-dark: #4e7020;
-  --heart: #d63a2f;
-  --heart-empty: #4a1512;
-  --hunger: #b8762e;
-  --hunger-empty: #3d2712;
-  --step: 8px;
 }
 
 * { box-sizing: border-box; }
@@ -46,7 +39,7 @@ body {
   -webkit-font-smoothing: none;
 }
 
-img, canvas { image-rendering: pixelated; }
+img { image-rendering: pixelated; }
 
 main { max-width: 560px; margin: 0 auto; }
 
@@ -96,61 +89,48 @@ h2 {
   margin: 0 0 8px;
 }
 
-.icons { display: flex; flex-wrap: wrap; gap: 1px; margin-bottom: 8px; }
-.icon { position: relative; width: 18px; height: 18px; }
-.icon .half {
-  position: absolute;
-  inset: 0;
-  width: 50%;
-  overflow: hidden;
-}
-.icon svg { position: absolute; inset: 0; width: 18px; height: 18px; }
-
-.xp-track {
-  height: 12px;
-  background: var(--void);
-  border: 2px solid #101010;
-  margin-bottom: 4px;
-}
-.xp-fill { height: 100%; background: var(--xp); width: 0; }
-.xp-label { text-align: center; color: var(--xp-dark); margin-bottom: 14px; }
-
-.hotbar {
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 2px;
-  margin-bottom: 14px;
-}
-.slot {
-  aspect-ratio: 1;
-  background: var(--slot);
+/* The in-game HUD, laid out in its native 182×39 GUI pixels and scaled as one. */
+.viewport {
+  background: #1c2230;
+  background-image: linear-gradient(#5a7bb5, #9dbbe8 60%, #4d6b3a 60%, #3b5230);
   border-top: 2px solid var(--slot-dark);
   border-left: 2px solid var(--slot-dark);
   border-right: 2px solid var(--panel-light);
   border-bottom: 2px solid var(--panel-light);
+  padding: 18px 10px 10px;
+  margin-bottom: 14px;
+}
+.hud {
   position: relative;
+  width: min(100%, 546px);
+  aspect-ratio: 182 / 39;
+  margin: 0 auto;
 }
-.slot[data-selected="true"] { outline: 3px solid #ffffff; outline-offset: 1px; z-index: 1; }
-.item { position: absolute; inset: 4px; }
-.item[data-enchanted="true"] { box-shadow: inset 0 0 0 2px rgba(180,120,255,.85); }
-.count {
-  position: absolute;
-  right: 1px;
-  bottom: -1px;
-  font-size: 8px;
-  line-height: 1;
-  color: #ffffff;
-  text-shadow: 1px 1px 0 #3f3f3f;
+.hud > * { position: absolute; display: block; }
+.glyph {
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
 }
-.durability {
-  position: absolute;
-  left: 3px;
-  right: 3px;
-  bottom: 2px;
-  height: 3px;
-  background: #000000;
+.swatch { outline: 1px solid rgba(0,0,0,.35); outline-offset: -1px; }
+.glint {
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  background-image: url("assets/mc/glint.png");
+  background-size: 400% 400%;
+  mix-blend-mode: screen;
+  opacity: .7;
+  animation: glint 7s linear infinite;
+  pointer-events: none;
 }
-.durability span { display: block; height: 100%; }
+@keyframes glint {
+  from { background-position: 0% 0%; }
+  to { background-position: 100% 133%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glint { animation: none; }
+}
 
 .shot {
   display: block;
@@ -204,26 +184,22 @@ button:active {
   border-bottom-color: var(--panel-light);
 }
 
+.disclaimer {
+  max-width: 560px;
+  margin: 6px auto 0;
+  text-align: center;
+  font-size: 8px;
+  line-height: 2.2;
+  color: #cbbfae;
+}
+
 .sr-only {
   position: absolute; width: 1px; height: 1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
-
-@media (max-width: 420px) {
-  .hotbar { grid-template-columns: repeat(5, 1fr); }
-}
 </style>
 </head>
 <body>
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="heart" viewBox="0 0 9 9">
-    <path d="M1 1h3v1h1v-1h3v3h-1v1h-1v1h-1v1h-1v-1h-1v-1h-1v-1h-1z" shape-rendering="crispEdges"/>
-  </symbol>
-  <symbol id="hunger" viewBox="0 0 9 9">
-    <path d="M3 1h3v1h1v3h-1v1h-2v1h-1v1h-2v-1h-1v-2h1v-1h1v-1h1z" shape-rendering="crispEdges"/>
-  </symbol>
-</svg>
 
 <main>
   <h1 class="sr-only">Live status</h1>
@@ -234,48 +210,32 @@ button:active {
   </div>
 </main>
 
+<footer class="disclaimer">
+  NOT AN OFFICIAL MINECRAFT WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+</footer>
+
 <script>
 const API = "https://status-api.yourdomain.tld";
 const POLL_MS = 15000;
 const STALE_MS = 90000;
 
-const ITEM_COLORS = {
-  "minecraft:dirt": "#79553a",
-  "minecraft:grass_block": "#5d8a3a",
-  "minecraft:cobblestone": "#7a7a7a",
-  "minecraft:stone": "#8f8f8f",
-  "minecraft:deepslate": "#4c4c50",
-  "minecraft:oak_planks": "#b8945f",
-  "minecraft:oak_log": "#6b4f2a",
-  "minecraft:sand": "#dbd3a0",
-  "minecraft:diamond": "#4fd6d2",
-  "minecraft:diamond_pickaxe": "#4fd6d2",
-  "minecraft:diamond_sword": "#4fd6d2",
-  "minecraft:netherite_pickaxe": "#4a4247",
-  "minecraft:netherite_sword": "#4a4247",
-  "minecraft:iron_ingot": "#d8d8d8",
-  "minecraft:iron_pickaxe": "#d8d8d8",
-  "minecraft:gold_ingot": "#f5d33a",
-  "minecraft:redstone": "#c81f1f",
-  "minecraft:lapis_lazuli": "#2b52c4",
-  "minecraft:emerald": "#17c05a",
-  "minecraft:coal": "#2b2b2b",
-  "minecraft:torch": "#e8b13a",
-  "minecraft:bread": "#c89141",
-  "minecraft:cooked_beef": "#8a4b2a",
-  "minecraft:golden_apple": "#f5d33a",
-  "minecraft:water_bucket": "#3b6fd4",
-  "minecraft:ender_pearl": "#1c6b60",
-  "minecraft:obsidian": "#241a35",
-  "minecraft:tnt": "#c83b32",
-};
+// Built at deploy time by site/build_assets.py from the Minecraft client jar.
+const ASSETS = "assets/mc";
+const HUD_W = 182;
+const HUD_H = 39;
+
+// Glyph widths for the game font; false when the assets weren't built, in
+// which case the page falls back to plain text.
+let glyphWidths = null;
+const assetsReady = fetch(`${ASSETS}/font/widths.json`)
+  .then((response) => (response.ok ? response.json() : false))
+  .catch(() => false)
+  .then((widths) => { glyphWidths = widths; });
 
 function colorFor(id) {
-  if (ITEM_COLORS[id]) return ITEM_COLORS[id];
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue} 42% 46%)`;
+  return `hsl(${Math.abs(hash) % 360} 42% 46%)`;
 }
 
 function prettyName(id) {
@@ -293,48 +253,156 @@ function el(tag, props = {}, children = []) {
   return node;
 }
 
-function iconRow(value, max, symbol, full, empty) {
-  const row = el("div", { class: "icons" });
-  for (let i = 0; i < max; i++) {
-    const filled = value - i * 2;
-    const wrap = el("div", { class: "icon" });
-    wrap.innerHTML = `<svg viewBox="0 0 9 9" fill="${empty}"><use href="#${symbol}"/></svg>`;
-    if (filled >= 2) {
-      wrap.innerHTML += `<svg viewBox="0 0 9 9" fill="${full}"><use href="#${symbol}"/></svg>`;
-    } else if (filled >= 1) {
-      const half = el("div", { class: "half" });
-      half.innerHTML = `<svg viewBox="0 0 9 9" fill="${full}"><use href="#${symbol}"/></svg>`;
-      wrap.append(half);
-    }
-    row.append(wrap);
-  }
-  return row;
+// ---- HUD ------------------------------------------------------------------
+
+// Positions are in GUI pixels, converted to percentages of the 182×39 box.
+function place(node, x, y, w, h) {
+  node.style.left = `${(x / HUD_W) * 100}%`;
+  node.style.top = `${(y / HUD_H) * 100}%`;
+  node.style.width = `${(w / HUD_W) * 100}%`;
+  node.style.height = `${(h / HUD_H) * 100}%`;
+  return node;
 }
 
-function slotNode(item, selected) {
-  const slot = el("div", { class: "slot" });
-  if (selected) slot.dataset.selected = "true";
-  if (!item) return slot;
+function sprite(name, x, y, w, h) {
+  return place(el("img", { src: `${ASSETS}/hud/${name}.png`, alt: "" }), x, y, w, h);
+}
 
-  slot.title = `${prettyName(item.id)} x${item.count}`;
-  const block = el("div", { class: "item" });
-  block.style.background = colorFor(item.id);
-  if (item.enchanted) block.dataset.enchanted = "true";
-  slot.append(block);
+function fill(x, y, w, h, color) {
+  const node = place(el("div"), x, y, w, h);
+  node.style.background = color;
+  return node;
+}
 
-  if (item.count > 1) slot.append(el("span", { class: "count", text: String(item.count) }));
+function masked(node, url) {
+  node.style.maskImage = `url("${url}")`;
+  node.style.webkitMaskImage = `url("${url}")`;
+  return node;
+}
 
+function textWidth(text) {
+  let width = 0;
+  for (const char of text) width += (glyphWidths[char] ?? 5) + 1;
+  return width;
+}
+
+function drawText(hud, text, x, y, color) {
+  let cursor = x;
+  for (const char of text) {
+    const width = glyphWidths[char];
+    if (width === undefined) { cursor += 6; continue; }
+    const glyph = masked(place(el("div", { class: "glyph" }), cursor, y, width, 8),
+      `${ASSETS}/font/${char.charCodeAt(0)}.png`);
+    glyph.style.background = color;
+    hud.append(glyph);
+    cursor += width + 1;
+  }
+}
+
+function drawShadowText(hud, text, x, y) {
+  drawText(hud, text, x + 1, y + 1, "#3f3f3f");
+  drawText(hud, text, x, y, "#ffffff");
+}
+
+function drawItem(hud, item) {
+  const x = 3 + item.slot * 20;
+  const y = 20;
+  const label = `${prettyName(item.id)}${item.count > 1 ? ` ×${item.count}` : ""}`;
+  const name = item.id.startsWith("minecraft:") ? item.id.slice(10) : null;
+  const url = `${ASSETS}/item/${name}.png`;
+
+  const swatch = () => {
+    const node = place(el("div", { class: "swatch", title: label }), x + 2, y + 2, 12, 12);
+    node.style.background = colorFor(item.id);
+    return node;
+  };
+
+  if (name) {
+    const icon = place(el("img", { src: url, alt: "", title: label }), x, y, 16, 16);
+    icon.addEventListener("error", () => icon.replaceWith(swatch()), { once: true });
+    hud.append(icon);
+    if (item.enchanted) hud.append(masked(place(el("div", { class: "glint" }), x, y, 16, 16), url));
+  } else {
+    hud.append(swatch());
+  }
+
+  if (item.count > 1) {
+    const text = String(item.count);
+    drawShadowText(hud, text, x + 19 - 2 - textWidth(text), y + 9);
+  }
+
+  // Same maths as the game: 13px bar, green → red by hue.
   if (item.damage && item.max_damage) {
-    const left = Math.max(0, 1 - item.damage / item.max_damage);
-    const bar = el("div", { class: "durability" });
-    const fill = el("span");
-    fill.style.width = `${Math.round(left * 100)}%`;
-    fill.style.background = `hsl(${Math.round(left * 110)} 90% 45%)`;
-    bar.append(fill);
-    slot.append(bar);
+    const left = Math.max(0, (item.max_damage - item.damage) / item.max_damage);
+    const width = Math.round(13 - (item.damage * 13) / item.max_damage);
+    hud.append(fill(x + 2, y + 13, 13, 2, "#000000"));
+    hud.append(fill(x + 2, y + 13, Math.max(0, width), 1, `hsl(${Math.round(left * 120)} 100% 50%)`));
   }
-  return slot;
 }
+
+function hudNode(player) {
+  const health = Math.ceil(player.health ?? 0);
+  const food = player.foodlevel ?? 0;
+  const level = player.xplevel ?? 0;
+  const hotbar = player.hotbar || [];
+
+  const hud = el("div", {
+    class: "hud",
+    role: "img",
+    "aria-label": `${health / 2} of 10 hearts, hunger ${food / 2} of 10, level ${level}. Hotbar: `
+      + (hotbar.map((item) => `${prettyName(item.id)} ×${item.count}`).join(", ") || "empty"),
+  });
+
+  for (let i = 0; i < 10; i++) {
+    const x = i * 8;
+    hud.append(sprite("heart_container", x, 0, 9, 9));
+    if (i * 2 + 1 < health) hud.append(sprite("heart_full", x, 0, 9, 9));
+    else if (i * 2 + 1 === health) hud.append(sprite("heart_half", x, 0, 9, 9));
+  }
+
+  for (let i = 0; i < 10; i++) {
+    const x = HUD_W - i * 8 - 9;
+    hud.append(sprite("food_empty", x, 0, 9, 9));
+    if (i * 2 + 1 < food) hud.append(sprite("food_full", x, 0, 9, 9));
+    else if (i * 2 + 1 === food) hud.append(sprite("food_half", x, 0, 9, 9));
+  }
+
+  hud.append(sprite("xp_background", 0, 10, 182, 5));
+  const progress = Math.min(182, Math.floor((player.xpp ?? 0) * 183));
+  if (progress > 0) {
+    const clip = place(el("div"), 0, 10, progress, 5);
+    clip.style.overflow = "hidden";
+    const bar = el("img", { src: `${ASSETS}/hud/xp_progress.png`, alt: "" });
+    bar.style.cssText = `position:absolute;left:0;top:0;height:100%;width:${(182 / progress) * 100}%`;
+    clip.append(bar);
+    hud.append(clip);
+  }
+  if (level > 0) {
+    const text = String(level);
+    const x = Math.floor((HUD_W - textWidth(text)) / 2);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(hud, text, x + dx, 4 + dy, "#000000");
+    drawText(hud, text, x, 4, "#80ff20");
+  }
+
+  hud.append(sprite("hotbar", 0, 17, 182, 22));
+  const selected = player.selecteditemslot ?? 0;
+  hud.append(sprite("hotbar_selection", -1 + selected * 20, 16, 24, 23));
+  for (const item of hotbar) drawItem(hud, item);
+
+  return el("div", { class: "viewport" }, [hud]);
+}
+
+// Used when the icon assets weren't built: the same facts, as text.
+function plainStats(player) {
+  return statRows([
+    ["health", `${Math.ceil(player.health ?? 0)} / 20`],
+    ["food", `${player.foodlevel ?? 0} / 20`],
+    ["level", player.xplevel ?? 0],
+    ["hotbar", (player.hotbar || []).map((item) => `${prettyName(item.id)} ×${item.count}`).join(", ") || "empty"],
+  ]);
+}
+
+// ---- panels -----------------------------------------------------------------
 
 function statRows(pairs) {
   const list = el("dl");
@@ -363,9 +431,8 @@ function render(data) {
   const root = document.getElementById("root");
   const frag = document.createDocumentFragment();
   const age = Date.now() - (data.received_at || data.generated_at || 0);
-  const stale = age > STALE_MS;
 
-  if (stale) {
+  if (age > STALE_MS) {
     root.replaceChildren(disconnectPanel(
       "Connection lost",
       `Last heard from the machine ${Math.round(age / 60000)} min ago.`
@@ -385,23 +452,7 @@ function render(data) {
   ]));
 
   if (player.online) {
-    status.append(iconRow(player.health ?? 0, 10, "heart", "var(--heart)", "var(--heart-empty)"));
-    status.append(iconRow(player.foodlevel ?? 0, 10, "hunger", "var(--hunger)", "var(--hunger-empty)"));
-
-    const track = el("div", { class: "xp-track" });
-    const fill = el("div", { class: "xp-fill" });
-    fill.style.width = `${Math.round((player.xpp ?? 0) * 100)}%`;
-    track.append(fill);
-    status.append(track);
-    status.append(el("div", { class: "xp-label", text: `lvl ${player.xplevel ?? 0}` }));
-
-    const hotbar = el("div", { class: "hotbar" });
-    const bySlot = new Map((player.hotbar || []).map((item) => [item.slot, item]));
-    for (let i = 0; i < 9; i++) {
-      hotbar.append(slotNode(bySlot.get(i), i === player.selecteditemslot));
-    }
-    status.append(hotbar);
-
+    status.append(glyphWidths ? hudNode(player) : plainStats(player));
     const position = player.position
       ? player.position.map((n) => Math.round(n)).join("  ")
       : "hidden";
@@ -485,6 +536,7 @@ fetch("map/settings.json", { method: "HEAD" })
 
 async function refresh() {
   try {
+    await assetsReady;
     const response = await fetch(`${API}/status`, { cache: "no-store" });
     if (response.status === 404) {
       document.getElementById("root").replaceChildren(

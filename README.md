@@ -115,19 +115,37 @@ It only captures actual gameplay. It skips frames while any menu is open
 to `latest.png.tmp` first and then moved into place, so the agent never uploads
 a half-written image.
 
-## Item colours
+## Minecraft assets
 
-Items render as flat coloured blocks, not real textures. Minecraft's art isn't
-yours to redistribute, so shipping sprites out of the game jar in a public repo
-is a copyright problem, however normal it feels. Options:
+The page draws the real HUD: hearts, hunger, XP bar and level, the hotbar with
+item icons, stack counts in the game font, durability bars and the enchantment
+glint.
 
-- extend `ITEM_COLORS` in `index.html` — unknown ids already fall back to a hash
-  colour, so it degrades fine
-- draw your own 16×16 tiles; you only need a dozen or so
-- use a resource pack with a permissive licence
+This is a fan site using Minecraft assets to present Minecraft information,
+which the [Minecraft Usage Guidelines](https://www.minecraft.net/en-us/usage-guidelines)
+allow on three conditions: include their disclaimer, don't look official, and
+don't redistribute game files. So:
 
-The font is Press Start 2P (SIL OFL) for the same reason. Monocraft is a closer
-match if you want one and it's OFL too.
+- **Disclaimer:** the page footer and the map carry "NOT AN OFFICIAL MINECRAFT
+  WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." Keep it if
+  you restyle either one.
+- **Nothing from the game is committed.** At deploy, `site/build_assets.py`
+  downloads the client jar from Mojang (checksum-verified), renders every
+  item's inventory icon (3D blocks included) plus the HUD sprites into
+  `site/assets/mc/`, and the workflow publishes them with the site. The folder
+  is gitignored.
+- **Local preview:** run `pip install Pillow && python site/build_assets.py`
+  once. Pass `--jar` to reuse a client jar you already have.
+
+A few items are drawn by special renderers in the game (banners, shields,
+decorated pots, conduits, copper golem statues, dragon heads). They show a
+coloured swatch instead of an icon. So do modded items. Chests, shulker boxes
+and mob heads are rebuilt as boxes and render properly.
+
+Durability uses `agent/max_durability.json`, taken from the game's own data
+reports. After a Minecraft update, regenerate it with
+`python agent/update_durability.py --server-jar server.jar`, and bump
+`MC_VERSION` in `site/build_assets.py`.
 
 ## Privacy
 

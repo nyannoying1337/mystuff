@@ -68,7 +68,7 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         "default-to-flat-view: false\n"
         f"live-data-root: {q(live_root)}\n"
         "client-decompression: true\n"
-        'scripts: [ "js/live-throttle.js" ]\n'
+        'scripts: [ "js/live-throttle.js", "js/disclaimer.js" ]\n'
         "styles: []\n",
         encoding="utf-8",
     )
@@ -195,7 +195,8 @@ def main() -> int:
         # Only used with SQL storage; a static host would serve it as plain text.
         (WEBROOT / "sql.php").unlink(missing_ok=True)
         (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
-        shutil.copy2(HERE / "live-throttle.js", WEBROOT / "js" / "live-throttle.js")
+        for script in ("live-throttle.js", "disclaimer.js"):
+            shutil.copy2(HERE / script, WEBROOT / "js" / script)
         print(f"rendered to {WEBROOT}")
 
     if args.publish or args.publish_only:

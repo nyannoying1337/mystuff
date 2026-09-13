@@ -32,6 +32,10 @@ SAFE_STATS = ("Health", "foodLevel", "XpLevel", "XpP", "Air", "SelectedItemSlot"
 # an RCON command.
 PLAYER_NAME = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 
+# Vanilla max durability per item. NBT only carries it when it was changed from
+# the default; regenerate with update_durability.py after a Minecraft update.
+MAX_DURABILITY = json.loads((Path(__file__).with_name("max_durability.json")).read_text(encoding="utf-8"))
+
 CURSE_CONDITION = re.compile(r"^\s*([a-z_]+)\s*(>=|<=|>|<|==)\s*(-?\d+(?:\.\d+)?)\s*$")
 COMPARE = {
     ">=": operator.ge,
@@ -158,7 +162,7 @@ def normalise_item(entry: dict) -> dict | None:
     legacy = entry.get("tag") or {}
 
     damage = components.get("minecraft:damage", legacy.get("Damage"))
-    max_damage = components.get("minecraft:max_damage")
+    max_damage = components.get("minecraft:max_damage") or MAX_DURABILITY.get(item_id)
     if damage:
         item["damage"] = int(damage)
     if max_damage:

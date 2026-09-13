@@ -36,6 +36,19 @@ jobs:
           else
             echo "no map branch yet — deploying without /map"
           fi
+      # Item icons and HUD sprites come from Mojang's client jar at deploy time,
+      # so no game assets are ever committed to the repo.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: site/.cache
+          key: mc-client-${{ hashFiles('site/build_assets.py') }}
+      - name: Build Minecraft icons
+        run: |
+          pip install --quiet Pillow
+          python site/build_assets.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
