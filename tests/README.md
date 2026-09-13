@@ -1,11 +1,12 @@
 # tests
 
 No Minecraft or Cloudflare needed; RCON, the Worker's storage and subprocesses are faked.
+Run them with the agent's Python (`agent/.venv`) after `pip install -r agent/requirements.txt`.
 
 ```bash
-agent/.venv/Scripts/python tests/test_curses.py      # curse rules over RCON
-agent/.venv/Scripts/python tests/test_agent_mod.py   # mod source, command files, logout render
-node tests/test_worker.mjs                           # Worker routes, broadcast/key logic, map markers
+python tests/test_curses.py      # curse rules over RCON
+python tests/test_agent_mod.py   # mod source, logout render, panorama, play time, privacy
+node tests/test_worker.mjs       # Worker routes, broadcasts, panorama, map markers
 ```
 
 The WebSocket side (invite key, 10-viewer cap, broadcasts) needs the real Workers

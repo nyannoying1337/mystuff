@@ -41,7 +41,7 @@ for (const key of [undefined, "wrong"]) {
   const refused = await connect(key);
   await sleep(300);
   assert.equal(refused.closed?.code, 4001, `key=${key} should be refused`);
-  assert.deepEqual(refused.messages[0], { type: "invalid" });
+  assert.equal(refused.messages.length, 0, "the close code says it all");
 }
 console.log("ok  no/wrong key refused with 4001");
 

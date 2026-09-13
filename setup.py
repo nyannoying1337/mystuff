@@ -42,6 +42,10 @@ TASK_NAME = "mc-status agent"
 DRY_RUN = False
 ASSUME_YES = False
 
+# never crash on a console that can't show a character
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 
 # ---------------------------------------------------------------- terminal helpers
 
@@ -171,7 +175,7 @@ def deploy_worker(api_url: str) -> str | None:
     """Deploy with wrangler (it opens a browser to log in the first time).
     Returns the workers.dev URL wrangler reports, if any."""
     generated = write_worker_config(api_url)
-    say(f"Deploying the Worker{' to ' + worker_domain(api_url) if worker_domain(api_url) else ''}…")
+    say(f"Deploying the Worker{' to ' + worker_domain(api_url) if worker_domain(api_url) else ''}...")
     result = run([*WRANGLER, "deploy", "-c", generated.name], cwd=WORKER, capture=True)
     output = (result.stdout or "") + (result.stderr or "")
     say(output.strip()[-1500:])
@@ -183,7 +187,7 @@ def deploy_worker(api_url: str) -> str | None:
 
 def worker_secret(name: str, value: str) -> None:
     """Store a Worker secret without it touching the command line or the screen."""
-    say(f"Storing {name} as a Worker secret…")
+    say(f"Storing {name} as a Worker secret...")
     generated = write_worker_config(load_config().get("worker", {}).get("url", ""))
     result = run([*WRANGLER, "secret", "put", name, "-c", generated.name], cwd=WORKER, input_text=value, capture=True)
     if result.returncode == 0:
@@ -222,7 +226,7 @@ def install_agent_requirements() -> None:
     venv = AGENT / ".venv"
     python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if not python.exists():
-        say("Creating agent/.venv…")
+        say("Creating agent/.venv...")
         run([sys.executable, "-m", "venv", str(venv)])
     run([str(python), "-m", "pip", "install", "--quiet", "--upgrade", "-r", str(AGENT / "requirements.txt")])
 
@@ -391,12 +395,12 @@ def guided(args) -> None:
     if all(github_variable(name, value) for name, value in variables.items() if value):
         say("Set the MCS_API_URL and MCS_SITE_NAME repository variables.")
     else:
-        say("Set these under Settings → Secrets and variables → Actions → Variables:")
+        say("Set these under Settings -> Secrets and variables -> Actions -> Variables:")
         for name, value in variables.items():
             say(f"  {name} = {value or '(the Worker URL, once deployed)'}")
     say(f"Then, in {pages}:")
-    say("  Pages → Source: GitHub Actions")
-    say("  Environments → github-pages → Deployment branches: add `map` (for logout maps)")
+    say("  Pages -> Source: GitHub Actions")
+    say("  Environments -> github-pages -> Deployment branches: add `map` (for logout maps)")
     say("Optional, to deploy the Worker from GitHub: add the secrets CLOUDFLARE_API_TOKEN")
     say("(template \"Edit Cloudflare Workers\") and CLOUDFLARE_ACCOUNT_ID.")
 
