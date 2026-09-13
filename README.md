@@ -114,7 +114,7 @@ private repo with Pages, which isn't free on GitHub.
 
 ```properties
 capture_interval_seconds=60   # how often "last thing seen" updates
-capture_width=640
+capture_width=1920
 state_interval_ticks=20       # how often state.json is refreshed (20 = 1 s)
 share_item_names=false        # custom item names can contain anything
 ```
@@ -162,7 +162,7 @@ Everything it shares goes through files in `%APPDATA%\.minecraft\mc-status\`:
   something changes, and at least every 5 seconds. Written to a temp file and
   moved into place, so it's never half-written. On logout it's marked
   `online: false` and keeps the last inventory.
-- **`latest.png`:** a 640px frame of the world, taken after the world is drawn
+- **`latest.png`:** a frame of the world up to 1920 px wide, taken after the world is drawn
   but before the HUD, so chat and coordinates never appear in it. Captured every
   60 s, and when you open the pause menu (which covers Save & Quit).
 - **`commands/*.json`:** how curses reach a singleplayer world, which has no
@@ -193,7 +193,7 @@ frame and loops over every pixel on the render thread. Measured on Intel
 integrated graphics at 854×480, it froze the game for about **600 ms** per
 capture, worse at higher resolutions.
 
-The mod now shrinks the frame on the GPU and reads back only 640×360. The slow
+The mod now shrinks the frame on the GPU (1920 px wide by default) and reads back only that. The slow
 part, copying out of the driver's mapped memory (~45 ms on that GPU), runs on a
 background thread. Frame times around a capture stay at their normal 5–10 ms.
 

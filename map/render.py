@@ -34,6 +34,9 @@ BLUEMAP_URL = (
 BLUEMAP_SHA256 = "0a40c9ef7778358e3fcbeedd47bde05a8fc816f7208ff56f4151e9348be7252a"
 
 HERE = Path(__file__).resolve().parent
+# Our additions to the BlueMap webapp: live marker feed, Ore UI theme, back button + disclaimer.
+WEB_SCRIPTS = ("live-feed.js", "site-chrome.js")
+WEB_STYLES = ("ore-ui.css",)
 WORK = HERE / "work"
 CONFIG = WORK / "config"
 WEBROOT = WORK / "web"
@@ -41,7 +44,7 @@ WEBROOT = WORK / "web"
 # Map ids double as URL segments; the Worker uses the same table to decide
 # which map your marker shows up on.
 MAPS = {
-    "overworld": ("minecraft:overworld", "Overworld", "#7dabff", "#000000", 0.1, 55, False),
+    "overworld": ("minecraft:overworld", "Overworld", "#7dabff", "#1e1e1f", 0.1, 55, False),
     "nether": ("minecraft:the_nether", "Nether", "#290000", "#150000", 0.6, -10000, True),
     "end": ("minecraft:the_end", "The End", "#080010", "#080010", 0.6, -10000, False),
 }
@@ -91,6 +94,12 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         encoding="utf-8",
     )
 
+    # Open tilted in 3D over the rendered area instead of zoomed out over the void.
+    # Same format as BlueMap's URL anchor: map:x:y:z:distance:rotation:angle:tilt:ortho:controls
+    start_location = ""
+    if start:
+        start_location = f"start-location: {q(f'{next(iter(maps))}:{start[0]}:64:{start[1]}:260:0.35:0.55:0:0:perspective')}\n"
+
     # Tiles stay gzipped on disk and the browser unpacks them, because GitHub
     # Pages won't send Content-Encoding for pre-compressed files.
     (CONFIG / "webapp.conf").write_text(
@@ -99,10 +108,11 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         "update-settings-file: true\n"
         "use-cookies: true\n"
         "default-to-flat-view: false\n"
+        f"{start_location}"
         f"live-data-root: {q(live_root)}\n"
         "client-decompression: true\n"
-        'scripts: [ "js/live-feed.js", "js/disclaimer.js" ]\n'
-        "styles: []\n",
+        f"scripts: [ {', '.join(q(f'js/{name}') for name in WEB_SCRIPTS)} ]\n"
+        f"styles: [ {', '.join(q(f'css/{name}') for name in WEB_STYLES)} ]\n",
         encoding="utf-8",
     )
 
@@ -300,8 +310,13 @@ def main() -> int:
         # Only used with SQL storage; a static host would serve it as plain text.
         (WEBROOT / "sql.php").unlink(missing_ok=True)
         (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
-        for script in ("live-feed.js", "disclaimer.js"):
+        (WEBROOT / "css").mkdir(parents=True, exist_ok=True)
+        for retired in ("disclaimer.js", "live-throttle.js"):  # replaced by site-chrome.js / live-feed.js
+            (WEBROOT / "js" / retired).unlink(missing_ok=True)
+        for script in WEB_SCRIPTS:
             shutil.copy2(HERE / script, WEBROOT / "js" / script)
+        for style in WEB_STYLES:
+            shutil.copy2(HERE / style, WEBROOT / "css" / style)
         # Tells the status page what this map shows.
         (WEBROOT / "mc-status.json").write_text(json.dumps({
             "rendered_at": int(time.time() * 1000),

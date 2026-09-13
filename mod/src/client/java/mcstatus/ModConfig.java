@@ -9,7 +9,7 @@ import java.util.Properties;
 
 final class ModConfig {
 	int captureIntervalSeconds = 60;
-	int captureWidth = 640;
+	int captureWidth = 1920;
 	int stateIntervalTicks = 20;
 	boolean shareItemNames = false;
 
@@ -36,7 +36,7 @@ final class ModConfig {
 		}
 
 		config.captureIntervalSeconds = Math.max(10, integer(props, "capture_interval_seconds", 60));
-		config.captureWidth = Math.clamp(integer(props, "capture_width", 640), 160, 1920);
+		config.captureWidth = Math.clamp(integer(props, "capture_width", 1920), 160, 1920);
 		config.stateIntervalTicks = Math.clamp(integer(props, "state_interval_ticks", 20), 5, 200);
 		config.shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
 		return config;

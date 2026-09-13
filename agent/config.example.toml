@@ -29,8 +29,8 @@ player = "nyannoying"
 # With the mod, its small HUD-free frames in <game_dir>/mc-status are used and
 # F2 screenshots are never published. Set a folder here to override that.
 # directory = "~/.minecraft/screenshots"
-max_width = 1280
-quality = 78
+max_width = 1920
+quality = 82
 
 [map]
 # When you log out, render the area around where you were and publish it to

@@ -693,8 +693,8 @@ def run_once(config: dict, state: dict) -> bool:
                 try:
                     image = encode_screenshot(
                         latest,
-                        int(screenshot_config.get("max_width", 1280)),
-                        int(screenshot_config.get("quality", 78)),
+                        int(screenshot_config.get("max_width", 1920)),
+                        int(screenshot_config.get("quality", 82)),
                     )
                     push_screenshot(config, image)
                     state["last_shot"] = stamp

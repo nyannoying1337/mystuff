@@ -23,7 +23,7 @@ import org.lwjgl.system.MemoryUtil;
  * <p>Vanilla screenshots read back the full-resolution frame and loop over every
  * pixel on the render thread; measured on Intel OpenGL at 854×480 that froze the
  * game for ~600 ms per capture. This runs right after the world is drawn (so
- * before the HUD and chat), shrinks it on the GPU into a ~640px texture, and
+ * before the HUD and chat), shrinks it on the GPU to capture_width (1920 px by default), and
  * reads back only that. The render thread spends about 1 ms; copying, flipping,
  * alpha and PNG encoding happen on the io pool, with no visible frame spike.
  */
