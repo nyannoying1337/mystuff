@@ -149,7 +149,8 @@ Set with `python setup.py` (or `npx wrangler secret put <NAME>` in `worker/`). N
 | `PUSH_TOKEN` | `setup.py token` | the agent's pushes |
 | `VIEW_KEY` | `setup.py invite` | the invite key viewers use |
 | `SERVER_PUSH_TOKEN` | `setup.py server` | the server tool's pushes and link requests |
-| `ADMIN_KEY` | `setup.py server` | the server tool's admin page |
+| `ADMIN_KEY` | `setup.py server` | the server tool's admin page, look only |
+| `CONTROL_KEY` | `setup.py server` | the server tool's admin page with actions and the console |
 | `PLAYER_LINK_SECRET` | `setup.py server` | signing player links |
 
 ## GitHub variables and secrets
@@ -166,7 +167,7 @@ Set with `python setup.py` (or `npx wrangler secret put <NAME>` in `worker/`). N
 | Secret | Used by |
 | --- | --- |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Deploy Worker; without them it skips itself |
-| `PUSH_TOKEN`, `VIEW_KEY`, `SERVER_PUSH_TOKEN`, `ADMIN_KEY`, `PLAYER_LINK_SECRET` | copied to the Worker on each deploy, if present |
+| `PUSH_TOKEN`, `VIEW_KEY`, `SERVER_PUSH_TOKEN`, `ADMIN_KEY`, `CONTROL_KEY`, `PLAYER_LINK_SECRET` | copied to the Worker on each deploy, if present |
 
 ## Things you can change in code
 

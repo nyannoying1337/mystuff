@@ -28,5 +28,5 @@ tag = "v2"
 new_sqlite_classes = ["ServerStore"]
 
 # Secrets, never committed: PUSH_TOKEN (the agent's) and VIEW_KEY (the invite key),
-# set by setup.py. The server tool adds SERVER_PUSH_TOKEN, ADMIN_KEY and
-# PLAYER_LINK_SECRET, set by `python setup.py server`.
+# set by setup.py. The server tool adds SERVER_PUSH_TOKEN, ADMIN_KEY, CONTROL_KEY
+# and PLAYER_LINK_SECRET, set by `python setup.py server`.

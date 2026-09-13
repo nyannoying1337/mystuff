@@ -1,12 +1,14 @@
 // The server tool page (server.html).
 //
 // Admins (opened with the admin key) get the server overview and a table of
-// every player; clicking one opens their page. A player's own link opens only
-// their page. The Worker decides what each key may see; this page just shows it.
+// every player; clicking one opens their page. The control key adds actions and
+// the console (server-control.js). A player's own link opens only their page.
+// The Worker decides what each key may see and do; this page just shows it.
 import { assetsReady, glyphWidths } from "./assets.js";
-import { advancementsPanel, chip, itemIcon, panel, statRows, statsPanel } from "./cards.js";
+import { advancementsPanel, chip, itemIcon, panel, statsPanel } from "./cards.js";
 import { API_URL, SITE_NAME } from "./config.js";
 import { fitPixels, inventoryNode, vitalsNode } from "./gui.js";
+import { consolePanel, controlsPanel, setSender } from "./server-control.js";
 import { clockTime, dimensionName, duration, el, timeAgo, titleCase } from "./util.js";
 
 const KEY_STORAGE = "mc-status-server-key";
@@ -29,6 +31,9 @@ let view = null;         // latest message from the Worker
 let selected = null;     // uuid of the open player page (admins)
 let filter = "";
 let sortBy = "status";
+let actionLog = [];      // control key only: recent actions and their results
+let notice = null;       // a refused action, shown for a few seconds
+let noticeTimer = null;
 
 document.getElementById("brand-name").textContent = `${SITE_NAME} server`;
 
@@ -132,7 +137,10 @@ function playerTable(players) {
   const body = shown.map((player) => {
     const row = el("tr", { tabindex: "0", "aria-label": `Open ${player.name}` }, [
       el("td", {}, [el("span", { class: "who-cell" }, [avatar(player, 32), el("b", { text: player.name })])]),
-      el("td", {}, [el("span", { class: "status-dot", "data-online": String(Boolean(player.online)), text: player.online ? "Online" : player.last_seen ? `Seen ${timeAgo(player.last_seen)}` : "Offline" })]),
+      el("td", {}, [el("span", {
+        class: "status-dot", "data-online": String(Boolean(player.online)), "data-banned": String(Boolean(player.banned)),
+        text: player.banned ? "Banned" : player.online ? "Online" : player.last_seen ? `Seen ${timeAgo(player.last_seen)}` : "Offline",
+      })]),
       el("td", { text: typeof player.health === "number" ? `${Math.ceil(player.health) / 2} ♥` : "—" }),
       el("td", { text: player.online && player.position ? `${dimensionName(player.dimension)} · ${player.position.map((n) => Math.round(n)).join(" ")}` : "—" }),
       el("td", { text: player.online && typeof player.ping === "number" ? `${player.ping} ms` : "—" }),
@@ -209,11 +217,23 @@ function playerPage(player, isAdmin) {
   const right = el("div", { class: "col" }, [
     player.advancements?.total ? advancementsPanel(player.advancements) : panel("Advancements", [el("p", { class: "empty", text: "None yet." })]),
   ]);
-  return [identity, el("div", { class: "grid" }, [left, right])];
+  const controls = isAdmin && view.control ? controlsPanel(player, { connected: view.connected, log: actionLog }) : null;
+  return [identity, controls, el("div", { class: "grid" }, [left, right])];
 }
 
 function render() {
   if (!view) return;
+  // the text fields survive re-renders; keep the caret where it was too
+  const active = document.activeElement;
+  const caret = active && "selectionStart" in active ? [active.selectionStart, active.selectionEnd] : null;
+  draw();
+  if (active && active !== document.body && root.contains(active) && document.activeElement !== active) {
+    active.focus();
+    if (caret) try { active.setSelectionRange(...caret); } catch { /* not a text field */ }
+  }
+}
+
+function draw() {
   forgetButton.hidden = false;
   const age = Date.now() - (view.received_at || 0);
   const quiet = age > (view.stale_ms || 90000);
@@ -230,16 +250,35 @@ function render() {
   } else {
     const wanted = selected || location.hash.match(/player=([0-9a-f-]{36})/)?.[1];
     const player = wanted && players.find((p) => p.uuid === wanted);
+    const top = notice ? el("p", { class: "notice", role: "alert", text: notice }) : null;
     if (player) {
       selected = player.uuid;
-      root.replaceChildren(...playerPage(player, true).filter(Boolean));
+      root.replaceChildren(...[top, ...playerPage(player, true)].filter(Boolean));
     } else {
       selected = null;
-      root.replaceChildren(...[serverBar(view.server, players), playerTable(players)].filter(Boolean));
+      const consoleSection = view.control ? consolePanel({ connected: view.connected, log: actionLog }) : null;
+      root.replaceChildren(...[top, serverBar(view.server, players), consoleSection, playerTable(players)].filter(Boolean));
     }
   }
   fitPixels();
 }
+
+function showNotice(text) {
+  notice = text;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { notice = null; render(); }, 6000);
+  render();
+}
+
+setSender((body) => {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    showNotice("Not connected to the Worker; try again in a moment.");
+    return null;
+  }
+  const id = crypto.randomUUID().slice(0, 13);
+  socket.send(JSON.stringify({ type: "action", id, ...body }));
+  return id;
+});
 
 // ---- connection -------------------------------------------------------------------
 
@@ -255,9 +294,20 @@ function connect() {
   ws.addEventListener("message", async (event) => {
     if (typeof event.data !== "string") return;
     const message = JSON.parse(event.data);
-    if (message.type !== "server") return;
+    if (message.type === "log") {
+      if (message.entries) actionLog = message.entries;
+      else if (message.entry) actionLog = [...actionLog.filter((entry) => entry.id !== message.entry.id), message.entry].slice(-50);
+    } else if (message.type === "link" && view) {
+      view = { ...view, connected: message.connected };
+    } else if (message.type === "action") {
+      if (!message.ok) showNotice(`Not done: ${message.error}`);
+      return;
+    } else if (message.type !== "server") {
+      return;
+    } else {
+      view = message;
+    }
     await assetsReady;
-    view = message;
     render();
   });
   ws.addEventListener("close", (event) => {

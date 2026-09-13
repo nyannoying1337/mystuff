@@ -29,11 +29,13 @@ import com.google.gson.JsonParser;
 import mcstatus.common.Snapshots;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
@@ -56,8 +58,9 @@ public class McStatusServer implements DedicatedServerModInitializer {
 	private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 	private final AtomicBoolean sending = new AtomicBoolean();
 	private final Map<UUID, JsonObject> offline = new HashMap<>();
+	private volatile ServerLink link;
 	private long offlineReadAt;
-	private long nextPushAt;
+	private volatile long nextPushAt;
 	private String workerUrl;
 	private String pushToken;
 	private String serverName;
@@ -82,6 +85,17 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(this::tick);
 		LinkCommands links = new LinkCommands(http, workerUrl, pushToken, siteUrl);
 		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> links.register(dispatcher));
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			ServerActions actions = new ServerActions(server, result -> {
+				link.send(GSON.toJson(result));
+				nextPushAt = 0;  // show the effect (kicked, banned, healed) right away
+			});
+			link = new ServerLink(http, workerUrl, pushToken, actions::handle);
+			link.start();
+		});
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			if (link != null) link.stop();
+		});
 		LOG.info("publishing {} to {} every {}s", serverName, workerUrl, intervalSeconds);
 	}
 
@@ -89,13 +103,18 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		long now = System.currentTimeMillis();
 		if (now < nextPushAt || sending.get()) return;
 		nextPushAt = now + intervalSeconds * 1000L;
-		String body;
+		JsonObject snapshot;
 		try {
-			body = GSON.toJson(snapshot(server, now));
+			snapshot = snapshot(server, now);
 		} catch (RuntimeException err) {
 			LOG.warn("snapshot failed: {}", err.toString());
 			return;
 		}
+		// over the admin link when it's up; a plain HTTPS push otherwise
+		snapshot.addProperty("type", "status");
+		String body = GSON.toJson(snapshot);
+		// WebSocket messages are capped at 1 MiB; a very big server pushes over HTTPS instead
+		if (link != null && body.length() < 900_000 && link.send(body)) return;
 		sending.set(true);
 		HttpRequest request = HttpRequest.newBuilder(URI.create(workerUrl + "/server/status"))
 			.timeout(Duration.ofSeconds(20))
@@ -126,6 +145,7 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		meta.addProperty("day", time / 24000);
 		meta.addProperty("time", Math.floorMod(time, 24000L));
 		meta.addProperty("weather", overworld.isThundering() ? "thunder" : overworld.isRaining() ? "rain" : "clear");
+		meta.addProperty("whitelist", server.getPlayerList().isUsingWhitelist());
 		meta.addProperty("generated_at", now);
 		out.add("server", meta);
 
@@ -133,17 +153,31 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		Set<UUID> online = new HashSet<>();
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			online.add(player.getUUID());
-			players.add(onlinePlayer(server, player));
+			JsonObject json = onlinePlayer(server, player);
+			addFlags(server, json, new NameAndId(player.getGameProfile()));
+			players.add(json);
 		}
 		if (now - offlineReadAt > OFFLINE_REFRESH_MS) {
 			offlineReadAt = now;
 			readOfflinePlayers(server);
 		}
 		offline.forEach((id, player) -> {
-			if (!online.contains(id)) players.add(player);
+			if (online.contains(id)) return;
+			JsonObject json = player.deepCopy();
+			addFlags(server, json, new NameAndId(id, json.get("name").getAsString()));
+			players.add(json);
 		});
 		out.add("players", players);
 		return out;
+	}
+
+	// Ban, whitelist and op status, read fresh every push, so the admin page's buttons match.
+	private static void addFlags(MinecraftServer server, JsonObject json, NameAndId who) {
+		var list = server.getPlayerList();
+		json.addProperty("banned", list.getBans().isBanned(who));
+		// PlayerList.isWhiteListed is true for everyone while the whitelist is off; ask the list itself
+		json.addProperty("whitelisted", list.getWhiteList().isWhiteListed(who));
+		json.addProperty("op", list.isOp(who));
 	}
 
 	private JsonObject onlinePlayer(MinecraftServer server, ServerPlayer player) {

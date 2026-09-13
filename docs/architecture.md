@@ -102,9 +102,10 @@ One Worker with two SQLite-backed Durable Objects: `StatusStore` for the status 
 | `GET /status`, `GET /shot` | `VIEW_KEY` | fallback for networks that block WebSockets |
 | `GET /pano?t=…` | `VIEW_KEY` | the panorama, cached as immutable per timestamp |
 | `GET /bluemap/<map>/live/players.json` | `VIEW_KEY` | map markers fallback |
-| `POST /server/status` | `SERVER_PUSH_TOKEN` | server tool: store players, broadcast per viewer |
-| `GET /server/live` | admin key or player link | server tool WebSocket, filtered per viewer |
-| `POST /server/links` | `SERVER_PUSH_TOKEN` | admin key or a player link, for `/mcstatus` |
+| `GET /server/connect` | `SERVER_PUSH_TOKEN` | the server's own WebSocket: status up, actions down |
+| `POST /server/status` | `SERVER_PUSH_TOKEN` | server tool push over HTTPS, when the socket is down |
+| `GET /server/live` | control key, admin key or player link | server tool WebSocket, filtered per viewer; control viewers send actions up it |
+| `POST /server/links` | `SERVER_PUSH_TOKEN` | the control key, admin key or a player link, for `/mcstatus` |
 | `GET /server/link` | admin key | a player link, for the admin page's "Copy player link" |
 
 ### Details
@@ -142,7 +143,9 @@ Plain HTML, CSS and ES modules served by GitHub Pages; no framework and no build
 ## The server tool
 
 - **The mod** has a server entrypoint (`McStatusServer`). Every `interval_seconds` on the server thread it snapshots the server (TPS, tick time, day, weather) and each online player (vitals, ping, position, inventory, statistics, advancements), using the same `Snapshots` code as the client. Offline players are read from the world's `players/stats` and `players/advancements` files every 5 minutes. The JSON is sent off the server thread.
-- **The Worker's `ServerStore`** keeps one row per player and rewrites only rows that changed; the overview row at most once a minute. Each viewer socket carries its role (admin, or player with a UUID), and every broadcast is filtered per socket.
+- **The server link.** `ServerLink` keeps a WebSocket open to `/server/connect` (reconnecting with backoff). Status goes up it, falling back to `POST /server/status` while it's down.
+- **The Worker's `ServerStore`** keeps one row per player and rewrites only rows that changed; the overview row at most once a minute. Each viewer socket carries its role (control, admin, or player with a UUID), and every broadcast is filtered per socket.
+- **Actions.** A control viewer sends `{type: "action", …}` up its socket. `checkAction` in `worker/server.js` allows only known actions with a valid UUID and bounded text, at most 30 a minute; the checked action goes down the server link, and an entry is added to the action log (`server:log`, last 50). `ServerActions` in the mod checks again, runs it on the server thread (vanilla commands as a "Web admin" source, collecting their output), and sends a result that completes the log entry.
 - **Player links** are `<uuid>.<HMAC-SHA256(PLAYER_LINK_SECRET, "player:" + uuid)>`, verified by recomputing; nothing is stored.
 - **`/mcstatus` commands** are Brigadier commands; the server fetches keys from `POST /server/links` with its token and sends a clickable link to the command's source only.
 

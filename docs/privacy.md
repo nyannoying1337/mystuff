@@ -43,7 +43,7 @@ On someone else's server, the mod doesn't collect coordinates, world facts, stat
 - **At most 10 viewers at once.** Hidden tabs give their slot back after a minute.
 - **Revoking:** `python setup.py invite` replaces the key. Anyone still watching with the old one is disconnected at the agent's next push (within a minute), not just on their next visit.
 - **Comparisons are constant time,** so keys can't be guessed character by character.
-- **The server tool** has its own keys: an admin key, and player links that each open one player's page. See [Server tool → How keys work](server-tool.md#how-keys-work).
+- **The server tool** has its own keys: a control key that can act on the server, an admin key that can only look, and player links that each open one player's page. Treat the control key like the server console's password. See [Server tool → How keys work](server-tool.md#how-keys-work).
 
 ## What isn't protected
 

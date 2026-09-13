@@ -351,7 +351,7 @@ def new_invite(site_url: str, push_to_github: bool = True) -> None:
 
 
 def new_server(api_url: str, site_url: str, server_name: str | None = None) -> None:
-    """The optional server tool: its three Worker secrets, and the mod's config file for the server."""
+    """The optional server tool: its four Worker secrets, and the mod's config file for the server."""
     if not api_url:
         raise SystemExit("No Worker URL: run the guided setup first, or pass --worker-url")
     say("This creates new server tool keys. Running it again replaces them: the server needs the new")
@@ -362,6 +362,7 @@ def new_server(api_url: str, site_url: str, server_name: str | None = None) -> N
     push_token = secrets.token_hex(32)
     for secret, value in (("SERVER_PUSH_TOKEN", push_token),
                           ("ADMIN_KEY", secrets.token_urlsafe(24)),
+                          ("CONTROL_KEY", secrets.token_urlsafe(32)),
                           ("PLAYER_LINK_SECRET", secrets.token_urlsafe(32))):
         worker_secret(secret, value)
         if github_secret(secret, value):
@@ -385,7 +386,7 @@ def new_server(api_url: str, site_url: str, server_name: str | None = None) -> N
     say("On the server (Fabric Loader + Fabric API, Minecraft matching the mod):")
     say("  1. put the mc-status jar in mods/")
     say(f"  2. copy {target.name} into config/")
-    say("  3. start it, then in game as an op: /mcstatus admin")
+    say("  3. start it, then in game as an op: /mcstatus admin (view) or /mcstatus control (actions, op level 4)")
     if not page:
         say("No site URL in agent/config.toml: fill in site_url yourself (<your site>/server.html).")
 

@@ -13,11 +13,18 @@ const rows = new Map();
 const sockets = [];
 const storage = {
   async list({ prefix }) { return new Map([...rows].filter(([k]) => k.startsWith(prefix)).sort()); },
-  async put(entries) { for (const [k, v] of Object.entries(entries)) rows.set(k, v); },
+  async get(key) { return rows.get(key); },
+  async put(entries, value) {
+    if (typeof entries === "string") rows.set(entries, value);
+    else for (const [k, v] of Object.entries(entries)) rows.set(k, v);
+  },
   async delete(keys) { for (const k of keys) rows.delete(k); },
 };
-const env = { PUSH_TOKEN: "agent-secret", SERVER_PUSH_TOKEN: "push-secret", ADMIN_KEY: "admin-key-123", PLAYER_LINK_SECRET: "link-secret-456" };
-const instance = new mod.ServerStore({ storage, getWebSockets: () => sockets.filter((s) => !s.closed), acceptWebSocket() {} }, env);
+const env = { PUSH_TOKEN: "agent-secret", SERVER_PUSH_TOKEN: "push-secret", ADMIN_KEY: "admin-key-123", PLAYER_LINK_SECRET: "link-secret-456", CONTROL_KEY: "control-key-789" };
+const instance = new mod.ServerStore({
+  storage, acceptWebSocket() {},
+  getWebSockets: (tag) => sockets.filter((s) => !s.closed && (!tag || s.tag === tag)),
+}, env);
 env.SERVER_STORE = { idFromName: (n) => n, get: () => instance };
 
 const call = (path, init) => {
@@ -33,6 +40,7 @@ const push = (players) => call("/server/status", {
 
 // --- keys: admin, signed player links, and everything else refused
 assert.deepEqual(await mod.viewerFor(env, "admin-key-123"), { role: "admin" });
+assert.deepEqual(await mod.viewerFor(env, "control-key-789"), { role: "admin", control: true });
 const aliceKey = await mod.playerKey(env, ALICE);
 assert.deepEqual(await mod.viewerFor(env, aliceKey), { role: "player", uuid: ALICE });
 assert.equal(await mod.viewerFor(env, `${BOB}.${aliceKey.split(".")[1]}`), null, "a signature only works for its own uuid");
@@ -54,6 +62,8 @@ assert.equal((await links({ admin: true }, "wrong")).status, 401, "only the serv
 assert.equal((await links({ admin: true }, aliceKey)).status, 401, "a player key is not the push token");
 assert.equal((await links({ admin: true }, "agent-secret")).status, 401, "the agent's token can't mint admin links");
 assert.equal((await (await links({ admin: true })).json()).key, "admin-key-123");
+assert.equal((await (await links({ control: true })).json()).key, "control-key-789");
+assert.equal((await links({ control: true }, "agent-secret")).status, 401, "the agent's token can't get the control key");
 assert.equal((await (await links({ uuid: ALICE })).json()).key, aliceKey);
 assert.equal((await links({ uuid: "not-a-uuid" })).status, 400);
 
@@ -72,14 +82,14 @@ assert.equal((await (await push([{ uuid: ALICE, name: "Alice", online: true, pos
   "after a minute the meta row is written again");
 
 // --- live views: admin sees everyone, a player only themselves
-function socket(viewer, hashOverride) {
-  const s = { sent: [], closed: null, send(m) { this.sent.push(JSON.parse(m)); }, close(code) { this.closed = { code }; } };
-  s.deserializeAttachment = () => ({ ...viewer, secretsHash: hashOverride ?? s.hash });
+function socket(viewer, hashOverride, tag = "server-viewer") {
+  const s = { tag, sent: [], closed: null, send(m) { this.sent.push(JSON.parse(m)); }, close(code) { this.closed = { code }; } };
+  s.deserializeAttachment = () => (tag === "server-link" ? { kind: "server" } : { ...viewer, secretsHash: hashOverride ?? s.hash });
   sockets.push(s);
   return s;
 }
 const secretsHash = async () => {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${env.ADMIN_KEY}|${env.PLAYER_LINK_SECRET}`));
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${env.CONTROL_KEY}|${env.ADMIN_KEY}|${env.PLAYER_LINK_SECRET}`));
   return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
 const admin = socket({ role: "admin" }); admin.hash = await secretsHash();
@@ -97,6 +107,66 @@ assert.equal(stale.closed?.code, 4001, "sockets from before a key change are clo
 const removed = await (await push([{ uuid: ALICE, name: "Alice", online: true }])).json();
 assert.equal(removed.removed, 1);
 assert.deepEqual((await instance.state()).players.map((p) => p.name), ["Alice"]);
+
+// --- actions: checked, control key only, forwarded to the connected server, logged
+assert.deepEqual(mod.checkAction({ id: "a", action: "kick", uuid: ALICE, reason: "bye\nnow" }), { id: "a", action: "kick", uuid: ALICE, reason: "byenow" });
+assert.deepEqual(mod.checkAction({ id: "b", action: "command", command: "//time set day" }), { id: "b", action: "command", command: "time set day" });
+assert.equal(mod.checkAction({ id: "c", action: "op", uuid: ALICE }).error, "unknown action", "only known actions");
+assert.equal(mod.checkAction({ id: "d", action: "kick", uuid: "Alice" }).error, "missing player");
+assert.equal(mod.checkAction({ id: "e", action: "gamemode", uuid: ALICE, mode: "god" }).error, "unknown game mode");
+assert.equal(mod.checkAction({ id: "f", action: "command", command: "   " }).error, "empty command");
+assert.equal(mod.checkAction({ action: "heal", uuid: ALICE }).error, "missing id");
+assert.equal(mod.checkAction({ id: "g", action: "command", command: "x".repeat(5000) }).command.length, 1000);
+
+const send = (s, body) => instance.webSocketMessage(s, JSON.stringify({ type: "action", ...body }));
+const control = socket({ role: "admin", control: true }); control.hash = await secretsHash();
+admin.sent.length = 0;
+await send(admin, { id: "view-only", action: "kick", uuid: ALICE });
+assert.equal(admin.sent.at(-1).ok, false, "the admin key can only look");
+await send(control, { id: "nobody-home", action: "heal", uuid: ALICE });
+assert.deepEqual(control.sent.at(-1), { type: "action", id: "nobody-home", ok: false, error: "The server isn't connected." });
+
+const serverLink = socket(null, null, "server-link");
+await send(control, { id: "k1", action: "kick", uuid: ALICE, reason: "test" });
+assert.deepEqual(serverLink.sent.at(-1), { type: "action", id: "k1", action: "kick", uuid: ALICE, reason: "test" }, "the server gets exactly the checked action");
+assert.equal(control.sent.find((m) => m.type === "action" && m.id === "k1").ok, true);
+let entry = control.sent.findLast((m) => m.type === "log").entry;
+assert.deepEqual([entry.action, entry.target, entry.status, entry.detail], ["kick", "Alice", "sent", "test"]);
+assert.ok(!admin.sent.some((m) => m.type === "log"), "the log only goes to control viewers");
+assert.ok(!alice.sent.some((m) => m.type === "log"));
+
+await instance.webSocketMessage(serverLink, JSON.stringify({ type: "result", id: "k1", ok: true, output: "Kicked Alice:\ntest" }));
+entry = control.sent.findLast((m) => m.type === "log").entry;
+assert.deepEqual([entry.status, entry.output], ["done", "Kicked Alice:\ntest"]);
+assert.equal(JSON.parse(rows.get("server:log")).length, 1, "one log entry, updated in place");
+
+await send(control, { id: "bad", action: "command", command: "" });
+assert.equal(serverLink.sent.at(-1).id, "k1", "rejected actions never reach the server");
+
+// status over the server's own socket works like a push
+await instance.webSocketMessage(serverLink, JSON.stringify({ type: "status", server: { name: "Test" }, players: [{ uuid: ALICE, name: "Alice", online: true, position: [1, 1, 1] }] }));
+assert.deepEqual(control.sent.findLast((m) => m.type === "server").players[0].position, [1, 1, 1]);
+assert.equal(control.sent.findLast((m) => m.type === "server").connected, true);
+assert.equal(control.sent.findLast((m) => m.type === "server").control, true);
+assert.equal(admin.sent.findLast((m) => m.type === "server").control, false);
+
+// rate limit
+for (let i = 0; i < 40; i++) await send(control, { id: `spam${i}`, action: "heal", uuid: ALICE });
+assert.equal(control.sent.at(-1).error, "Too many actions; wait a minute.");
+
+// the server's socket closing tells viewers
+await instance.webSocketClose(serverLink, 1000, "bye");
+serverLink.closed = { code: 1000 };
+assert.deepEqual(control.sent.at(-1), { type: "link", connected: false });
+
+// the routes: the server connects with its token only, and viewers can't pretend to be it
+assert.equal((await call("/server/connect", { headers: { Upgrade: "websocket", Authorization: "Bearer agent-secret" } })).status, 401);
+assert.equal((await call("/server/connect", { headers: { Upgrade: "websocket" } })).status, 401);
+let forwarded;
+instance.fetch = async (request) => { forwarded = request; return new Response(null, { status: 204 }); };
+await call(`/server/live?key=admin-key-123`, { headers: { Upgrade: "websocket", "X-Server-Link": "1", "X-Viewer": '{"role":"admin","control":true}' } });
+assert.equal(forwarded.headers.get("X-Server-Link"), null, "a client's X-Server-Link header is dropped");
+assert.deepEqual(JSON.parse(forwarded.headers.get("X-Viewer")), { role: "admin" }, "the Worker decides the role, not the client");
 
 // --- without its secrets the server tool is off
 const bare = { PUSH_TOKEN: "agent-secret", SERVER_STORE: env.SERVER_STORE };

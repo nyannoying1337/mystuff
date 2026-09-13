@@ -29,6 +29,7 @@ import net.minecraft.server.players.NameAndId;
  * /mcstatus link                 your own page (any player)
  * /mcstatus link &lt;player&gt;        someone's page (moderators)
  * /mcstatus admin                the admin page, with every player (server admins)
+ * /mcstatus control              the admin page with actions and the console (server owners, op level 4)
  *
  * Links arrive as a clickable chat message only the person who asked can see.
  * The keys come from the Worker, which the server authenticates to with its
@@ -56,7 +57,16 @@ final class LinkCommands {
 					.executes(this::playerLinks)))
 			.then(Commands.literal("admin")
 				.requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
-				.executes(this::adminLink)));
+				.executes(this::adminLink))
+			.then(Commands.literal("control")
+				.requires(Commands.hasPermission(Commands.LEVEL_OWNERS))
+				.executes(this::controlLink)));
+	}
+
+	private int controlLink(CommandContext<CommandSourceStack> context) {
+		sendLink(context.getSource(), requestKey("{\"control\":true}"),
+			"Control page (actions and console)", "Keep this to yourself: it can kick, ban and run any command.");
+		return 1;
 	}
 
 	private int ownLink(CommandContext<CommandSourceStack> context) {

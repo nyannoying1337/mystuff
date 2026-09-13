@@ -112,7 +112,7 @@ Optional. Add these repository **secrets** and every push that touches `worker/`
 | `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → API Tokens → "Edit Cloudflare Workers" template |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard, right sidebar of Workers & Pages |
 | `PUSH_TOKEN`, `VIEW_KEY` | set by the wizard if `gh` is installed |
-| `SERVER_PUSH_TOKEN`, `ADMIN_KEY`, `PLAYER_LINK_SECRET` | set by `setup.py server` if `gh` is installed |
+| `SERVER_PUSH_TOKEN`, `ADMIN_KEY`, `CONTROL_KEY`, `PLAYER_LINK_SECRET` | set by `setup.py server` if `gh` is installed |
 
 Without the Cloudflare secrets the workflow skips itself (it still shows as successful), and you deploy with `python setup.py deploy`.
 

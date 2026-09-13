@@ -364,6 +364,41 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 .player-identity { padding: 0; }
 .vitals-well { margin-top: 16px; padding: 12px; background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius); }
 .vitals-well .gui { margin: 0 auto; }
+.status-dot[data-banned="true"] { color: #ffb4ae; }
+.status-dot[data-banned="true"]::before { background: #e0524a; }
+
+/* control key: actions, console, action log */
+.btn-danger { color: #fff; background: #a8352d; box-shadow: inset 0 2px 0 #c9534a, inset 0 -3px 0 #6e1f19; }
+.btn-danger:hover { background: #962f28; }
+.btn[data-armed="true"] { background: #e0524a; box-shadow: inset 0 2px 0 #f07a72, inset 0 -3px 0 #8f2a23; color: #fff; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.notice { margin: 0 0 16px; padding: 10px 14px; border: 2px solid #6e1f19; border-radius: var(--radius); background: #3a1d1b; color: #ffd6d2; font-weight: 600; }
+.controls-panel { margin-top: 20px; }
+.console-panel { margin-bottom: 20px; }
+.controls { margin: 0; padding: 0; border: 0; display: grid; gap: 10px; }
+.control-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.control-input, .console-input, .control-select {
+  height: 36px; padding: 0 10px; color: var(--text); font: inherit; font-size: 14px;
+  background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius);
+}
+.control-input { flex: 1; min-width: 180px; }
+.control-input:focus, .console-input:focus, .control-select:focus { border-color: var(--gold); outline: none; }
+.control-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.control-flags { font-size: 13px; color: var(--text-3); }
+.console-row { display: flex; gap: 8px; align-items: center; }
+.console-prompt { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--gold); }
+.console-input { flex: 1; min-width: 0; font-family: ui-monospace, Consolas, monospace; }
+.log-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; }
+.log-scroll { max-height: 320px; overflow-y: auto; padding-right: 4px; }
+.log-row { padding: 8px 10px; background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius); font-size: 13px; min-width: 0; }
+.log-head { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+.log-head > :nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.log-head code { font-family: ui-monospace, Consolas, monospace; color: var(--text); }
+.log-head time { color: var(--text-3); white-space: nowrap; font-size: 12px; }
+.log-status { flex: none; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; background: var(--panel-raised); color: var(--text-2); }
+.log-row[data-status="done"] .log-status { background: #2f4a27; color: #d6f5c8; }
+.log-row[data-status="failed"] .log-status { background: #5a2420; color: #ffd6d2; }
+.log-output { margin-top: 4px; color: var(--text-2); font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* statistics inside a column (player pages): no extra gap, two tiles per row */
 .col .stats-panel { margin-top: 0; }
 .col .stats-panel .tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }

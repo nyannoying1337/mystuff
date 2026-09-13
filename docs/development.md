@@ -40,6 +40,7 @@ PUSH_TOKEN=local-push-token
 VIEW_KEY=local-view-key
 SERVER_PUSH_TOKEN=local-server-token
 ADMIN_KEY=local-admin-key
+CONTROL_KEY=local-control-key
 PLAYER_LINK_SECRET=local-link-secret
 ```
 
