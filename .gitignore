@@ -6,3 +6,4 @@ site/.cache/
 .wrangler/
 node_modules/
 __pycache__/
+agent/agent.log*
