@@ -9,7 +9,7 @@ works fine behind a captive portal.
 ┌─────────────────────────────┐   POST    ┌────────────────┐  GET  ┌──────────────┐
 │ Minecraft + mc-status mod   │           │ /status /shot  │ ◀──── │ status page  │
 │   writes state.json,        │           │ /bluemap/…     │       │ /map         │
-│   latest.png; runs curses   │           │  + KV store    │       └──────▲───────┘
+│   latest.png; runs curses   │           │ + Durable Obj. │       └──────▲───────┘
 │        ▲ commands  │ files  │           └───────▲────────┘              │
 │        │           ▼        │                   │                       │
 │ agent.py ───────────────────┼───────────────────┘                       │
@@ -46,7 +46,6 @@ yours to click through.
 ```bash
 cd worker
 npx wrangler login
-npx wrangler kv namespace create STATUS     # paste the id into wrangler.toml
 npx wrangler deploy
 cd ..
 powershell -ExecutionPolicy Bypass -File setup-token.ps1
@@ -58,8 +57,21 @@ checks that the Worker accepts it. The token is never printed. Run it again to
 rotate the token.
 
 `wrangler.toml` routes it at `status-api.nyannoying.de`. Cloudflare creates that
-DNS record on deploy, because the domain's DNS is on Cloudflare. The free tier
-covers this comfortably: 100k requests a day.
+DNS record on deploy, because the domain's DNS is on Cloudflare.
+
+**Staying free.** Everything here fits the free plans; going over a limit
+makes requests fail until 00:00 UTC, it never bills you.
+
+| Service | Free limit | This setup uses |
+| --- | --- | --- |
+| Workers requests | 100,000/day | agent: ~8,600/day if you play all day, 1,440/day while away; plus ~5,800/day per viewer with the page open all day |
+| Storage writes | 100,000/day (SQLite Durable Object) | one per push |
+| GitHub Actions | unlimited on public repos | one deploy per logout or push to `main` |
+| GitHub Pages | 1 GB site, 100 GB/month bandwidth | ~10 MB map + page |
+
+State lives in a SQLite-backed Durable Object rather than KV on purpose: KV's
+free plan allows only 1,000 writes a day, which an agent pushing every 10 s
+uses up in under three hours.
 
 ### 2. The mod
 
@@ -108,6 +120,10 @@ can't read CPU/GPU temperatures, so temperature curses may never fire there.
 The `pages.yml` workflow deploys `site/` on every push to `main` or `map`.
 Under Settings → Pages, set the source to *GitHub Actions*. Enforce HTTPS while
 you're there.
+
+Also allow the map branch to deploy: Settings → Environments → github-pages →
+Deployment branches → add `map`. Without it, logout maps are pushed but never
+go live.
 
 ## The mod
 

@@ -621,7 +621,8 @@ def screenshot_directory(config: dict) -> Path | None:
     return mod_dir(config) if source_type(config) == "mod" else None
 
 
-def run_once(config: dict, state: dict) -> None:
+def run_once(config: dict, state: dict) -> bool:
+    """Collect and push once. Returns whether the player is in game."""
     raw = read_mod_state(config) if source_type(config) == "mod" else None
     payload = {
         "generated_at": int(time.time() * 1000),
@@ -668,6 +669,7 @@ def run_once(config: dict, state: dict) -> None:
         "online" if player.get("online") else "offline",
         len(player.get("hotbar", [])) + len(player.get("inventory", [])),
     )
+    return bool(player.get("online"))
 
 
 def main() -> int:
@@ -718,12 +720,17 @@ def main() -> int:
         ))
         return 0
 
-    interval = int(config.get("agent", {}).get("interval_seconds", 20))
+    agent_config = config.get("agent", {})
+    interval = int(agent_config.get("interval_seconds", 10))
+    # Nothing changes while you're away, so push rarely — well under the page's
+    # 90 s "connection lost" threshold, and easy on the free tiers.
+    offline_interval = int(agent_config.get("offline_interval_seconds", 60))
     state: dict = {}
 
     while True:
+        online = False
         try:
-            run_once(config, state)
+            online = run_once(config, state)
         except requests.RequestException as err:
             log.warning("push failed: %s", err)
         except Exception:
@@ -731,7 +738,17 @@ def main() -> int:
 
         if args.once:
             return 0
-        time.sleep(interval)
+        # While offline, check the mod's file every few seconds so a join is
+        # picked up quickly, but only push when the interval is up or you're back.
+        if online:
+            time.sleep(interval)
+            continue
+        waited = 0
+        while waited < offline_interval:
+            time.sleep(min(5, interval))
+            waited += min(5, interval)
+            if source_type(config) == "mod" and collect_player_mod(config, read_mod_state(config)).get("online"):
+                break
 
 
 if __name__ == "__main__":

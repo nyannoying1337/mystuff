@@ -8,12 +8,15 @@ routes = [
   { pattern = "status-api.nyannoying.de", custom_domain = true },
 ]
 
-# Create the namespace first:
-#   npx wrangler kv namespace create STATUS
-# then paste the returned id below.
-[[kv_namespaces]]
-binding = "STATUS"
-id = "802ad94f883342dca526bf223c7077e0"
+# State lives in a SQLite-backed Durable Object: free plan allows 100,000
+# writes a day (KV would only allow 1,000). Nothing to create by hand.
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "StatusStore"
 
-# Set the shared secret (never commit it):
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StatusStore"]
+
+# The push token is a secret, never committed. setup-token.ps1 sets it:
 #   npx wrangler secret put PUSH_TOKEN

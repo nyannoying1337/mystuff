@@ -232,6 +232,12 @@ def publish(remote: str) -> None:
     run(["git", "init", "-q", "-b", "map", str(stage)])
     shutil.copytree(WEBROOT, stage, dirs_exist_ok=True)
     (stage / ".nojekyll").touch()
+    # GitHub only runs workflows that exist in the pushed branch, so the map
+    # branch carries a copy of the site deploy (which builds from main anyway).
+    # The github-pages environment has to allow the `map` branch to deploy.
+    workflow = HERE.parent / ".github" / "workflows" / "pages.yml"
+    (stage / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(workflow, stage / ".github" / "workflows" / "pages.yml")
     run(["git", "add", "-A"], cwd=stage)
     run(["git", "-c", "user.name=mc-status", "-c", "user.email=mc-status@localhost",
          "commit", "-q", "-m", "Render map"], cwd=stage)

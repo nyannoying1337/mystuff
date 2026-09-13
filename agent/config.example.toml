@@ -5,7 +5,9 @@ url = "https://status-api.nyannoying.de"
 token = "change-me"
 
 [agent]
+# How often to push while you're in game, and while you're not.
 interval_seconds = 10
+offline_interval_seconds = 60
 
 [source]
 # "mod"  — singleplayer: the mc-status Fabric mod writes your state, and runs

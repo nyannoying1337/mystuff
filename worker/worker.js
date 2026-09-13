@@ -1,3 +1,26 @@
+import { DurableObject } from "cloudflare:workers";
+
+// All state lives in one SQLite-backed Durable Object. On the Workers Free
+// plan, KV allows 1,000 writes a day — an agent pushing every 10 s uses that
+// up in under three hours — while these Durable Objects allow 100,000.
+export class StatusStore extends DurableObject {
+  async read(key) {
+    return (await this.ctx.storage.get(key)) ?? null;
+  }
+
+  async readMany(keys) {
+    return Object.fromEntries(await this.ctx.storage.get(keys));
+  }
+
+  async write(entries) {
+    await this.ctx.storage.put(entries);
+  }
+}
+
+function store(env) {
+  return env.STORE.get(env.STORE.idFromName("status"));
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -37,7 +60,7 @@ const STALE_MS = 90000;
 // This answers those requests from the last status push, so the static map on
 // GitHub Pages shows where you are right now.
 async function bluemapPlayers(env, mapId) {
-  const stored = await env.STATUS.get("current");
+  const stored = await store(env).read("current");
   const players = [];
   if (stored) {
     const status = JSON.parse(stored);
@@ -95,7 +118,7 @@ export default {
     }
 
     if (path === "/status" && request.method === "GET") {
-      const stored = await env.STATUS.get("current");
+      const stored = await store(env).read("current");
       if (!stored) {
         return json({ state: "never-reported" }, 404);
       }
@@ -119,19 +142,18 @@ export default {
       }
 
       payload.received_at = Date.now();
-      await env.STATUS.put("current", JSON.stringify(payload));
+      await store(env).write({ current: JSON.stringify(payload) });
       return json({ ok: true });
     }
 
     if (path === "/shot" && request.method === "GET") {
-      const image = await env.STATUS.get("shot", "arrayBuffer");
-      if (!image) return json({ error: "no screenshot yet" }, 404);
-      const takenAt = (await env.STATUS.get("shot-taken-at")) || "";
-      return new Response(image, {
+      const { shot, "shot-taken-at": takenAt } = await store(env).readMany(["shot", "shot-taken-at"]);
+      if (!shot) return json({ error: "no screenshot yet" }, 404);
+      return new Response(shot, {
         headers: {
           "Content-Type": "image/jpeg",
           "Cache-Control": "no-store",
-          "X-Taken-At": takenAt,
+          "X-Taken-At": takenAt || "",
           ...CORS,
         },
       });
@@ -142,12 +164,12 @@ export default {
 
       const image = await request.arrayBuffer();
       if (image.byteLength === 0) return json({ error: "empty body" }, 400);
-      if (image.byteLength > 5 * 1024 * 1024) {
+      // Durable Object values max out at 2 MB; the agent sends ~50 kB JPEGs.
+      if (image.byteLength > 2 * 1024 * 1024 - 1024) {
         return json({ error: "screenshot too large" }, 413);
       }
 
-      await env.STATUS.put("shot", image);
-      await env.STATUS.put("shot-taken-at", String(Date.now()));
+      await store(env).write({ shot: image, "shot-taken-at": String(Date.now()) });
       return json({ ok: true, bytes: image.byteLength });
     }
 
