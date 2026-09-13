@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "mc-status-shot",
+	"version": "${version}",
+	"name": "mc-status screenshots",
+	"description": "Overwrites screenshots/latest.png every few seconds so the mc-status agent always has a fresh frame to publish.",
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"mcstatus.shot.ShotClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

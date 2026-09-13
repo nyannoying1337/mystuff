@@ -8,19 +8,30 @@ behind a captive portal.
 your PC                     Cloudflare Worker              GitHub Pages
 ┌──────────────┐   POST     ┌──────────────┐    GET      ┌──────────────┐
 │ agent.py     │ ─────────▶ │ /status /shot│ ◀────────── │ index.html   │
-│ fastfetch    │  every 20s │  + KV store  │  every 15s  │ your domain  │
-│ RCON         │            └──────────────┘             └──────────────┘
-│ screenshots/ │
+│ fastfetch    │  every 20s │ /bluemap/…   │  every 15s  │ map/ (render)│
+│ RCON ◀─curses│            │  + KV store  │             │ your domain  │
+│ screenshots/ │            └──────────────┘             └──────────────┘
 └──────────────┘
+      ▲ latest.png every 15s          map/render.py ──▶ `map` branch ──▶ /map
+  mod/ (Fabric)
 ```
+
+| Folder | What it is |
+| --- | --- |
+| `worker/` | Cloudflare Worker: stores the latest push, serves it to the page and the map |
+| `agent/` | Python agent on your PC: collects, pushes, runs curses |
+| `site/` | The status page |
+| `mod/` | Optional Fabric client mod that keeps a fresh screenshot on disk |
+| `map/` | BlueMap render + publish script |
 
 ## What shows up
 
 Health and hunger with half-icons, XP bar and level, the full hotbar with stack
 counts, durability bars and an enchant tint, coordinates, dimension, your most
-recent in-game screenshot, and the usual fastfetch line-up. When the agent goes
-quiet for 90 seconds the page swaps to a "connection lost" panel instead of
-showing stale numbers.
+recent in-game screenshot, the usual fastfetch line-up, recently fired curses,
+and a link to the 3D world map with you on it. When the agent goes quiet for 90
+seconds the page swaps to a "connection lost" panel instead of showing stale
+numbers.
 
 ## 1. The Worker
 
@@ -80,11 +91,29 @@ DNS-only rather than proxied.
 The agent watches your screenshots folder and publishes whichever file is
 newest. So out of the box, **F2 in game is the publish button** — no mod needed.
 
-To automate it later, a small Fabric client mod is about 80 lines: on client
-tick, every ~15 seconds call `ScreenshotRecorder.saveScreenshot(...)`
-overwriting a single `latest.png`, and let the agent keep doing the uploading.
-Capturing at `DISCONNECT` doesn't work — the world is already being torn down
-and there's no frame left to grab.
+### The mod (optional)
+
+`mod/` is a Fabric client mod for Minecraft 26.2 that overwrites
+`screenshots/latest.png` every 15 seconds, so the page always has a recent
+frame. The agent keeps doing the uploading.
+
+- **Get the jar:** every push that touches `mod/` builds it. Open the repo's
+  *Actions* tab → *Build mod* → the latest run → *mc-status-shot* artifact. Or
+  build it yourself with `cd mod && ./gradlew build` (Java 25), which puts the
+  jar in `mod/build/libs/`.
+- **Install:** drop it into `.minecraft/mods/` next to Fabric API.
+- **Configure:** the first launch writes `config/mc-status-shot.properties`:
+
+  ```properties
+  interval_seconds=15
+  hide_hud=true        # hides HUD and chat for the one captured frame
+  file_name=latest.png
+  ```
+
+It only captures actual gameplay. It skips frames while any menu is open
+(chat included), while paused, or while no world is loaded. Each file is written
+to `latest.png.tmp` first and then moved into place, so the agent never uploads
+a half-written image.
 
 ## Item colours
 
@@ -110,12 +139,76 @@ Two things to decide for yourself:
 
 - **Coordinates.** Fine for a solo world. If anyone else has your server
   address, set `hide_coordinates = true`.
-- **Screenshots.** They capture your HUD, which includes chat.
+- **Screenshots.** F2 captures your HUD, which includes chat. The mod hides the
+  HUD for its frames (`hide_hud=true`), but anything you press F2 on yourself is
+  published as-is.
+- **The map.** It shows your whole world to anyone with the link, including
+  bases. Your marker follows `hide_coordinates`: when it's on, no marker.
 
-## Not yet built
+## The map
 
-- The Fabric mod (F2 works meanwhile)
-- BlueMap export committed by an Action, with your live position as a marker on
-  top of the static render
-- The cursed version: system state driving the world, so a hot GPU sets things
-  on fire
+A BlueMap 3D render of your world at `/map`, with your live position on top.
+
+The world only exists on your machine, so the render runs there too.
+`map/render.py` renders it and force-pushes the result to a separate `map`
+branch as a single commit, so re-renders never pile tile history onto `main`.
+Any push to `map` redeploys Pages, and the workflow copies the branch into
+`/map`.
+
+Run it on the machine that has the world (Python 3.11+, Java 21+, git with push
+access):
+
+```bash
+python map/render.py --world ~/server/world --accept-mojang-eula --publish
+```
+
+- **`--accept-mojang-eula`:** BlueMap needs textures from the Minecraft
+  client jar and downloads it from Mojang. The flag confirms you own the game.
+  The jar stays in `map/work/` and is never published.
+- **Live marker URL:** taken from `worker.url` in `agent/config.toml`. Pass
+  `--live-url https://status-api.yourdomain.tld/bluemap` to override.
+- **Re-rendering:** later runs only re-render chunks that changed. Add `--force`
+  after changing map settings.
+- **Automating:** a nightly cron or systemd timer running the same command
+  works. The render is incremental.
+
+How the live marker works: the map's `live-data-root` points at the Worker. The
+Worker answers BlueMap's `…/live/players.json` requests from your last status
+push, and only shows the marker on the map for your current dimension.
+BlueMap normally polls every second. `map/live-throttle.js` slows that to every
+15 seconds and pauses while the tab is hidden, so one open tab stays well
+inside the Workers free tier. It depends on BlueMap internals, so if you bump
+`BLUEMAP_VERSION` in `render.py`, check the marker still moves.
+
+**Size:** tiles stay gzipped and the browser decompresses them. A 169-chunk
+test world rendered to about 6 MB, so expect roughly 35 MB per 1,000 explored
+chunks. GitHub Pages caps a site at 1 GB, so for a huge world add a
+`render-mask` in `render.py`.
+
+## Cursed mode
+
+The machine reaches into the world: a hot GPU sets the ground around you on
+fire, a hot CPU brings a thunderstorm, low RAM makes you slow, and 12 hours of
+uptime tells you to go to bed. Fired curses show up on the status page.
+
+It is off by default. Enable it under `[cursed]` in `agent/config.toml`. Rules
+are plain RCON commands, so you can write your own:
+
+```toml
+[[cursed.rules]]
+name = "gpu on fire"
+when = "gpu_temp >= 80"        # cpu_temp gpu_temp mem_percent uptime_hours health foodlevel xplevel
+cooldown_seconds = 120
+commands = ['execute at {player} run fill ~-2 ~ ~-2 ~2 ~ ~2 minecraft:fire replace minecraft:air']
+```
+
+A rule fires when its condition becomes true, then again every
+`cooldown_seconds` while it stays true. Curses only run while you're in game.
+`agent.py --dry-run` prints the live metrics and which rules would fire,
+without running anything.
+
+Temperatures come from fastfetch's `--cpu-temp` / `--gpu-temp`, which need
+sensor support on your system. If `--dry-run` shows no `cpu_temp`, rules on it
+never fire.
+
+**Fire spreads.** Try the fire rule on a copy of your world first.

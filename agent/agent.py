@@ -7,6 +7,7 @@ import argparse
 import io
 import json
 import logging
+import operator
 import re
 import shutil
 import subprocess
@@ -26,6 +27,19 @@ log = logging.getLogger("agent")
 # rather than filtered, so a Minecraft update can't silently start leaking
 # something new.
 SAFE_STATS = ("Health", "foodLevel", "XpLevel", "XpP", "Air", "SelectedItemSlot")
+
+# Minecraft usernames. Anything else is refused before it can be spliced into
+# an RCON command.
+PLAYER_NAME = re.compile(r"^[A-Za-z0-9_]{3,16}$")
+
+CURSE_CONDITION = re.compile(r"^\s*([a-z_]+)\s*(>=|<=|>|<|==)\s*(-?\d+(?:\.\d+)?)\s*$")
+COMPARE = {
+    ">=": operator.ge,
+    "<=": operator.le,
+    ">": operator.gt,
+    "<": operator.lt,
+    "==": operator.eq,
+}
 
 
 def load_config(path: Path) -> dict:
@@ -53,17 +67,26 @@ def collect_system() -> dict:
     if not shutil.which("fastfetch"):
         return {}
 
-    try:
-        raw = subprocess.run(
-            ["fastfetch", "--format", "json"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=True,
-        ).stdout
-        modules = json.loads(raw)
-    except (subprocess.SubprocessError, json.JSONDecodeError) as err:
-        log.warning("fastfetch failed: %s", err)
+    # Temperatures are only detected when asked for. Older fastfetch builds
+    # reject the flags, so fall back to a plain run rather than losing everything.
+    modules = None
+    for command in (
+        ["fastfetch", "--format", "json", "--cpu-temp", "true", "--gpu-temp", "true"],
+        ["fastfetch", "--format", "json"],
+    ):
+        try:
+            raw = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=True,
+            ).stdout
+            modules = json.loads(raw)
+            break
+        except (subprocess.SubprocessError, json.JSONDecodeError) as err:
+            log.warning("fastfetch failed (%s): %s", " ".join(command[3:]) or "plain", err)
+    if not isinstance(modules, list):
         return {}
 
     # fastfetch emits a list of {type, result} objects; index them by type.
@@ -157,6 +180,9 @@ def collect_player(config: dict) -> dict:
     player = rcon_config.get("player")
     if not player:
         return {"online": False}
+    if not PLAYER_NAME.match(player):
+        log.error("rcon.player %r is not a valid Minecraft name", player)
+        return {"online": False}
 
     try:
         with MCRcon(
@@ -190,6 +216,10 @@ def collect_player(config: dict) -> dict:
             result["position"] = None
         else:
             result["position"] = [round(axis, 1) for axis in position]
+            rotation = data.get("Rotation")
+            if isinstance(rotation, list) and len(rotation) == 2:
+                # [yaw, pitch] — only used to point the marker on the map
+                result["rotation"] = [round(angle, 1) for angle in rotation]
 
     inventory = data.get("Inventory")
     if isinstance(inventory, list):
@@ -212,6 +242,88 @@ def collect_player(config: dict) -> dict:
             }
 
     return result
+
+
+def curse_metrics(system: dict, player: dict) -> dict:
+    """Numbers a curse rule can test against. Missing sensors are left out, so
+    a rule on them simply never fires."""
+    metrics = {}
+    for key in ("cpu_temp", "gpu_temp"):
+        if isinstance(system.get(key), (int, float)):
+            metrics[key] = float(system[key])
+
+    used, total = system.get("mem_used"), system.get("mem_total")
+    if isinstance(used, (int, float)) and isinstance(total, (int, float)) and total:
+        metrics["mem_percent"] = used / total * 100
+
+    uptime = system.get("uptime")
+    if isinstance(uptime, dict) and isinstance(uptime.get("uptime"), (int, float)):
+        metrics["uptime_hours"] = uptime["uptime"] / 3_600_000
+
+    for key in ("health", "foodlevel", "xplevel"):
+        if isinstance(player.get(key), (int, float)):
+            metrics[key] = float(player[key])
+    return metrics
+
+
+def parse_condition(text: str):
+    match = CURSE_CONDITION.match(text or "")
+    if not match:
+        raise ValueError(f"can't read condition {text!r} — expected e.g. 'gpu_temp >= 80'")
+    metric, op, threshold = match.groups()
+    return metric, COMPARE[op], float(threshold)
+
+
+def due_curses(config: dict, metrics: dict, state: dict, now: float) -> list[dict]:
+    """Rules whose condition holds and whose cooldown has run out."""
+    cursed = config.get("cursed", {})
+    if not cursed.get("enabled", False):
+        return []
+
+    last_fired = state.setdefault("curse_fired", {})
+    due = []
+    for rule in cursed.get("rules", []):
+        name = rule.get("name") or rule.get("when", "unnamed")
+        try:
+            metric, compare, threshold = parse_condition(rule.get("when", ""))
+        except ValueError as err:
+            log.warning("curse %r skipped: %s", name, err)
+            continue
+        if metric not in metrics or not compare(metrics[metric], threshold):
+            continue
+        cooldown = float(rule.get("cooldown_seconds", 120))
+        if name in last_fired and now - last_fired[name] < cooldown:
+            continue
+        due.append({"name": name, "metric": metric, "value": round(metrics[metric], 1), "rule": rule})
+    return due
+
+
+def cast_curses(config: dict, player: str, curses: list[dict], state: dict, now: float) -> None:
+    """Send each due rule's commands over one RCON connection."""
+    rcon_config = config.get("rcon", {})
+    try:
+        with MCRcon(
+            rcon_config.get("host", "127.0.0.1"),
+            rcon_config["password"],
+            port=int(rcon_config.get("port", 25575)),
+            timeout=5,
+        ) as rcon:
+            for curse in curses:
+                for template in curse["rule"].get("commands", []):
+                    command = template.replace("{player}", player)
+                    reply = rcon.command(command)
+                    log.info("curse %r: /%s -> %s", curse["name"], command, reply.strip()[:120] or "ok")
+                state["curse_fired"][curse["name"]] = now
+                recent = state.setdefault("curse_log", [])
+                recent.insert(0, {
+                    "name": curse["name"],
+                    "metric": curse["metric"],
+                    "value": curse["value"],
+                    "at": int(now * 1000),
+                })
+                del recent[5:]
+    except Exception as err:
+        log.warning("could not cast curses: %s", err)
 
 
 def newest_screenshot(directory: Path) -> Path | None:
@@ -266,6 +378,15 @@ def run_once(config: dict, state: dict) -> None:
         "player": collect_player(config),
     }
 
+    player = payload["player"]
+    if player.get("online"):
+        now = time.time()
+        curses = due_curses(config, curse_metrics(payload["system"], player), state, now)
+        if curses:
+            cast_curses(config, player["name"], curses, state, now)
+    if state.get("curse_log"):
+        payload["curses"] = state["curse_log"]
+
     screenshot_config = config.get("screenshot", {})
     directory = screenshot_config.get("directory")
     if directory:
@@ -315,8 +436,19 @@ def main() -> int:
     config = load_config(args.config)
 
     if args.dry_run:
+        system, player = collect_system(), collect_player(config)
+        metrics = curse_metrics(system, player)
+        would_fire = [
+            {"name": curse["name"], "commands": curse["rule"].get("commands", [])}
+            for curse in due_curses(config, metrics, {}, time.time())
+        ] if player.get("online") else []
         print(json.dumps(
-            {"system": collect_system(), "player": collect_player(config)},
+            {
+                "system": system,
+                "player": player,
+                "curse_metrics": metrics,
+                "curses_that_would_fire": would_fire,
+            },
             indent=2,
         ))
         return 0

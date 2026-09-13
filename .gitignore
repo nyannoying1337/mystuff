@@ -1,5 +1,6 @@
 agent/config.toml
 agent/.venv/
+map/work/
 .wrangler/
 node_modules/
 __pycache__/

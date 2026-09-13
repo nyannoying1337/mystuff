@@ -23,6 +23,43 @@ function authorized(request, env) {
   return diff === 0;
 }
 
+// Same ids as MAPS in map/render.py.
+const MAP_DIMENSIONS = {
+  overworld: "minecraft:overworld",
+  nether: "minecraft:the_nether",
+  end: "minecraft:the_end",
+};
+
+// Matches the status page: older than this and the marker disappears.
+const STALE_MS = 90000;
+
+// BlueMap's webapp reads live data from <live-data-root>/<map>/live/*.json.
+// This answers those requests from the last status push, so the static map on
+// GitHub Pages shows where you are right now.
+async function bluemapPlayers(env, mapId) {
+  const stored = await env.STATUS.get("current");
+  const players = [];
+  if (stored) {
+    const status = JSON.parse(stored);
+    const player = status.player || {};
+    const fresh = Date.now() - (status.received_at || 0) < STALE_MS;
+    if (fresh && player.online && Array.isArray(player.position)) {
+      const [x, y, z] = player.position;
+      const [yaw, pitch] = Array.isArray(player.rotation) ? player.rotation : [0, 0];
+      players.push({
+        // The name stands in for the uuid; BlueMap only uses it as a key and
+        // for a head image it won't find, so it falls back to Steve.
+        uuid: player.name,
+        name: player.name,
+        foreign: player.dimension !== MAP_DIMENSIONS[mapId],
+        position: { x, y, z },
+        rotation: { yaw, pitch, roll: 0 },
+      });
+    }
+  }
+  return json({ players }, 200, { "Cache-Control": "no-store" });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -30,6 +67,14 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
+    }
+
+    const live = path.match(/^\/bluemap\/([a-z0-9_-]+)\/live\/(players|markers)\.json$/);
+    if (live && request.method === "GET") {
+      const [, mapId, file] = live;
+      if (!(mapId in MAP_DIMENSIONS)) return json({ error: "unknown map" }, 404);
+      if (file === "markers") return json({}, 200, { "Cache-Control": "max-age=300" });
+      return bluemapPlayers(env, mapId);
     }
 
     if (path === "/status" && request.method === "GET") {

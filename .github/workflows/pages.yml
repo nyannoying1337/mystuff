@@ -1,9 +1,9 @@
 name: Deploy site
 
 on:
+  # `map` is force-pushed by map/render.py; a new render redeploys the site.
   push:
-    branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
+    branches: [main, map]
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,20 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # Always build from main, even when the map branch triggered the run.
       - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Add the rendered map, if there is one
+        run: |
+          if git ls-remote --exit-code --heads origin map > /dev/null; then
+            git fetch --depth 1 origin map
+            mkdir -p site/map
+            git archive FETCH_HEAD | tar -x -C site/map
+            echo "map: $(find site/map -type f | wc -l) files"
+          else
+            echo "no map branch yet — deploying without /map"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

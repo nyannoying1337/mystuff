@@ -16,7 +16,7 @@ password = "your-rcon-password"
 player = "nyannoying"
 
 [screenshot]
-# Press F2 in game and the newest file here gets published.
+# Press F2 in game (or install the mod in mod/) and the newest file here gets published.
 directory = "~/.minecraft/screenshots"
 max_width = 1280
 quality = 78
@@ -24,3 +24,44 @@ quality = 78
 [privacy]
 # Set true if anyone else has your server address.
 hide_coordinates = false
+
+[cursed]
+# The machine reaches into the world. Off until you mean it — these run real
+# commands as the server console. Try them on a copy of your world first:
+# fire spreads.
+#
+# `when` is "<metric> <op> <number>". Metrics: cpu_temp, gpu_temp (°C),
+# mem_percent, uptime_hours, health (0-20), foodlevel (0-20), xplevel.
+# A rule fires when its condition holds, then again every cooldown_seconds
+# while it still does. {player} becomes rcon.player.
+# Run `agent.py --dry-run` to see live metrics and which rules would fire.
+enabled = false
+
+[[cursed.rules]]
+name = "gpu on fire"
+when = "gpu_temp >= 80"
+cooldown_seconds = 120
+commands = [
+  'execute at {player} run fill ~-2 ~ ~-2 ~2 ~ ~2 minecraft:fire replace minecraft:air',
+]
+
+[[cursed.rules]]
+name = "cpu storm"
+when = "cpu_temp >= 85"
+cooldown_seconds = 300
+commands = ['weather thunder 120s']
+
+[[cursed.rules]]
+name = "out of ram"
+when = "mem_percent >= 90"
+cooldown_seconds = 60
+commands = ['effect give {player} minecraft:slowness 30 1']
+
+[[cursed.rules]]
+name = "go to bed"
+when = "uptime_hours >= 12"
+cooldown_seconds = 1800
+commands = [
+  'title {player} actionbar "this pc has been up for 12 hours. go to bed."',
+  'effect give {player} minecraft:nausea 15',
+]

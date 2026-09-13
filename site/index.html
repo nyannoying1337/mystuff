@@ -177,6 +177,9 @@ dl { margin: 0; }
 .row dt { color: var(--ink-dim); }
 .row dd { margin: 0; text-align: right; word-break: break-word; }
 
+.map-link { display: block; text-align: center; color: var(--ink); }
+.map-link:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
 .disconnect { text-align: center; padding: 22px 14px; }
 .disconnect p { margin: 0 0 14px; line-height: 2.2; }
 .disconnect p:last-child { margin: 0; color: var(--ink-dim); }
@@ -437,15 +440,48 @@ function render(data) {
       ["cpu temp", system.cpu_temp ? `${Math.round(system.cpu_temp)} c` : null],
       ["gpu", system.gpu],
       ["gpu temp", system.gpu_temp ? `${Math.round(system.gpu_temp)} c` : null],
-      ["uptime", system.uptime && system.uptime.total
-        ? `${Math.floor(system.uptime.total / 3600000)}h`
+      ["uptime", system.uptime && system.uptime.uptime
+        ? `${Math.floor(system.uptime.uptime / 3600000)}h`
         : null],
     ]));
     frag.append(machine);
   }
 
+  if (Array.isArray(data.curses) && data.curses.length) {
+    const curses = el("section", { class: "panel" }, [el("h2", { text: "Recent curses" })]);
+    curses.append(statRows(data.curses.map((curse) => [
+      curse.name,
+      `${CURSE_UNITS[curse.metric] ? Math.round(curse.value) + CURSE_UNITS[curse.metric] : curse.value}`
+        + ` · ${timeAgo(curse.at)}`,
+    ])));
+    frag.append(curses);
+  }
+
+  if (mapAvailable) {
+    const link = el("a", { class: "map-link", href: "map/", text: "Open the world map" });
+    frag.append(el("section", { class: "panel" }, [link]));
+  }
+
   root.replaceChildren(frag);
 }
+
+const CURSE_UNITS = { cpu_temp: " c", gpu_temp: " c", mem_percent: "%", uptime_hours: "h" };
+
+function timeAgo(ms) {
+  const minutes = Math.round((Date.now() - ms) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  return `${Math.round(minutes / 60)}h ago`;
+}
+
+// The map is rendered separately and may not exist yet; only link it if it does.
+let mapAvailable = false;
+fetch("map/settings.json", { method: "HEAD" })
+  .then((response) => {
+    mapAvailable = response.ok;
+    if (mapAvailable) refresh();
+  })
+  .catch(() => {});
 
 async function refresh() {
   try {
