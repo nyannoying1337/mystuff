@@ -3,12 +3,15 @@
 	"id": "mc-status",
 	"version": "${version}",
 	"name": "mc-status",
-	"description": "Shares your status, inventory, stats, advancements, a HUD-free frame and a logout panorama with the mc-status agent, and runs its curses in singleplayer.",
+	"description": "Client: shares your singleplayer status with the mc-status agent. Server (proof of concept): publishes every player to an admin page and per-player pages.",
 	"license": "MIT",
-	"environment": "client",
+	"environment": "*",
 	"entrypoints": {
 		"client": [
 			"mcstatus.McStatusClient"
+		],
+		"server": [
+			"mcstatus.server.McStatusServer"
 		]
 	},
 	"depends": {

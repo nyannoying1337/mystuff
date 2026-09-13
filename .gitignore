@@ -13,3 +13,8 @@ worker/wrangler.generated.toml
 agent/playtime.json
 agent/*.json.tmp
 site/_preview/
+tests/server-under-test.mjs
+mod/run/
+LOCAL-TEST-LINKS.txt
+mod/run/
+tests/server-under-test.mjs

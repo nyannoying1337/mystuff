@@ -1,4 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
+import { handleServer } from "./server.js";
+
+export { ServerStore } from "./server.js";
 
 // Most people watching live at once; the rest get a "try again later".
 const MAX_VIEWERS = 10;
@@ -217,6 +220,10 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
+
+    // proof of concept: the multi-player server tool
+    const serverResponse = await handleServer(request, env, url, path);
+    if (serverResponse) return serverResponse;
 
     if (path === "/live" && request.method === "GET") {
       if (request.headers.get("Upgrade") !== "websocket") return json({ error: "expected websocket" }, 426);

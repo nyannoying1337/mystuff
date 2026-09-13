@@ -6,10 +6,12 @@ import assert from "node:assert/strict";
 const src = new URL("../worker/worker.js", import.meta.url);
 const copy = new URL("./worker-under-test.mjs", import.meta.url);
 // Node has no cloudflare:workers; stand in the base class the runtime provides.
-writeFileSync(copy, readFileSync(src, "utf8").replace(
-  'import { DurableObject } from "cloudflare:workers";',
-  "class DurableObject { constructor(ctx, env) { this.ctx = ctx; this.env = env; } }",
-));
+const STUB = "class DurableObject { constructor(ctx, env) { this.ctx = ctx; this.env = env; } }";
+writeFileSync(new URL("./server-under-test.mjs", import.meta.url), readFileSync(new URL("../worker/server.js", import.meta.url), "utf8")
+  .replace('import { DurableObject } from "cloudflare:workers";', STUB));
+writeFileSync(copy, readFileSync(src, "utf8")
+  .replace('import { DurableObject } from "cloudflare:workers";', STUB)
+  .replaceAll('"./server.js"', '"./server-under-test.mjs"'));
 const mod = await import(copy);
 const worker = mod.default;
 

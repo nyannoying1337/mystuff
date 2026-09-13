@@ -1,3 +1,12 @@
+> **PROOF OF CONCEPT, not released.** This local fork adds a *server tool*: a Fabric server mod that
+> publishes every player on a server, an admin page (`site/server.html` with the admin key) and
+> per-player pages (signed player links). Tested locally only; it isn't pushed or deployed anywhere.
+>
+> Local test: `cd mod && gradlew runServer` (config in `mod/run/config/mc-status-server.properties`),
+> `cd worker && npx wrangler dev --port 8789` (secrets `PUSH_TOKEN`, `VIEW_KEY`, `ADMIN_KEY`,
+> `PLAYER_LINK_SECRET` in `worker/.dev.vars`), serve `site/` on port 8766, then join `localhost`.
+> Tests: `node tests/test_server_worker.mjs`.
+
 # mc-status
 
 A live, invite-only status page for your Minecraft sessions and the PC they run

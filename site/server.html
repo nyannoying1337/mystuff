@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server · live</title>
+<meta name="theme-color" content="#1e1e1f">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/mc/item/command_block.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="js/server.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="server.html"><img src="assets/mc/item/command_block.png" alt=""><span id="brand-name">Server</span></a>
+    <div class="top-actions">
+      <span class="pill" id="live-pill" hidden></span>
+      <span class="poc-badge" title="Not released; local testing only">Proof of concept</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap" id="root" aria-live="polite">
+    <div class="center"><p class="empty">Connecting…</p></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>NOT AN OFFICIAL MINECRAFT WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</span>
+    <button type="button" class="link-button" id="forget-key" hidden>Forget key on this device</button>
+  </div>
+</footer>
+
+</body>
+</html>

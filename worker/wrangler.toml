@@ -18,5 +18,14 @@ class_name = "StatusStore"
 tag = "v1"
 new_sqlite_classes = ["StatusStore"]
 
+# proof of concept: the server tool
+[[durable_objects.bindings]]
+name = "SERVER_STORE"
+class_name = "ServerStore"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ServerStore"]
+
 # Secrets, never committed: PUSH_TOKEN (the agent's) and VIEW_KEY (the invite key).
 # setup.py sets both.
