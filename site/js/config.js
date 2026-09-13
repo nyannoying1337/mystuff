@@ -1,3 +1,5 @@
-// local proof-of-concept test
-export const API_URL = "http://127.0.0.1:8789";
-export const SITE_NAME = "PoC";
+// The values that make this site yours. On GitHub Pages this file is rewritten
+// at deploy time from the repository variables MCS_API_URL and MCS_SITE_NAME
+// (see .github/workflows/pages.yml); these defaults are for local previews.
+export const API_URL = "https://status-api.example.com";
+export const SITE_NAME = "My Minecraft";

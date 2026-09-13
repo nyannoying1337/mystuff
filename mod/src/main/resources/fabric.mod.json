@@ -3,7 +3,7 @@
 	"id": "mc-status",
 	"version": "${version}",
 	"name": "mc-status",
-	"description": "Client: shares your singleplayer status with the mc-status agent. Server (proof of concept): publishes every player to an admin page and per-player pages.",
+	"description": "Client: shares your singleplayer status with the mc-status agent. Server: publishes every player to an admin page and per-player pages.",
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {

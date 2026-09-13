@@ -7,14 +7,13 @@ node_modules/
 __pycache__/
 agent/agent.log*
 tests/worker-under-test.mjs
+tests/server-under-test.mjs
 worker/.dev.vars
 .wrangler/
 worker/wrangler.generated.toml
 agent/playtime.json
 agent/*.json.tmp
 site/_preview/
-tests/server-under-test.mjs
+server/
 mod/run/
 LOCAL-TEST-LINKS.txt
-mod/run/
-tests/server-under-test.mjs

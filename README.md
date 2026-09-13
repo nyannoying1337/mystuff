@@ -1,14 +1,3 @@
-> **PROOF OF CONCEPT, not released.** This local fork adds a *server tool*: a Fabric server mod that
-> publishes every player on a server, an admin page (`site/server.html` with the admin key) and
-> per-player pages (signed player links). Tested locally only; it isn't pushed or deployed anywhere.
->
-> Local test: `cd mod && gradlew runServer` (config in `mod/run/config/mc-status-server.properties`),
-> `cd worker && npx wrangler dev --port 8789` (secrets `PUSH_TOKEN`, `VIEW_KEY`, `ADMIN_KEY`,
-> `PLAYER_LINK_SECRET` in `worker/.dev.vars`), serve `site/` on port 8766, then join `localhost`.
-> In game: `/mcstatus admin` (server admins) sends a clickable admin link, `/mcstatus link` a player's own page,
-> `/mcstatus link <player>` (moderators) someone else's. Set `site_url` in the server's config.
-> Tests: `node tests/test_server_worker.mjs`.
-
 # mc-status
 
 A live, invite-only status page for your Minecraft sessions and the PC they run
@@ -36,10 +25,10 @@ captive portal.
 
 | Folder | What it is |
 | --- | --- |
-| `mod/` | Fabric client mod: writes your state, a HUD-free frame and a logout panorama; runs curses |
+| `mod/` | Fabric mod. Client: writes your state, a HUD-free frame and a logout panorama; runs curses. Server: the optional [server tool](#server-tool-optional) |
 | `agent/` | Python agent: reads the mod's files, adds machine load, pushes, renders the map on logout |
 | `worker/` | Cloudflare Worker: stores the latest push and streams it to viewers |
-| `site/` | The status page (static HTML, CSS and ES modules, no build step) |
+| `site/` | The status page, and `server.html` for the server tool (static HTML, CSS and ES modules, no build step) |
 | `map/` | BlueMap render and publish script, plus the map page's theme and live marker |
 | `setup.py` | Setup wizard: config, secrets, Worker deploy, autostart, invite links |
 
@@ -103,13 +92,15 @@ subdomain of a Cloudflare-managed domain as the Worker URL, e.g.
 | `python setup.py token` | New push token for the agent |
 | `python setup.py deploy` | Deploy Worker changes from your PC |
 | `python setup.py autostart` | Reinstall the agent's autostart |
+| `python setup.py server` | Keys and config file for the optional [server tool](#server-tool-optional) |
 | `python agent/agent.py --dry-run` | Print exactly what would be published |
 
 **Deploying the Worker from GitHub instead** is optional. Add these repository
 secrets and pushes to `worker/` deploy it:
 - `CLOUDFLARE_API_TOKEN` (created from the "Edit Cloudflare Workers" template);
 - `CLOUDFLARE_ACCOUNT_ID`;
-- `PUSH_TOKEN` and `VIEW_KEY` (the wizard sets these if `gh` is installed).
+- `PUSH_TOKEN` and `VIEW_KEY` (the wizard sets these if `gh` is installed);
+- for the server tool, `SERVER_PUSH_TOKEN`, `ADMIN_KEY` and `PLAYER_LINK_SECRET` (`setup.py server` sets these the same way).
 
 Without them, that workflow skips itself.
 
@@ -120,7 +111,7 @@ Going over a limit makes requests fail until 00:00 UTC; nothing is ever billed.
 | Service | Free limit | This uses |
 | --- | --- | --- |
 | Workers requests | 100,000/day | the agent pushes about 8,600/day if you play all day and 1,440/day while away; each viewer costs about one request per visit |
-| Durable Object storage writes | 100,000/day | one per push, plus one per frame and one per logout panorama |
+| Durable Object storage writes | 100,000/day | one per push, plus one per frame and one per logout panorama; the server tool adds one per changed player per push (about 16,000/day for 5 players online all day) |
 | GitHub Actions | unlimited on public repos | one deploy per logout render or push to `main` |
 | GitHub Pages | 1 GB site, 100 GB/month | about 10 MB for the map and page |
 
@@ -286,15 +277,67 @@ Without the mod there's no frame, unless `screenshot.directory` points at a
 folder. `python setup.py autostart` installs a systemd user service on Linux
 and a launchd agent on macOS.
 
+## Server tool (optional)
+
+The same mod jar, dropped into a Fabric server, publishes every player on that
+server. It's useful as a moderation view, and each player can see their own page.
+
+**Who sees what** on `<your site>/server.html`:
+
+| Opened with | Shows |
+| --- | --- |
+| the admin key | the server (TPS, tick time, day, weather) and a table of every player, online and offline; each opens a full page: vitals, position, ping, inventory, statistics, advancements with checklists |
+| a player link | only that player's page |
+| no key or a wrong one | a key field, and no data at all |
+
+The main status page doesn't link to it. The Worker checks every key before it
+sends anything, and filters each viewer's data separately, so a player link never
+receives anyone else.
+
+**Set up:**
+1. Run `python setup.py server`. It creates the server tool's three Worker secrets
+   (`SERVER_PUSH_TOKEN`, `ADMIN_KEY`, `PLAYER_LINK_SECRET`) and writes
+   `server/mc-status-server.properties` (gitignored; it contains the server's token).
+2. On the server, which needs Fabric Loader and Fabric API, put the mc-status jar in `mods/` and that file in `config/`.
+3. Start the server. Without the file it writes an empty one and stays idle.
+
+**In game:**
+
+| Command | Who | Sends you |
+| --- | --- | --- |
+| `/mcstatus admin` | ops level 3+ | a clickable link to the admin page |
+| `/mcstatus link` | everyone | a link to your own page |
+| `/mcstatus link <player>` | ops level 2+ | that player's link, to pass on |
+
+Links are sent only to the person who asked. In the server console they're printed.
+The server gets keys from the Worker with its own token, so the admin key is
+never stored on the server.
+
+**Separate token.** The server uses `SERVER_PUSH_TOKEN`, not your agent's
+`PUSH_TOKEN`. Whoever runs the server can't overwrite your own status, and the
+agent's token can't get admin links. Until `setup.py server` has run, all of the
+server tool's routes refuse everything.
+
+**Revoking.** Running `setup.py server` again replaces all three secrets. Every
+open admin and player page is disconnected, and the server needs the new config
+file.
+
+**Offline players** come from the world's `players/stats` and
+`players/advancements` files, refreshed every 5 minutes. Their inventory and
+position only show while they're online.
+
 ## Development
 
 ```bash
 python tests/test_agent_mod.py     # mod source, logout render, panorama, play time, privacy
 python tests/test_curses.py        # curse rules over RCON
 node tests/test_worker.mjs         # Worker routes and broadcasts
+node tests/test_server_worker.mjs  # server tool: keys, per-viewer filtering, write throttling
 ```
 
-All three also run in the *Tests* workflow. `tests/README.md` covers the
+All four also run in the *Tests* workflow. For the server tool locally:
+`cd mod && ./gradlew runServer`, then `npx wrangler dev` in `worker/` with the
+secrets in `worker/.dev.vars`. `tests/README.md` covers the
 WebSocket test against `wrangler dev`.
 
 **Page code:**

@@ -28,6 +28,10 @@ jobs:
           python tests/test_agent_mod.py
           python tests/test_curses.py
       - name: Worker
-        run: node tests/test_worker.mjs
+        run: |
+          node tests/test_worker.mjs
+          node tests/test_server_worker.mjs
       - name: Setup wizard (dry run)
-        run: python setup.py --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev
+        run: |
+          python setup.py --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev
+          python setup.py server --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev

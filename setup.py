@@ -7,6 +7,7 @@
     python setup.py deploy          deploy the Worker from this machine
     python setup.py worker-config   write worker/wrangler.generated.toml (used by CI)
     python setup.py autostart       start the agent when you log in
+    python setup.py server          optional server tool: keys, and the server mod's config file
 
 Secrets are generated here and handed straight to wrangler (and to GitHub if
 the gh CLI is installed). They're never printed; the push token is also kept in
@@ -105,6 +106,9 @@ def load_config() -> dict:
 
 def set_config_value(section: str, key: str, value: str) -> None:
     """Change one `key = "value"` line inside [section], keeping every comment."""
+    if DRY_RUN and CONFIG.is_file():
+        say(f"  (dry run) would set [{section}] {key} in {CONFIG.relative_to(ROOT)}")
+        return
     if not CONFIG.is_file():
         shutil.copyfile(EXAMPLE, CONFIG)
     text = CONFIG.read_text(encoding="utf-8")
@@ -345,6 +349,46 @@ def new_invite(site_url: str, push_to_github: bool = True) -> None:
     say(f"  {link}")
 
 
+def new_server(api_url: str, site_url: str, server_name: str | None = None) -> None:
+    """The optional server tool: its three Worker secrets, and the mod's config file for the server."""
+    if not api_url:
+        raise SystemExit("No Worker URL: run the guided setup first, or pass --worker-url")
+    say("This creates new server tool keys. Running it again replaces them: the server needs the new")
+    say("config file, and every admin and player link stops working.")
+    if not confirm("Continue?"):
+        return
+    name = server_name or ask("Server name shown on the admin page", "Minecraft server")
+    push_token = secrets.token_hex(32)
+    for secret, value in (("SERVER_PUSH_TOKEN", push_token),
+                          ("ADMIN_KEY", secrets.token_urlsafe(24)),
+                          ("PLAYER_LINK_SECRET", secrets.token_urlsafe(32))):
+        worker_secret(secret, value)
+        if github_secret(secret, value):
+            say(f"Also stored {secret} as a GitHub secret, for the Deploy Worker workflow.")
+    page = f"{site_url.rstrip('/')}/server.html" if site_url else ""
+    target = ROOT / "server" / "mc-status-server.properties"
+    if DRY_RUN:
+        say(f"  (dry run) would write {target.relative_to(ROOT)} for {page or 'the server page'}")
+        return
+    target.parent.mkdir(exist_ok=True)
+    target.write_text(
+        "# mc-status server tool. Copy into the server's config/ folder. Contains a secret: don't share it.\n"
+        f"worker_url={api_url}\n"
+        f"push_token={push_token}\n"
+        f"site_url={page}\n"
+        f"server_name={name}\n"
+        "interval_seconds=30\n"
+        "share_item_names=false\n",
+        encoding="utf-8")
+    say(f"\nWrote {target.relative_to(ROOT)} (gitignored).")
+    say("On the server (Fabric Loader + Fabric API, Minecraft matching the mod):")
+    say("  1. put the mc-status jar in mods/")
+    say(f"  2. copy {target.name} into config/")
+    say("  3. start it, then in game as an op: /mcstatus admin")
+    if not page:
+        say("No site URL in agent/config.toml: fill in site_url yourself (<your site>/server.html).")
+
+
 def guided(args) -> None:
     say(__doc__.split("\n\n")[0])
     if sys.version_info < (3, 11):
@@ -431,9 +475,10 @@ def main() -> int:
     global DRY_RUN, ASSUME_YES
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", nargs="?", default="guided",
-                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart"])
+                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart", "server"])
     parser.add_argument("--site-url")
     parser.add_argument("--site-name")
+    parser.add_argument("--server-name", help="for `server`: the name shown on the admin page")
     parser.add_argument("--worker-url")
     parser.add_argument("--rotate", action="store_true", help="replace the push token and invite key")
     parser.add_argument("--yes", action="store_true", help="accept every default (for scripts)")
@@ -455,6 +500,8 @@ def main() -> int:
         new_invite(args.site_url or load_config().get("site", {}).get("url", ""))
     elif args.command == "autostart":
         install_autostart()
+    elif args.command == "server":
+        new_server(api_url, args.site_url or load_config().get("site", {}).get("url", ""), args.server_name)
     return 0
 
 

@@ -1,4 +1,4 @@
-// PROOF OF CONCEPT: the server tool's Worker routes, in plain Node.
+// The server tool's Worker routes (worker/server.js), in plain Node.
 import { readFileSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
@@ -16,7 +16,7 @@ const storage = {
   async put(entries) { for (const [k, v] of Object.entries(entries)) rows.set(k, v); },
   async delete(keys) { for (const k of keys) rows.delete(k); },
 };
-const env = { PUSH_TOKEN: "push-secret", ADMIN_KEY: "admin-key-123", PLAYER_LINK_SECRET: "link-secret-456" };
+const env = { PUSH_TOKEN: "agent-secret", SERVER_PUSH_TOKEN: "push-secret", ADMIN_KEY: "admin-key-123", PLAYER_LINK_SECRET: "link-secret-456" };
 const instance = new mod.ServerStore({ storage, getWebSockets: () => sockets.filter((s) => !s.closed), acceptWebSocket() {} }, env);
 env.SERVER_STORE = { idFromName: (n) => n, get: () => instance };
 
@@ -52,17 +52,24 @@ const links = (body, token = "push-secret") => call("/server/links", {
 });
 assert.equal((await links({ admin: true }, "wrong")).status, 401, "only the server can ask");
 assert.equal((await links({ admin: true }, aliceKey)).status, 401, "a player key is not the push token");
+assert.equal((await links({ admin: true }, "agent-secret")).status, 401, "the agent's token can't mint admin links");
 assert.equal((await (await links({ admin: true })).json()).key, "admin-key-123");
 assert.equal((await (await links({ uuid: ALICE })).json()).key, aliceKey);
 assert.equal((await links({ uuid: "not-a-uuid" })).status, 400);
 
 // --- pushes need the push token; players are stored as separate rows
 assert.equal((await call("/server/status", { method: "POST", body: "{}" })).status, 401);
+assert.equal((await call("/server/status", { method: "POST", headers: { Authorization: "Bearer agent-secret" }, body: "{}" })).status, 401,
+  "the agent's token can't push server data");
 const first = await (await push([{ uuid: ALICE, name: "Alice", online: true, position: [1, 2, 3] }, { uuid: BOB, name: "Bob", online: false }])).json();
 assert.deepEqual(first, { ok: true, players: 2, written: 3, removed: 0 });
 assert.ok(rows.has(`server:player:${ALICE}`) && rows.has(`server:player:${BOB}`));
 const again = await (await push([{ uuid: ALICE, name: "Alice", online: true, position: [1, 2, 3] }, { uuid: BOB, name: "Bob", online: false }])).json();
-assert.equal(again.written, 1, "unchanged players aren't rewritten, only the meta row");
+assert.equal(again.written, 0, "unchanged players aren't rewritten, and the meta row waits a minute");
+assert.ok((await instance.state()).received_at > JSON.parse(rows.get("server:meta")).received_at - 1, "state() serves the newest meta from memory");
+instance.meta.writtenAt -= 61000;
+assert.equal((await (await push([{ uuid: ALICE, name: "Alice", online: true, position: [1, 2, 3] }, { uuid: BOB, name: "Bob", online: false }])).json()).written, 1,
+  "after a minute the meta row is written again");
 
 // --- live views: admin sees everyone, a player only themselves
 function socket(viewer, hashOverride) {
@@ -90,5 +97,18 @@ assert.equal(stale.closed?.code, 4001, "sockets from before a key change are clo
 const removed = await (await push([{ uuid: ALICE, name: "Alice", online: true }])).json();
 assert.equal(removed.removed, 1);
 assert.deepEqual((await instance.state()).players.map((p) => p.name), ["Alice"]);
+
+// --- without its secrets the server tool is off
+const bare = { PUSH_TOKEN: "agent-secret", SERVER_STORE: env.SERVER_STORE };
+const bareCall = (path, init) => {
+  const url = new URL(`https://w.example${path}`);
+  return mod.handleServer(new Request(url, init), bare, url, url.pathname);
+};
+for (const token of ["", "agent-secret", "undefined"]) {
+  assert.equal((await bareCall("/server/status", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: "{}" })).status, 401);
+  assert.equal((await bareCall("/server/links", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: '{"admin":true}' })).status, 401);
+}
+assert.equal(await mod.viewerFor(bare, "undefined"), null);
+assert.equal(await mod.viewerFor(bare, `${ALICE}.anything`), null);
 
 console.log("ALL SERVER TOOL WORKER TESTS PASSED");

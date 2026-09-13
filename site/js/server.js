@@ -1,4 +1,4 @@
-// PROOF OF CONCEPT: the server tool page.
+// The server tool page (server.html).
 //
 // Admins (opened with the admin key) get the server overview and a table of
 // every player; clicking one opens their page. A player's own link opens only

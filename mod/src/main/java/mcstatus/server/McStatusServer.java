@@ -40,8 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PROOF OF CONCEPT. The server side of mc-status: every player on a Fabric
- * server, for an admin page and per-player pages.
+ * The server side of mc-status: every player on a Fabric server, for an admin
+ * page and per-player pages. Does nothing until worker_url and push_token are set.
  *
  * <p>Every few seconds, on the server thread, it snapshots the server and each
  * online player (vitals, position, inventory, statistics, advancements), plus
@@ -73,7 +73,7 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		pushToken = props.getProperty("push_token", "");
 		serverName = props.getProperty("server_name", "Minecraft server");
 		siteUrl = props.getProperty("site_url", "").trim();
-		intervalSeconds = Math.max(5, Integer.parseInt(props.getProperty("interval_seconds", "10").trim()));
+		intervalSeconds = Math.max(10, parseInt(props.getProperty("interval_seconds", "30"), 30));
 		shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
 		if (workerUrl.isEmpty() || pushToken.isEmpty()) {
 			LOG.warn("set worker_url and push_token in {} to start publishing", file);
@@ -214,6 +214,14 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		}
 	}
 
+	private static int parseInt(String value, int fallback) {
+		try {
+			return Integer.parseInt(value.trim());
+		} catch (NumberFormatException err) {
+			return fallback;
+		}
+	}
+
 	private static Properties loadConfig(Path file) {
 		Properties props = new Properties();
 		if (Files.isRegularFile(file)) {
@@ -226,15 +234,16 @@ public class McStatusServer implements DedicatedServerModInitializer {
 		}
 		try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
 			writer.write("""
-				# mc-status server (proof of concept)
-				# The Worker to publish to, and its PUSH_TOKEN secret.
+				# mc-status server tool. `python setup.py server` writes a filled-in copy of this file.
+				# The Worker to publish to, and its SERVER_PUSH_TOKEN secret.
 				worker_url=
 				push_token=
 				# The server page (site/server.html) for /mcstatus link and /mcstatus admin.
 				site_url=
 				# Shown at the top of the admin page.
 				server_name=Minecraft server
-				interval_seconds=10
+				# Seconds between pushes (at least 10). 30 keeps a busy server inside Cloudflare's free plan.
+				interval_seconds=30
 				# Custom item names can contain anything players type.
 				share_item_names=false
 				""");

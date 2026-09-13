@@ -1,4 +1,7 @@
-// PROOF OF CONCEPT: every player on a server, from the server mod.
+// The optional server tool: every player on a server, pushed by the mod running
+// on a Fabric server with SERVER_PUSH_TOKEN. It has its own token, so a server
+// (or whoever hosts it) can't touch your own status, and your agent's token
+// can't mint admin links. Without its secrets every route here refuses.
 //
 // Two kinds of viewers:
 //   admin   ?key=<ADMIN_KEY>                   sees the server and every player
@@ -9,6 +12,10 @@ import { DurableObject } from "cloudflare:workers";
 
 const MAX_VIEWERS = 10;
 const STALE_MS = 90000;
+// The meta row (TPS, time of day, ...) changes on every push; writing it at most
+// once a minute keeps a busy server well inside the free 100,000 writes a day.
+// Viewers still get every push live, and the latest meta is kept in memory.
+const META_WRITE_MS = 60000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -89,21 +96,29 @@ export class ServerStore extends DurableObject {
   async state() {
     const rows = await this.ctx.storage.list({ prefix: "server:" });
     const players = [];
-    let server = null;
-    let receivedAt = null;
+    let meta = this.meta ? JSON.parse(this.meta.row) : { server: null, received_at: null };
     for (const [key, value] of rows) {
-      if (key === "server:meta") ({ server, received_at: receivedAt } = JSON.parse(value));
-      else if (key.startsWith("server:player:")) players.push(JSON.parse(value));
+      if (key === "server:meta") {
+        if (!this.meta) meta = JSON.parse(value);
+      } else if (key.startsWith("server:player:")) players.push(JSON.parse(value));
     }
     players.sort((a, b) => Number(b.online) - Number(a.online) || String(a.name).localeCompare(String(b.name)));
-    return { server, received_at: receivedAt, players };
+    return { server: meta.server, received_at: meta.received_at, players };
   }
 
   async publish(payload) {
     const receivedAt = Date.now();
     const incoming = new Map((payload.players || []).filter((p) => UUID.test(p?.uuid || "")).map((p) => [p.uuid, p]));
     const existing = await this.ctx.storage.list({ prefix: "server:player:" });
-    const changes = { "server:meta": JSON.stringify({ server: payload.server || null, received_at: receivedAt }) };
+    const changes = {};
+    const metaRow = JSON.stringify({ server: payload.server || null, received_at: receivedAt });
+    const metaShape = JSON.stringify([payload.server?.name, incoming.size]);
+    if (!this.meta || this.meta.shape !== metaShape || receivedAt - this.meta.writtenAt >= META_WRITE_MS) {
+      changes["server:meta"] = metaRow;
+      this.meta = { row: metaRow, shape: metaShape, writtenAt: receivedAt };
+    } else {
+      this.meta = { ...this.meta, row: metaRow };
+    }
     for (const [uuid, player] of incoming) {
       const row = JSON.stringify(player);
       if (existing.get(`server:player:${uuid}`) !== row) changes[`server:player:${uuid}`] = row;  // only changed rows are written
@@ -151,13 +166,18 @@ export class ServerStore extends DurableObject {
 
 const store = (env) => env.SERVER_STORE.get(env.SERVER_STORE.idFromName("server"));
 
+/** The server mod, proving itself with SERVER_PUSH_TOKEN (never the agent's PUSH_TOKEN). */
+function fromServer(request, env) {
+  const header = request.headers.get("Authorization") || "";
+  return safeEqual(header.startsWith("Bearer ") ? header.slice(7) : "", env.SERVER_PUSH_TOKEN);
+}
+
 /** Routes under /server/. Returns null for anything else. */
 export async function handleServer(request, env, url, path) {
   if (!path.startsWith("/server/")) return null;
 
   if (path === "/server/status" && request.method === "POST") {
-    const header = request.headers.get("Authorization") || "";
-    if (!safeEqual(header.startsWith("Bearer ") ? header.slice(7) : "", env.PUSH_TOKEN)) return json({ error: "unauthorized" }, 401);
+    if (!fromServer(request, env)) return json({ error: "unauthorized" }, 401);
     if (Number(request.headers.get("Content-Length") || 0) > MAX_BODY_BYTES) return json({ error: "too large" }, 413);
     let payload;
     try {
@@ -177,12 +197,11 @@ export async function handleServer(request, env, url, path) {
     return store(env).fetch(new Request(request.url, { headers }));
   }
 
-  // For the server mod's /mcstatus command: the server proves itself with the
-  // push token and gets the key to put in a clickable chat link. The admin key
-  // and the link secret never have to be copied into the server's config.
+  // For the server mod's /mcstatus command: the server proves itself with its
+  // token and gets the key to put in a clickable chat link. The admin key and
+  // the link secret never have to be copied into the server's config.
   if (path === "/server/links" && request.method === "POST") {
-    const header = request.headers.get("Authorization") || "";
-    if (!safeEqual(header.startsWith("Bearer ") ? header.slice(7) : "", env.PUSH_TOKEN)) return json({ error: "unauthorized" }, 401);
+    if (!fromServer(request, env)) return json({ error: "unauthorized" }, 401);
     let body;
     try {
       body = await request.json();

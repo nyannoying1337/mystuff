@@ -334,8 +334,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 .check-chip[data-done="true"] { color: var(--text); border-color: #2d5f1f; box-shadow: inset 0 -2px 0 var(--green-lip); background: #2f4a27; }
 .check-chip[data-done="false"] img { filter: grayscale(1) brightness(.8); opacity: .75; }
 
-/* ---- PROOF OF CONCEPT: server tool (server.html) ---- */
-.poc-badge { padding: 4px 10px; border-radius: 999px; border: 2px dashed #7a5409; color: var(--gold); font-size: 12px; font-weight: 700; white-space: nowrap; }
+/* ---- server tool (server.html) ---- */
 .server-bar { margin-bottom: 20px; }
 .server-bar[data-tps="quiet"] .chips .chip:nth-child(2) b { color: var(--gold); }
 .server-bar[data-tps="offline"] .chips .chip:nth-child(2) b { color: #ff8d86; }

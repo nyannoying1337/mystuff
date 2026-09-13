@@ -4,7 +4,8 @@ name: Deploy Worker
 # Needs the repository secrets CLOUDFLARE_API_TOKEN (API token from the "Edit
 # Cloudflare Workers" template) and CLOUDFLARE_ACCOUNT_ID. Without them the job
 # says so and stops, so forks that deploy with `python setup.py deploy` see no
-# failures. PUSH_TOKEN and VIEW_KEY secrets, if set, are copied to the Worker.
+# failures. PUSH_TOKEN and VIEW_KEY secrets (and the server tool's
+# SERVER_PUSH_TOKEN, ADMIN_KEY and PLAYER_LINK_SECRET), if set, are copied to the Worker.
 
 on:
   push:
@@ -62,8 +63,11 @@ jobs:
         env:
           PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
           VIEW_KEY: ${{ secrets.VIEW_KEY }}
+          SERVER_PUSH_TOKEN: ${{ secrets.SERVER_PUSH_TOKEN }}
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+          PLAYER_LINK_SECRET: ${{ secrets.PLAYER_LINK_SECRET }}
         run: |
-          for name in PUSH_TOKEN VIEW_KEY; do
+          for name in PUSH_TOKEN VIEW_KEY SERVER_PUSH_TOKEN ADMIN_KEY PLAYER_LINK_SECRET; do
             value="${!name}"
             if [ -n "$value" ]; then
               printf '%s' "$value" | npx --yes wrangler@4 secret put "$name" -c wrangler.generated.toml

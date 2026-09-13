@@ -221,7 +221,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
-    // proof of concept: the multi-player server tool
+    // the optional server tool: every player on a server (worker/server.js)
     const serverResponse = await handleServer(request, env, url, path);
     if (serverResponse) return serverResponse;
 

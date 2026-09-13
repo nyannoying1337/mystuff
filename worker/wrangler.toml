@@ -18,7 +18,7 @@ class_name = "StatusStore"
 tag = "v1"
 new_sqlite_classes = ["StatusStore"]
 
-# proof of concept: the server tool
+# The optional server tool (worker/server.js). Inactive until its secrets are set.
 [[durable_objects.bindings]]
 name = "SERVER_STORE"
 class_name = "ServerStore"
@@ -27,5 +27,6 @@ class_name = "ServerStore"
 tag = "v2"
 new_sqlite_classes = ["ServerStore"]
 
-# Secrets, never committed: PUSH_TOKEN (the agent's) and VIEW_KEY (the invite key).
-# setup.py sets both.
+# Secrets, never committed: PUSH_TOKEN (the agent's) and VIEW_KEY (the invite key),
+# set by setup.py. The server tool adds SERVER_PUSH_TOKEN, ADMIN_KEY and
+# PLAYER_LINK_SECRET, set by `python setup.py server`.
