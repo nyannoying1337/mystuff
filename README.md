@@ -321,6 +321,11 @@ Never read or sent:
 - any field the mod or NBT adds that isn't on an explicit allowlist. So a
   Minecraft update can't quietly start leaking something.
 
+One third party: the page shows your skin (the head next to your name, and the
+full body in the inventory preview) from `mc-heads.net`. Viewers' browsers ask
+it for your player name, which the page shows anyway. If it's unreachable, the
+page falls back to the game's own player head.
+
 Decide for yourself:
 
 - **Coordinates.** Fine for a solo world. `privacy.hide_coordinates = true`
