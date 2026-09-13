@@ -1,9 +1,0 @@
-name = "api-ice"
-main = "src/index.ts"
-compatibility_date = "2024-03-19"
-
-# STEAM_API_KEY, OSU_CLIENT_ID, OSU_CLIENT_SECRET are set via wrangler secret put
-
-[[kv_namespaces]]
-binding = "KV"
-id = ""  # You'll need to create a KV namespace and add its ID here 
