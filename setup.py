@@ -80,8 +80,9 @@ def run(command: list[str], *, cwd: Path | None = None, input_text: str | None =
     executable = shutil.which(command[0])
     if not executable:
         raise FileNotFoundError(command[0])
+    # wrangler prints UTF-8 (emoji, box drawing); the console's code page can't decode that
     return subprocess.run([executable, *command[1:]], cwd=cwd, input=input_text, text=True,
-                          capture_output=capture)
+                          encoding="utf-8", errors="replace", capture_output=capture)
 
 
 def copy_to_clipboard(text: str) -> bool:
