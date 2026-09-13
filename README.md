@@ -35,6 +35,11 @@ works fine behind a captive portal.
   difficulty, game mode), advancements (done per tab, recently earned, almost
   there) and statistics (play time, deaths, kills, blocks mined, distance,
   favourites). Advancements and statistics stay visible after you log out.
+  A freshly earned advancement pops up on the frame for 5 minutes, like the
+  game's toast, and the map marks where you last died.
+- **Play time per day** for the last week. The game has no per-day numbers, so
+  the agent counts time in game itself and keeps a month in
+  `agent/playtime.json` (local, gitignored).
 - **Logged out:** when and where you were last seen, what you logged out with,
   and a 3D map of the area around that spot with a marker on it.
 - **Always:** the machine's live load (CPU, GPU, memory, video memory, uptime),
@@ -342,6 +347,8 @@ Decide for yourself:
   hides them on the page and removes the map marker. The logout map still shows
   that area, so turn `render_on_logout` off too if that matters.
 - **The map** shows everything within the rendered radius, including builds.
+- **Where you last died** is a map marker, own worlds only; `hide_coordinates`
+  removes it too.
 - **World name, biome and statistics** of your own worlds are shown. Servers
   never get this: the mod doesn't collect it there and the agent drops it too.
 - **Hardware names** (CPU and GPU model, Windows version) are on the machine card.

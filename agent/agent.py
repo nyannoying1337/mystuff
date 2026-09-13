@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import io
 import json
 import logging
@@ -46,11 +47,20 @@ MAX_DURABILITY = json.loads((Path(__file__).with_name("max_durability.json")).re
 PUBLISHED_PLAYER_KEYS = (
     "online", "name", "health", "foodlevel", "xplevel", "xpp", "selecteditemslot",
     "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand", "mode",
-    "world", "stats", "advancements", "game", "joined_at",
+    "world", "stats", "advancements", "game", "joined_at", "last_death",
 )
 # Only known for your own worlds; the mod doesn't write them for servers, and
 # they're dropped here too in case an older or newer mod does.
-SINGLEPLAYER_ONLY_KEYS = ("position", "rotation", "world", "stats", "advancements")
+SINGLEPLAYER_ONLY_KEYS = ("position", "rotation", "world", "stats", "advancements", "last_death")
+
+# Seconds in game per local day, kept by the agent itself (the game has no
+# per-day numbers). One small file; a month is kept, a week is published.
+PLAYTIME_FILE = Path(__file__).with_name("playtime.json")
+PLAYTIME_KEEP_DAYS = 31
+PLAYTIME_PUBLISH_DAYS = 7
+# A longer gap between two online checks means the PC slept or the agent was
+# stopped; that time isn't counted.
+PLAYTIME_MAX_GAP = 120
 # Only meaningful while the game is running.
 LIVE_ONLY_KEYS = ("game", "joined_at")
 # The mod rewrites state.json at least every 5 s; much older means the game is gone.
@@ -89,10 +99,52 @@ def mod_dir(config: dict) -> Path:
 
 
 def apply_privacy(config: dict, player: dict) -> dict:
-    if config.get("privacy", {}).get("hide_coordinates", False) and "position" in player:
-        player["position"] = None
+    if config.get("privacy", {}).get("hide_coordinates", False):
+        if "position" in player:
+            player["position"] = None
         player.pop("rotation", None)
+        player.pop("last_death", None)
     return player
+
+
+def playtime_file(config: dict) -> Path:
+    raw = config.get("agent", {}).get("playtime_file")
+    return Path(os.path.expandvars(raw)).expanduser() if raw else PLAYTIME_FILE
+
+
+def track_playtime(config: dict, state: dict, online: bool, now: float) -> list[dict]:
+    """Add the time since the last online check to today; return the last week, oldest first."""
+    path = playtime_file(config)
+    history = state.get("playtime")
+    if history is None:
+        try:
+            history = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            history = {}
+        if not isinstance(history, dict):
+            history = {}
+        state["playtime"] = history
+
+    last = state.get("playtime_at")
+    state["playtime_at"] = now if online else None
+    if online and last is not None and 0 < now - last <= PLAYTIME_MAX_GAP:
+        today = time.strftime("%Y-%m-%d", time.localtime(now))
+        history[today] = round(float(history.get(today, 0)) + (now - last), 1)
+        for day in sorted(history)[:-PLAYTIME_KEEP_DAYS]:
+            del history[day]
+        try:
+            temp = path.with_suffix(".tmp")
+            temp.write_text(json.dumps(history, sort_keys=True), encoding="utf-8")
+            temp.replace(path)
+        except OSError as err:
+            log.warning("could not save %s: %s", path, err)
+
+    today = datetime.date(*time.localtime(now)[:3])
+    days = []
+    for back in range(PLAYTIME_PUBLISH_DAYS - 1, -1, -1):
+        day = (today - datetime.timedelta(days=back)).isoformat()
+        days.append({"date": day, "seconds": int(float(history.get(day, 0)))})
+    return days
 
 
 def unwrap(tag):
@@ -695,6 +747,7 @@ def run_once(config: dict, state: dict) -> bool:
 
     player = payload["player"]
     track_presence(config, state, player, raw)
+    payload["playtime"] = track_playtime(config, state, bool(player.get("online")), time.time())
     if player.get("online"):
         if curses_allowed(config, raw):
             now = time.time()

@@ -117,6 +117,13 @@ html, body { background: #1e1e1f; }
   border-radius: 4px;
 }
 
+/* last death, from live-feed.js */
+.mcs-death .bm-marker-poi-icon {
+  width: 32px; height: 32px; image-rendering: pixelated;
+  padding: 4px; box-sizing: content-box;
+  background: rgba(14, 14, 15, .8); border: 2px solid #0e0e0f; border-radius: 4px;
+}
+
 /* ---- added by site-chrome.js ---- */
 .mcs-back {
   position: fixed; left: 12px; bottom: 44px; z-index: 10000;

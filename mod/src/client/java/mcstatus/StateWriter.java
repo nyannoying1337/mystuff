@@ -119,6 +119,17 @@ final class StateWriter {
 		if (server != null) {
 			state.addProperty("world_path", server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString());
 			state.add("world", world(client, server, player));
+			// for the map's death marker; coordinates, so own worlds only
+			player.getLastDeathLocation().ifPresent(death -> {
+				JsonObject spot = new JsonObject();
+				spot.addProperty("dimension", death.dimension().identifier().toString());
+				JsonArray at = new JsonArray();
+				at.add(death.pos().getX());
+				at.add(death.pos().getY());
+				at.add(death.pos().getZ());
+				spot.add("position", at);
+				state.add("last_death", spot);
+			});
 			JsonObject stats = progress.stats();
 			if (stats != null) state.add("stats", stats);
 			JsonObject advancements = progress.advancements();

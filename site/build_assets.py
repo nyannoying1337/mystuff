@@ -8,7 +8,7 @@ rendered icons with the site. See the usage-guidelines note in the README.
 Output (site/assets/mc/):
   item/<id>.png   48×48 inventory icon for every item, 3D blocks included
   hud/*.png       hearts, hunger, XP bar, hotbar, inventory screen, empty-slot sprites
-  font/<n>.png    digit and "/" glyphs from the default font
+  font/<color>/<n>.png  printable ASCII glyphs from the default font, pre-tinted
   glint.png       enchantment glint texture
   names.json      English item and enchantment names for tooltips
 """
@@ -59,6 +59,7 @@ HUD_SPRITES = {
     "task_frame_open": "gui/sprites/advancements/task_frame_unobtained.png",
     "goal_frame_open": "gui/sprites/advancements/goal_frame_unobtained.png",
     "challenge_frame_open": "gui/sprites/advancements/challenge_frame_unobtained.png",
+    "toast_advancement": "gui/sprites/toast/advancement.png",
 }
 INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
@@ -509,6 +510,8 @@ FONT_COLORS = {
     "shadow": (63, 63, 63),     # the game's text shadow, #3f3f3f
     "green": (128, 255, 32),    # XP level, #80ff20
     "black": (0, 0, 0),
+    "yellow": (255, 255, 0),    # advancement toast title
+    "purple": (255, 136, 255),  # challenge toast title
 }
 
 
@@ -519,11 +522,12 @@ def build_font(assets: Assets) -> None:
     for color in FONT_COLORS:
         (OUT / "font" / color).mkdir(parents=True, exist_ok=True)
     widths = {}
-    for char in "0123456789/":
+    # printable ASCII: counts, levels, and the English advancement toasts
+    for char in (chr(code) for code in range(32, 127)):
         code = ord(char)
         glyph = sheet.crop(((code % 16) * cell, (code // 16) * cell, (code % 16 + 1) * cell, (code // 16 + 1) * cell))
         columns = [x for x in range(cell) if any(glyph.getpixel((x, y))[3] for y in range(cell))]
-        width = (max(columns) + 1) if columns else cell // 2
+        width = (max(columns) + 1) if columns else 3  # space: 3 + 1 spacing, as in game
         alpha = glyph.crop((0, 0, width, cell)).getchannel("A")
         for color, rgb in FONT_COLORS.items():
             tinted = Image.new("RGBA", alpha.size, rgb + (0,))

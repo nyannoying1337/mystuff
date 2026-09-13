@@ -18,7 +18,11 @@
   let key = null;
   try { key = localStorage.getItem(KEY_STORAGE); } catch { /* storage blocked */ }
 
+  // Same ids as MAPS in map/render.py.
+  const MAP_DIMENSIONS = { overworld: "minecraft:overworld", nether: "minecraft:the_nether", end: "minecraft:the_end" };
+
   let players = null;       // latest {mapId: {players: [...]}} from the socket
+  let lastDeath = null;     // {dimension, position} from the status, own worlds only
   let socket = null;
   let failures = 0;
   let retryTimer = null;
@@ -46,6 +50,35 @@
     if (manager && !manager.disposed) {
       manager.updateFromData(players?.[currentMapId()] || { players: [] });
     }
+    const files = bluemap.markerFileManager;
+    if (files && !files.disposed) files.updateFromData(deathMarkers(currentMapId()));
+  }
+
+  // Where you last died, as a marker set BlueMap can toggle in its menu.
+  function deathMarkers(mapId) {
+    const spot = lastDeath;
+    if (!spot || !Array.isArray(spot.position) || spot.dimension !== MAP_DIMENSIONS[mapId]) return {};
+    const [x, y, z] = spot.position.map(Number);
+    return {
+      "mc-status-deaths": {
+        label: "Deaths",
+        toggleable: true,
+        defaultHidden: false,
+        sorting: 10,
+        markers: {
+          "last-death": {
+            type: "poi",
+            position: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+            label: "Last death",
+            detail: `Last death<br><small>${Math.round(x)} ${Math.round(y)} ${Math.round(z)}</small>`,
+            icon: "../assets/mc/item/bone.png",
+            anchor: { x: 21, y: 21 },  // centre of the 32 px icon plus padding and border (ore-ui.css)
+            classes: ["mcs-death"],
+            maxDistance: 100000,
+          },
+        },
+      },
+    };
   }
   setInterval(applyToBlueMap, 2000);
 
@@ -71,6 +104,7 @@
       const message = JSON.parse(event.data);
       if (message.type === "status") {
         players = message.players;
+        lastDeath = message.status?.player?.last_death || null;
         applyToBlueMap();
       }
     });

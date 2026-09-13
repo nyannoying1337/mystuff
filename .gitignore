@@ -10,3 +10,5 @@ agent/agent.log*
 tests/worker-under-test.mjs
 worker/.dev.vars
 worker/.wrangler/
+agent/playtime.json
+agent/playtime.tmp

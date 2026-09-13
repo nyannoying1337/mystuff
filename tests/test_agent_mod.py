@@ -240,3 +240,30 @@ metrics = agent.curse_metrics(dict(system, cpu_percent=50.0, gpu_percent=20.0), 
 assert metrics["cpu_percent"] == 50.0 and metrics["gpu_percent"] == 20.0
 
 print("WORLD/STATS/SYSTEM TESTS PASSED")
+
+# ============================================================ last death, play time per day
+death = {"dimension": "minecraft:overworld", "position": [10, 64, -5]}
+write_state(mode="singleplayer", last_death=death)
+assert agent.collect_player(config, agent.read_mod_state(config))["last_death"] == death
+write_state(mode="multiplayer", world_path=None, last_death=death)
+assert "last_death" not in agent.collect_player(config, agent.read_mod_state(config))
+write_state(mode="singleplayer", last_death=death)
+hidden = dict(config, privacy={"hide_coordinates": True})
+assert "last_death" not in agent.collect_player(hidden, agent.read_mod_state(config))
+
+pt_config = dict(config, agent={"playtime_file": str(tmp / "playtime.json")})
+pt_state = {}
+noon = time.mktime((2026, 9, 13, 12, 0, 0, 0, 0, -1))
+assert agent.track_playtime(pt_config, pt_state, True, noon)[-1] == {"date": "2026-09-13", "seconds": 0}
+agent.track_playtime(pt_config, pt_state, True, noon + 10)
+agent.track_playtime(pt_config, pt_state, True, noon + 20)
+agent.track_playtime(pt_config, pt_state, True, noon + 20 + 3600)   # PC slept: not counted
+days = agent.track_playtime(pt_config, pt_state, False, noon + 3630)
+assert len(days) == 7 and days[-1]["seconds"] == 20 and days[0]["date"] == "2026-09-07", days
+# offline gaps don't count, and the file survives an agent restart
+agent.track_playtime(pt_config, pt_state, True, noon + 4000)
+fresh = {}
+assert agent.track_playtime(pt_config, fresh, False, noon + 4010)[-1]["seconds"] == 20
+assert json.loads((tmp / "playtime.json").read_text())["2026-09-13"] == 20
+
+print("DEATH/PLAYTIME TESTS PASSED")

@@ -23,6 +23,8 @@ agent.MCRcon = FakeRcon
 config = tomllib.loads((HERE.parent / "agent" / "config.example.toml").read_text(encoding="utf-8"))
 config["cursed"]["enabled"] = True
 config["source"] = {"type": "rcon"}  # this test covers the server path
+import tempfile
+config.setdefault("agent", {})["playtime_file"] = str(Path(tempfile.mkdtemp()) / "playtime.json")
 
 hot = {"cpu_temp": 70.0, "gpu_temp": 83.2, "mem_used": 15e9, "mem_total": 16e9, "uptime": {"uptime": 13 * 3600_000}}
 agent.collect_system = lambda: hot

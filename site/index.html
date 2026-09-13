@@ -127,7 +127,7 @@ main { flex: 1; padding: 28px 0 40px; }
 }
 .scene[data-offline="true"] { filter: grayscale(.7) brightness(.75); }
 .scene-chip {
-  position: absolute; top: 14px; right: 14px; z-index: 1;
+  position: absolute; top: 14px; left: 14px; z-index: 1;
   padding: 4px 10px; border-radius: var(--radius);
   background: rgba(14, 14, 15, .75); color: var(--text-2); font-size: 12px; font-weight: 500;
 }
@@ -140,6 +140,22 @@ main { flex: 1; padding: 28px 0 40px; }
 /* hearts, hunger and XP sit where the game draws them: bottom centre of the frame */
 .vitals-dock { position: absolute; left: 0; right: 0; bottom: 6%; z-index: 1; display: flex; justify-content: center; pointer-events: none; }
 .vitals-dock .gui { margin: 0; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }
+/* a fresh advancement pops in top right, like the game's toast */
+.toast-dock { position: absolute; top: 12px; left: 0; right: 12px; z-index: 2; display: flex; justify-content: flex-end; pointer-events: none; }
+.toast-dock .gui { margin: 0; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .5)); }
+.toast-dock .gui[data-enter="true"] { animation: toast-in .6s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes toast-in { from { transform: translateX(calc(100% + 16px)); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast-dock .gui[data-enter="true"] { animation: none; } }
+
+/* play time per day */
+.pt-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.pt-day { display: grid; grid-template-rows: 18px 120px 20px; gap: 4px; text-align: center; min-width: 0; }
+.pt-value { font-size: 11px; font-weight: 700; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pt-track { position: relative; background: var(--deep); border: 2px solid var(--edge); border-radius: 3px; overflow: hidden; }
+.pt-track i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--green); box-shadow: inset 0 2px 0 var(--green-top), inset 0 -3px 0 var(--green-lip); }
+.pt-label { font-size: 12px; color: var(--text-3); }
+.pt-day[data-today="true"] .pt-label { color: var(--gold); font-weight: 700; }
+.pt-day[data-today="true"] .pt-track i { background: #c7901a; box-shadow: inset 0 2px 0 #e7b441, inset 0 -3px 0 #7a5409; }
 
 .identity { display: flex; align-items: center; gap: 18px 24px; padding: 18px 22px 22px; flex-wrap: wrap; }
 .avatar {
@@ -632,6 +648,41 @@ function vitalsNode(player) {
   return gui.node;
 }
 
+// The game's advancement toast: shown for a few minutes after earning one.
+const TOAST_MS = 5 * 60 * 1000;
+const TOAST_TITLES = {
+  task: ["Advancement Made!", "yellow"],
+  goal: ["Goal Reached!", "yellow"],
+  challenge: ["Challenge Complete!", "purple"],
+};
+const toastsShown = new Set();  // slide in once, not on every re-render
+
+function fitText(text, max) {
+  if (textWidth(text) <= max) return text;
+  let cut = text;
+  while (cut && textWidth(`${cut}...`) > max) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}...`;
+}
+
+function toastNode(adv) {
+  // same size relative to the frame as the vitals (182 wide at fill .3)
+  const gui = makeGui(160, 32, "toast", { fill: 0.3 * 160 / 182, min: 280 * 160 / 182, max: 3 });
+  const [heading, color] = TOAST_TITLES[adv.type] || TOAST_TITLES.task;
+  gui.node.setAttribute("role", "status");
+  gui.node.setAttribute("aria-label", `${heading} ${adv.title}`);
+  if (!toastsShown.has(adv.id)) {
+    gui.node.dataset.enter = "true";
+    toastsShown.add(adv.id);
+  }
+  sprite(gui, "toast_advancement", 0, 0, 160, 32);
+  const url = `${ASSETS}/item/${shortId(adv.icon)}.png`;
+  gui.add(el("img", { src: url, alt: "" }), 8, 8, 16, 16);
+  if (adv.glint) masked(gui.add(el("div", { class: "glint" }), 8, 8, 16, 16), url);
+  drawText(gui, heading, 30, 7, color);
+  drawText(gui, fitText(adv.title || "", 125), 30, 18, "white");
+  return gui.node;
+}
+
 const ARMOR_SLOTS = [["head", "slot_helmet"], ["chest", "slot_chestplate"], ["legs", "slot_leggings"], ["feet", "slot_boots"]];
 
 // The survival inventory screen, slots where the game puts them.
@@ -909,6 +960,31 @@ function statsPanel(stats, online) {
   return el("section", { class: "panel stats-panel" }, children);
 }
 
+function playtimePanel(days) {
+  const most = Math.max(...days.map((day) => day.seconds), 1);
+  const total = days.reduce((sum, day) => sum + day.seconds, 0);
+  const short = (s) => (s < 60 ? "" : s < 3600 ? `${Math.round(s / 60)}m` : `${(s / 3600).toFixed(s < 36000 ? 1 : 0)}h`);
+  const chart = el("div", { class: "pt-chart", role: "img" });
+  chart.setAttribute("aria-label", days.map((day) => `${day.date}: ${duration(day.seconds)}`).join(", "));
+  days.forEach((day, index) => {
+    const today = index === days.length - 1;
+    const weekday = new Date(`${day.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short" });
+    const fill = el("i");
+    fill.style.height = `${day.seconds ? Math.max(4, (day.seconds / most) * 100) : 0}%`;
+    const column = el("div", { class: "pt-day", title: `${day.date}: ${duration(day.seconds)}` }, [
+      el("span", { class: "pt-value", text: short(day.seconds) }),
+      el("div", { class: "pt-track" }, [fill]),
+      el("span", { class: "pt-label", text: today ? "Today" : weekday }),
+    ]);
+    if (today) column.dataset.today = "true";
+    chart.append(column);
+  });
+  return el("section", { class: "panel" }, [
+    el("div", { class: "panel-head" }, [el("h2", { text: "Play time" }), el("small", { text: `${duration(total)} this week` })]),
+    chart,
+  ]);
+}
+
 function setPill(state, text) {
   const pill = document.getElementById("live-pill");
   pill.hidden = !state;
@@ -1058,6 +1134,10 @@ function render(data) {
   if (glyphWidths && typeof player.health === "number") {
     scene.append(el("div", { class: "vitals-dock" }, [vitalsNode(player)]));
   }
+  const fresh = player.advancements?.recent?.[0];
+  if (glyphWidths && online && !multiplayer && fresh?.at && Date.now() - fresh.at < TOAST_MS) {
+    scene.append(el("div", { class: "toast-dock" }, [toastNode(fresh)]));
+  }
 
   const chips = el("div", { class: "chips" });
   if (online && multiplayer) {
@@ -1100,6 +1180,7 @@ function render(data) {
 
   if (online && !multiplayer && player.world) right.append(worldPanel(player.world));
   if (Object.keys(system).length) right.append(machinePanel(system, player.game, online));
+  if (Array.isArray(data.playtime) && data.playtime.some((day) => day.seconds >= 60)) right.append(playtimePanel(data.playtime));
 
   const mapButton = document.getElementById("map-button");
   mapButton.hidden = !mapInfo;
