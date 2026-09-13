@@ -105,7 +105,10 @@ final class StateWriter {
 		rotation.add(Math.round(player.getXRot() * 10) / 10.0);
 		state.add("rotation", rotation);
 
+		// The agent only renders maps and runs curses for singleplayer sessions.
+		// For servers nothing identifying is written — not even the address.
 		IntegratedServer server = client.getSingleplayerServer();
+		state.addProperty("mode", server != null ? "singleplayer" : "multiplayer");
 		if (server != null) {
 			state.addProperty("world_path", server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString());
 		}

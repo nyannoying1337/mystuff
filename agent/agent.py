@@ -43,7 +43,7 @@ MAX_DURABILITY = json.loads((Path(__file__).with_name("max_durability.json")).re
 # else in that file (like the local world path) stays on this machine.
 PUBLISHED_PLAYER_KEYS = (
     "online", "name", "health", "foodlevel", "xplevel", "xpp", "selecteditemslot",
-    "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand",
+    "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand", "mode",
 )
 # The mod rewrites state.json at least every 5 s; much older means the game is gone.
 MOD_STALE_SECONDS = 30
@@ -240,6 +240,12 @@ def collect_player_mod(config: dict, raw: dict | None) -> dict:
         not isinstance(written_at, (int, float)) or time.time() - written_at / 1000 > MOD_STALE_SECONDS
     ):
         player["online"] = False  # game closed or crashed without saying goodbye
+    mode = session_mode(raw)
+    player["mode"] = mode
+    if mode == "multiplayer":
+        # where you are on someone's server isn't yours to publish
+        player.pop("position", None)
+        player.pop("rotation", None)
     return apply_privacy(config, player)
 
 
@@ -431,35 +437,69 @@ def record_curse(state: dict, curse: dict, now: float) -> None:
 
 # ---------------------------------------------------------------- logout map
 
+def session_mode(raw: dict | None) -> str | None:
+    """"singleplayer" or "multiplayer" for the mod's session; None for RCON."""
+    if not raw:
+        return None
+    mode = raw.get("mode")
+    if mode in ("singleplayer", "multiplayer"):
+        return mode
+    # mod 1.0.0 didn't write a mode, but only ever wrote world_path in singleplayer
+    return "singleplayer" if raw.get("world_path") else "multiplayer"
+
+
 def track_presence(config: dict, state: dict, player: dict, raw: dict | None) -> None:
-    """Remember where the player was; when they leave, render that spot."""
-    source = raw if raw else player
+    """Remember where the player was; when they leave a singleplayer world,
+    render that spot. Server sessions never touch the map: their coordinates
+    belong to someone else's world."""
+    mode = session_mode(raw)
+    now_ms = int(time.time() * 1000)
+
     if player.get("online"):
         state["was_online"] = True
+        state["session_mode"] = mode
+        # always from this session, so a server session can't reuse the last world
+        state["world_path"] = raw.get("world_path") if raw and mode == "singleplayer" else None
+        if mode == "multiplayer":
+            state["last_seen"] = {"mode": "multiplayer", "at": now_ms}
+            return
+        source = raw if raw else player
         position = source.get("position")
         if isinstance(position, list) and len(position) == 3:
             state["last_seen"] = {
                 "position": position,
                 "dimension": source.get("dimension"),
-                "at": int(time.time() * 1000),
+                "at": now_ms,
+                **({"mode": mode} if mode else {}),
             }
-        if raw and raw.get("world_path"):
-            state["world_path"] = raw["world_path"]
         return
 
     if state.get("was_online"):
         state["was_online"] = False
-        start_logout_render(config, state)
-    elif raw and "last_seen" not in state and isinstance(raw.get("position"), list):
+        if state.get("session_mode") == "multiplayer":
+            log.info("left a multiplayer server — no map render")
+        else:
+            start_logout_render(config, state)
+    elif raw and "last_seen" not in state:
         # Agent started while the player is away (restart, reboot): the mod's
         # last state still says where and when they left.
-        state["last_seen"] = {
-            "position": raw["position"],
-            "dimension": raw.get("dimension"),
-            "at": raw.get("written_at") or int(time.time() * 1000),
-        }
-        if raw.get("world_path"):
-            state["world_path"] = raw["world_path"]
+        at = raw.get("written_at") or now_ms
+        if mode == "multiplayer":
+            state["last_seen"] = {"mode": "multiplayer", "at": at}
+        elif isinstance(raw.get("position"), list):
+            state["last_seen"] = {
+                "position": raw["position"],
+                "dimension": raw.get("dimension"),
+                "at": at,
+                "mode": "singleplayer",
+            }
+            state["world_path"] = raw.get("world_path")
+
+
+def curses_allowed(config: dict, raw: dict | None) -> bool:
+    """Curses reach a world over RCON, or through the mod in singleplayer only.
+    Queued on a server they'd just wait and fire later in the wrong place."""
+    return source_type(config) != "mod" or session_mode(raw) == "singleplayer"
 
 
 def last_seen_payload(config: dict, state: dict) -> dict | None:
@@ -633,10 +673,11 @@ def run_once(config: dict, state: dict) -> bool:
     player = payload["player"]
     track_presence(config, state, player, raw)
     if player.get("online"):
-        now = time.time()
-        curses = due_curses(config, curse_metrics(payload["system"], player), state, now)
-        if curses:
-            cast_curses(config, player["name"], curses, state, now)
+        if curses_allowed(config, raw):
+            now = time.time()
+            curses = due_curses(config, curse_metrics(payload["system"], player), state, now)
+            if curses:
+                cast_curses(config, player["name"], curses, state, now)
     elif (seen := last_seen_payload(config, state)):
         payload["last_seen"] = seen
     if state.get("curse_log"):

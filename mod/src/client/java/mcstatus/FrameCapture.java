@@ -52,6 +52,8 @@ final class FrameCapture {
 	void onLevelRendered(Minecraft client) {
 		long now = System.currentTimeMillis();
 		if (inFlight || client.level == null || client.player == null) return;
+		// no frames from servers: other people's builds and names aren't ours to publish
+		if (client.getSingleplayerServer() == null) return;
 		if (!requested && now < nextCaptureAt) return;
 		requested = false;
 		nextCaptureAt = now + config.captureIntervalSeconds * 1000L;

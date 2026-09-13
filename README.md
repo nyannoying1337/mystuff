@@ -169,6 +169,23 @@ Everything it shares goes through files in `%APPDATA%\.minecraft\mc-status\`:
   RCON. The mod runs each file's commands as the integrated server, then deletes
   the file. At most 20 commands per file. Ignored on multiplayer servers.
 
+### Multiplayer
+
+On someone else's server the page only shows that you're in game ("in game ·
+multiplayer"), plus your HUD and inventory.
+
+Skipped on servers:
+- coordinates;
+- screenshots (the mod doesn't even capture);
+- the map marker;
+- the logout map render;
+- curses.
+
+The server's address is never written anywhere. Every session is tagged
+`"mode": "singleplayer" | "multiplayer"` in `state.json`, and the map only ever
+follows singleplayer sessions. As a safety net, the mod drops curse command
+files older than a minute instead of running them late.
+
 ### Why the capture doesn't lag
 
 The first version used the game's screenshot code. That reads back the whole

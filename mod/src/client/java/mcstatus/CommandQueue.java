@@ -26,6 +26,8 @@ final class CommandQueue {
 	private static final int CHECK_EVERY_TICKS = 20;
 	private static final long MAX_FILE_BYTES = 64 * 1024;
 	private static final int MAX_COMMANDS_PER_FILE = 20;
+	// A curse is a reaction to "right now"; one that's a minute old is dropped.
+	private static final long MAX_AGE_MS = 60_000;
 
 	private final Path dir;
 	private final AtomicBoolean scanning = new AtomicBoolean();
@@ -38,20 +40,22 @@ final class CommandQueue {
 	void tick(Minecraft client) {
 		if (++ticks < CHECK_EVERY_TICKS) return;
 		ticks = 0;
+		if (client.player == null) return;
 		IntegratedServer server = client.getSingleplayerServer();
-		if (server == null || client.player == null) return;
 		if (!scanning.compareAndSet(false, true)) return;
 		Util.ioPool().execute(() -> {
 			try {
-				List<String> commands = drain();
-				if (!commands.isEmpty()) server.execute(() -> run(server, commands));
+				// On a server nothing runs; stale files are still cleared so they
+				// can't all fire the next time a singleplayer world opens.
+				List<String> commands = drain(server != null);
+				if (server != null && !commands.isEmpty()) server.execute(() -> run(server, commands));
 			} finally {
 				scanning.set(false);
 			}
 		});
 	}
 
-	private List<String> drain() {
+	private List<String> drain(boolean runnable) {
 		List<String> commands = new ArrayList<>();
 		if (!Files.isDirectory(dir)) return commands;
 		List<Path> files = new ArrayList<>();
@@ -62,9 +66,20 @@ final class CommandQueue {
 			return commands;
 		}
 		files.sort(null); // agent names files by timestamp
+		long now = System.currentTimeMillis();
 		for (Path file : files) {
+			boolean stale;
 			try {
-				if (Files.size(file) <= MAX_FILE_BYTES) {
+				stale = now - Files.getLastModifiedTime(file).toMillis() > MAX_AGE_MS;
+			} catch (IOException err) {
+				continue; // vanished meanwhile
+			}
+			if (!runnable && !stale) continue; // might still be meant for a world that's opening
+			if (stale) {
+				McStatusClient.LOG.info("dropping stale command file {}", file.getFileName());
+			}
+			try {
+				if (!stale && Files.size(file) <= MAX_FILE_BYTES) {
 					JsonObject body = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
 					JsonArray list = body.getAsJsonArray("commands");
 					if (list != null) {

@@ -135,6 +135,73 @@ state = {}
 write_state(online=False, written_at=1234)
 raw = agent.read_mod_state(config)
 agent.track_presence(config, state, agent.collect_player(config, raw), raw)
-assert state["last_seen"] == {"position": [120.5, 64.0, -33.2], "dimension": "minecraft:overworld", "at": 1234}
+assert state["last_seen"] == {"position": [120.5, 64.0, -33.2], "dimension": "minecraft:overworld", "at": 1234, "mode": "singleplayer"}
 assert "render_thread" not in state and calls == []
 print("RESTART-OFFLINE TEST PASSED")
+
+# ============================================================ singleplayer vs multiplayer
+calls.clear()
+agent.wait_for_world_saved = lambda w, rejoined, **kw: True
+
+def session(state, **over):
+    write_state(**over)
+    raw = agent.read_mod_state(config)
+    player = agent.collect_player(config, raw)
+    agent.track_presence(config, state, player, raw)
+    return player, raw
+
+def join_thread(state):
+    thread = state.get("render_thread")
+    if thread:
+        thread.join(10)
+
+# --- multiplayer: mode published, coordinates stripped, no world path kept
+state = {}
+player, raw = session(state, mode="multiplayer", world_path=None, position=[999.0, 70.0, -999.0])
+assert player["mode"] == "multiplayer"
+assert "position" not in player and "rotation" not in player, player
+assert state["world_path"] is None and state["last_seen"]["mode"] == "multiplayer"
+assert "position" not in state["last_seen"]
+
+# --- no curses on a server
+assert agent.curses_allowed(config, raw) is False
+assert agent.curses_allowed(config, {"mode": "singleplayer", "world_path": str(world)}) is True
+assert agent.curses_allowed(dict(config, source={"type": "rcon"}), None) is True
+
+# --- singleplayer, then a server, then leave the server: no render, no stale world reuse
+state = {}
+session(state, mode="singleplayer")                      # world_path = test world
+assert state["world_path"] == str(world)
+session(state, mode="multiplayer", world_path=None, position=[999.0, 70.0, -999.0])
+assert state["world_path"] is None
+session(state, mode="multiplayer", world_path=None, online=False)
+join_thread(state)
+assert calls == [], f"left a server but rendered: {calls}"
+seen = agent.last_seen_payload(config, state)
+assert seen["mode"] == "multiplayer" and "position" not in seen
+
+# --- a server, then singleplayer, then leave singleplayer: renders the singleplayer spot
+calls.clear()
+state = {}
+session(state, mode="multiplayer", world_path=None, position=[999.0, 70.0, -999.0])
+session(state, mode="singleplayer", position=[12.0, 64.0, 34.0])
+session(state, mode="singleplayer", online=False)
+join_thread(state)
+assert len(calls) == 1, calls
+cmd = calls[0]
+assert cmd[cmd.index("--world") + 1] == str(world)
+assert cmd[cmd.index("--center") + 1: cmd.index("--center") + 3] == ["12", "34"]
+
+# --- mod 1.0.0 state (no mode): world_path means singleplayer, none means multiplayer
+assert agent.session_mode({"world_path": "x"}) == "singleplayer"
+assert agent.session_mode({"position": [1, 2, 3]}) == "multiplayer"
+assert agent.session_mode(None) is None
+
+# --- agent restarted after a server session: last_seen without coordinates
+state = {}
+write_state(mode="multiplayer", world_path=None, online=False, written_at=5555)
+raw = agent.read_mod_state(config)
+agent.track_presence(config, state, agent.collect_player(config, raw), raw)
+assert state["last_seen"] == {"mode": "multiplayer", "at": 5555}
+
+print("SINGLEPLAYER/MULTIPLAYER TESTS PASSED")

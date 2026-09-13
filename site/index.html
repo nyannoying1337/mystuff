@@ -619,23 +619,30 @@ function render(data) {
   }
 
   const online = player.online && age <= STALE_MS;
+  // On someone's server only status and inventory are shown: no coordinates,
+  // no screenshot, no map marker (the agent doesn't even send them).
+  const multiplayer = player.mode === "multiplayer";
   const status = el("section", { class: "panel" });
-  const badge = el("span", { class: "badge", text: online ? "in game" : "not playing" });
+  const badge = el("span", {
+    class: "badge",
+    text: online ? (multiplayer ? "in game · multiplayer" : "in game") : "not playing",
+  });
   badge.dataset.state = online ? "online" : "offline";
   status.append(el("div", { class: "head" }, [el("h1", { text: player.name || "status" }), badge]));
 
   if (online) {
     status.append(glyphWidths ? hudNode(player) : plainStats(player));
-    status.append(statRows([
-      ["x y z", coords(player.position)],
-      ["dimension", dimensionName(player.dimension)],
-    ]));
+    status.append(statRows(multiplayer
+      ? [["where", "a multiplayer server"]]
+      : [["x y z", coords(player.position)], ["dimension", dimensionName(player.dimension)]]));
   } else if (data.last_seen) {
-    status.append(statRows([
-      ["last seen", timeAgo(data.last_seen.at)],
-      ["where", dimensionName(data.last_seen.dimension)],
-      ["x y z", coords(data.last_seen.position)],
-    ]));
+    status.append(statRows(data.last_seen.mode === "multiplayer"
+      ? [["last seen", timeAgo(data.last_seen.at)], ["where", "a multiplayer server"]]
+      : [
+        ["last seen", timeAgo(data.last_seen.at)],
+        ["where", dimensionName(data.last_seen.dimension)],
+        ["x y z", coords(data.last_seen.position)],
+      ]));
   } else {
     status.append(el("p", { text: "No world loaded right now." }));
   }
@@ -654,7 +661,7 @@ function render(data) {
   // The frame arrives over the socket as a blob; only the polling fallback fetches it.
   const shotSrc = shotUrl || (pollTimer && data.screenshot_at && inviteKey
     ? `${API}/shot?key=${encodeURIComponent(inviteKey)}&t=${data.screenshot_at}` : null);
-  if (data.screenshot_at && shotSrc) {
+  if (data.screenshot_at && shotSrc && !(online && multiplayer)) {
     const shot = el("section", { class: "panel" }, [el("h2", { text: "Last thing seen" })]);
     const image = el("img", { class: "shot", alt: "The most recent frame of the world." });
     image.src = shotSrc;
