@@ -502,17 +502,33 @@ def build_names(assets: Assets) -> None:
     )
 
 
+# The colours the page draws digits in. Pre-tinted images instead of CSS masks:
+# browsers always smooth masks, but an <img> can be drawn pixelated.
+FONT_COLORS = {
+    "white": (255, 255, 255),
+    "shadow": (63, 63, 63),     # the game's text shadow, #3f3f3f
+    "green": (128, 255, 32),    # XP level, #80ff20
+    "black": (0, 0, 0),
+}
+
+
 def build_font(assets: Assets) -> None:
-    sheet = assets.image("font/ascii.png")
+    sheet = assets.image("font/ascii.png").convert("RGBA")
     cell = sheet.width // 16
-    (OUT / "font").mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(OUT / "font", ignore_errors=True)
+    for color in FONT_COLORS:
+        (OUT / "font" / color).mkdir(parents=True, exist_ok=True)
     widths = {}
     for char in "0123456789/":
         code = ord(char)
         glyph = sheet.crop(((code % 16) * cell, (code // 16) * cell, (code % 16 + 1) * cell, (code // 16 + 1) * cell))
         columns = [x for x in range(cell) if any(glyph.getpixel((x, y))[3] for y in range(cell))]
         width = (max(columns) + 1) if columns else cell // 2
-        glyph.crop((0, 0, width, cell)).save(OUT / "font" / f"{code}.png")
+        alpha = glyph.crop((0, 0, width, cell)).getchannel("A")
+        for color, rgb in FONT_COLORS.items():
+            tinted = Image.new("RGBA", alpha.size, rgb + (0,))
+            tinted.putalpha(alpha)
+            tinted.save(OUT / "font" / color / f"{code}.png")
         widths[char] = width
     (OUT / "font" / "widths.json").write_text(json.dumps(widths), encoding="utf-8")
 

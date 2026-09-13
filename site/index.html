@@ -54,7 +54,7 @@ button, input { font: inherit; }
 .topbar { border-bottom: 2px solid var(--edge); background: var(--deep); position: sticky; top: 0; z-index: 5; }
 .topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; }
-.brand img { width: 32px; height: 32px; }
+.brand img { width: calc(16 * var(--t2, 2px)); height: calc(16 * var(--t2, 2px)); }
 .brand span { font-weight: 800; font-size: 18px; letter-spacing: .2px; }
 .top-actions { display: flex; align-items: center; gap: 10px; }
 
@@ -137,9 +137,11 @@ main { flex: 1; padding: 28px 0 40px; }
 .scene-note strong { font-size: 28px; font-weight: 800; }
 .scene-note span { color: var(--text-2); }
 
+/* hearts, hunger and XP sit where the game draws them: bottom centre of the frame */
+.vitals-dock { position: absolute; left: 0; right: 0; bottom: 6%; z-index: 1; display: flex; justify-content: center; pointer-events: none; }
+.vitals-dock .gui { margin: 0; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }
+
 .identity { display: flex; align-items: center; gap: 18px 24px; padding: 18px 22px 22px; flex-wrap: wrap; }
-.vitals { width: min(100%, 364px); flex: none; margin-left: auto; }
-@media (max-width: 700px) { .vitals { margin: 4px auto 0; } }
 .avatar {
   width: 72px; height: 72px; flex: none; border: 2px solid var(--edge); border-radius: var(--radius);
   background: var(--tile); box-shadow: inset 0 2px 0 #5d5e60; display: grid; place-items: center; overflow: hidden;
@@ -164,7 +166,7 @@ main { flex: 1; padding: 28px 0 40px; }
   .scene { aspect-ratio: 16 / 10; min-height: 0; }
 }
 
-.inventory-well { background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius); padding: clamp(10px, 3vw, 22px); }
+.inventory-well { background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius); padding: clamp(6px, 1.5vw, 12px); }
 
 dl { margin: 0; }
 .row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--divider); }
@@ -182,13 +184,15 @@ dl { margin: 0; }
 /* icon + number tiles (world, statistics) */
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 10px; }
 .tiles-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* an odd one out spans the row instead of leaving a hole */
+.tiles-2 > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 420px) { .tiles-2 { grid-template-columns: minmax(0, 1fr); } }
 .tile {
   display: flex; align-items: center; gap: 12px; min-width: 0;
   padding: 9px 12px 11px; border: 2px solid var(--edge); border-radius: var(--radius);
   background: var(--panel-raised); box-shadow: inset 0 2px 0 #505153, inset 0 -3px 0 #2a2b2c;
 }
-.tile > img { width: 32px; height: 32px; flex: none; }
+.tile > img { width: calc(16 * var(--t2, 2px)); height: calc(16 * var(--t2, 2px)); flex: none; }
 .tile div { min-width: 0; }
 .tile .k { display: block; font-size: 12px; font-weight: 700; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .v { display: block; font-size: 17px; font-weight: 800; line-height: 1.3; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -212,15 +216,15 @@ dl { margin: 0; }
 .adv-total strong { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .adv-total span { color: var(--text-2); }
 .adv-tabs { display: grid; gap: 8px; margin-top: 16px; }
-.adv-tab { display: grid; grid-template-columns: 20px minmax(78px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
-.adv-tab img { width: 20px; height: 20px; }
+.adv-tab { display: grid; grid-template-columns: calc(16 * var(--t1, 1.25px)) minmax(78px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.adv-tab img { width: calc(16 * var(--t1, 1.25px)); height: calc(16 * var(--t1, 1.25px)); }
 .adv-tab b { font-weight: 500; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .adv-list { display: grid; gap: 8px; }
 .adv { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.adv-frame { position: relative; width: 52px; height: 52px; flex: none; }
+.adv-frame { position: relative; width: calc(26 * var(--t2, 2px)); height: calc(26 * var(--t2, 2px)); flex: none; }
 .adv-frame > img { position: absolute; image-rendering: pixelated; }
 .adv-frame .frame { inset: 0; width: 100%; height: 100%; }
-.adv-frame .icon { left: 10px; top: 10px; width: 32px; height: 32px; }
+.adv-frame .icon { left: calc(5 * var(--t2, 2px)); top: calc(5 * var(--t2, 2px)); width: calc(16 * var(--t2, 2px)); height: calc(16 * var(--t2, 2px)); }
 .adv-body { min-width: 0; flex: 1; }
 .adv-title { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .adv-title[data-type="challenge"] { color: #e7a8ff; }
@@ -236,7 +240,7 @@ dl { margin: 0; }
 /* ---- centered screens: join, notices ---- */
 .center { min-height: calc(100vh - 64px - 120px); display: grid; place-items: center; padding: 20px 0; }
 .card-narrow { width: min(440px, 100%); text-align: center; padding: 30px 28px 32px; }
-.card-narrow .big-icon { width: 64px; height: 64px; margin: 0 auto 14px; display: block; }
+.card-narrow .big-icon { width: calc(16 * var(--t4, 4px)); height: calc(16 * var(--t4, 4px)); margin: 0 auto 14px; display: block; }
 .card-narrow h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
 .card-narrow p { margin: 0 0 20px; color: var(--text-2); }
 .card-narrow .btn { width: 100%; }
@@ -257,13 +261,10 @@ dl { margin: 0; }
 /* ---- game GUIs, laid out in native GUI pixels and scaled as one ---- */
 .gui { position: relative; margin: 0 auto; }
 .gui > * { position: absolute; display: block; }
-.hud { width: min(92%, 546px); }
-.inventory { width: min(100%, 528px); }
 .preview-body { object-fit: contain; image-rendering: auto; }
 .slot-hit { padding: 0; border: 0; background: transparent; cursor: help; }
 .slot-hit:hover { background: rgba(255, 255, 255, .45); }
 .slot-hit:focus-visible { outline: 2px solid #fff; outline-offset: 0; }
-.glyph { mask-size: 100% 100%; -webkit-mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; }
 .swatch { outline: 1px solid rgba(0, 0, 0, .35); outline-offset: -1px; }
 .glint {
   mask-size: 100% 100%; -webkit-mask-size: 100% 100%;
@@ -375,10 +376,13 @@ function el(tag, props = {}, children = []) {
 // ---- game GUI drawing --------------------------------------------------------
 
 // A box measured in GUI pixels; children are placed by percentage so the whole
-// thing scales crisply as one image would.
-function makeGui(width, height, className) {
+// thing scales as one image would. fitGuis() gives it a whole number of screen
+// pixels per GUI pixel. `fill` is the share of its container it aims for, `min`
+// a width in CSS px it tries to reach, `max` the largest CSS px per GUI pixel.
+function makeGui(width, height, className, { fill = 1, min = 0, max = 3 } = {}) {
   const node = el("div", { class: `gui ${className}` });
   node.style.aspectRatio = `${width} / ${height}`;
+  Object.assign(node.dataset, { native: width, fill, min, max });
   return {
     node,
     add(child, x, y, w, h) {
@@ -414,22 +418,53 @@ function textWidth(text) {
   return width;
 }
 
+// color: one of the pre-tinted glyph sets from build_assets.py (white, shadow, green, black)
 function drawText(gui, text, x, y, color) {
   let cursor = x;
   for (const char of text) {
     const width = glyphWidths[char];
     if (width === undefined) { cursor += 6; continue; }
-    const glyph = gui.add(el("div", { class: "glyph" }), cursor, y, width, 8);
-    masked(glyph, `${ASSETS}/font/${char.charCodeAt(0)}.png`);
-    glyph.style.background = color;
+    gui.add(el("img", { src: `${ASSETS}/font/${color}/${char.charCodeAt(0)}.png`, alt: "" }), cursor, y, width, 8);
     cursor += width + 1;
   }
 }
 
 function drawShadowText(gui, text, x, y) {
-  drawText(gui, text, x + 1, y + 1, "#3f3f3f");
-  drawText(gui, text, x, y, "#ffffff");
+  drawText(gui, text, x + 1, y + 1, "shadow");
+  drawText(gui, text, x, y, "white");
 }
+
+// Pixel art only stays sharp when each texture pixel covers a whole number of
+// screen pixels. With Windows display scaling (125 %, 150 %) "2×" in CSS isn't,
+// so sizes are rounded to the screen: --t1/--t2/--t4 are one texture pixel at
+// roughly 1.25, 2 and 4 CSS px, and GUIs get an integer scale.
+function fitPixels() {
+  const dpr = window.devicePixelRatio || 1;
+  const rootStyle = document.documentElement.style;
+  for (const [name, scale] of [["--t1", 1.25], ["--t2", 2], ["--t4", 4]]) {
+    rootStyle.setProperty(name, `${Math.max(1, Math.round(scale * dpr)) / dpr}px`);
+  }
+  for (const gui of document.querySelectorAll(".gui[data-native]")) {
+    const parent = gui.parentElement;
+    const style = getComputedStyle(parent);
+    const box = parent.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    if (box <= 0) continue;
+    const native = Number(gui.dataset.native);
+    const target = Math.min(box, Math.max(box * Number(gui.dataset.fill), Number(gui.dataset.min)));
+    // nearest whole scale to the target, but never wider than the box or the max
+    const fits = Math.floor((box * dpr) / native);
+    const wanted = Math.round((target * dpr) / native);
+    const scale = Math.max(1, Math.min(wanted, fits, Math.round(Number(gui.dataset.max) * dpr)));
+    gui.style.width = `${(scale * native) / dpr}px`;
+  }
+}
+
+let fitQueued = false;
+window.addEventListener("resize", () => {  // also fires on browser zoom, which changes the pixel ratio
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(() => { fitQueued = false; fitPixels(); });
+});
 
 // One item at slot position (x, y), drawn like the game: icon, glint, count,
 // durability bar, plus an invisible button that shows the tooltip.
@@ -559,7 +594,8 @@ function vitalsNode(player) {
   const level = player.xplevel ?? 0;
   const armor = player.world?.armor ?? 0;
   const top = armor > 0 ? 10 : 0;
-  const gui = makeGui(182, top + 15, "vitals");
+  // about as big relative to the frame as the game draws it at GUI scale 3
+  const gui = makeGui(182, top + 15, "vitals", { fill: 0.3, min: 280, max: 3 });
   gui.node.setAttribute("role", "img");
   gui.node.setAttribute("aria-label", [
     `${health / 2} of 10 hearts`, `hunger ${food / 2} of 10`, `level ${level}`,
@@ -590,8 +626,8 @@ function vitalsNode(player) {
   if (level > 0) {
     const text = String(level);
     const x = Math.floor((182 - textWidth(text)) / 2);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(gui, text, x + dx, top + 4 + dy, "#000000");
-    drawText(gui, text, x, top + 4, "#80ff20");
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(gui, text, x + dx, top + 4 + dy, "black");
+    drawText(gui, text, x, top + 4, "green");
   }
   return gui.node;
 }
@@ -856,14 +892,21 @@ function statsPanel(stats, online) {
     stats.enchanted ? tile("enchanting_table", "Items enchanted", count(stats.enchanted)) : null,
     stats.slept ? tile("red_bed", "Nights slept", count(stats.slept)) : null,
     stats.raids_won ? tile("ominous_bottle", "Raids won", count(stats.raids_won)) : null,
+  ].filter(Boolean);
+  const favourites = [
     top(stats.top_mined, (e) => tile(shortId(e.id), "Mined the most", itemName(e), `${count(e.count)} blocks`)),
+    top(stats.top_crafted, (e) => tile(shortId(e.id), "Crafted the most", itemName(e), `${count(e.count)} made`)),
     top(stats.top_killed, (e) => tile(mobIcon(e.id), "Hunted the most", entityName(e.id), `${count(e.count)} killed`)),
     top(stats.top_killed_by, (e) => tile(mobIcon(e.id), "Nemesis", entityName(e.id), `killed you ${count(e.count)}×`)),
   ].filter(Boolean);
-  return el("section", { class: "panel stats-panel" }, [
+  const children = [
     el("div", { class: "panel-head" }, [el("h2", { text: "Statistics" }), online ? "" : el("small", { text: "as of the last session" })]),
     el("div", { class: "tiles" }, tiles),
-  ]);
+  ];
+  if (favourites.length) {
+    children.push(el("h3", { class: "subhead", text: "Favourites" }), el("div", { class: "tiles" }, favourites));
+  }
+  return el("section", { class: "panel stats-panel" }, children);
 }
 
 function setPill(state, text) {
@@ -1011,6 +1054,10 @@ function render(data) {
       el("span", { text: "No frames or coordinates from other people's worlds." }),
     ]));
   }
+  // offline these are what you logged out with, greyed out with the frame
+  if (glyphWidths && typeof player.health === "number") {
+    scene.append(el("div", { class: "vitals-dock" }, [vitalsNode(player)]));
+  }
 
   const chips = el("div", { class: "chips" });
   if (online && multiplayer) {
@@ -1033,7 +1080,6 @@ function render(data) {
     avatar(player.name),
     el("div", { class: "who" }, [el("h1", { text: player.name || "Unknown player" }), chips]),
   ]);
-  if (online && glyphWidths) identity.append(vitalsNode(player));
   const hero = el("section", { class: "panel hero" }, [scene, identity]);
 
   // ---- cards ----
@@ -1083,6 +1129,7 @@ function render(data) {
 
   const activeKey = tooltipKey;
   root.replaceChildren(...sections);
+  fitPixels();
   // updates re-render everything; keep an open tooltip attached to its slot
   if (activeKey) {
     const again = root.querySelector(`[data-key="${activeKey}"]`);
@@ -1269,6 +1316,7 @@ setInterval(() => {
   if (lastData && !document.hidden && !tooltipPinned) render(lastData);
 }, 30000);
 
+fitPixels();
 connect();
 </script>
 </body>
