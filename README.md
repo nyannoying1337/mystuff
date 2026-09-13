@@ -28,13 +28,17 @@ works fine behind a captive portal.
 
 ## What shows up
 
-- **In game:** the real HUD (hearts, hunger, XP and level, hotbar), your full
-  inventory on the inventory screen with tooltips, coordinates, and a recent
-  frame of the world.
+- **In game:** armor, hearts, hunger and XP drawn with the game's sprites, your
+  full inventory on the inventory screen with tooltips, coordinates, how long
+  you've been playing, and a recent frame of the world.
+- **In your own worlds:** the world card (day and time, weather, biome,
+  difficulty, game mode), advancements (done per tab, recently earned, almost
+  there) and statistics (play time, deaths, kills, blocks mined, distance,
+  favourites). Advancements and statistics stay visible after you log out.
 - **Logged out:** when and where you were last seen, what you logged out with,
   and a 3D map of the area around that spot with a marker on it.
-- **Always:** the machine's fastfetch line-up and any curses that fired
-  recently.
+- **Always:** the machine's live load (CPU, GPU, memory, video memory, uptime),
+  the game's FPS and tick time while playing, and any curses that fired recently.
 
 ## Setup (singleplayer on Windows)
 
@@ -140,8 +144,11 @@ To run it at every login, with no console window and logs in `agent/agent.log`:
 powershell -ExecutionPolicy Bypass -File agent\install-windows.ps1
 ```
 
-Optional: `winget install fastfetch` for the machine panel. On Windows it often
-can't read CPU/GPU temperatures, so temperature curses may never fire there.
+The machine card needs nothing extra: psutil reads CPU, memory and uptime, and
+on Windows the GPU's load and memory come from the same performance counters
+Task Manager uses. Optional: `winget install fastfetch` adds CPU/GPU
+temperatures where it can read them (on Windows it often can't, so temperature
+curses may never fire there).
 
 ### 4. The page
 
@@ -158,7 +165,9 @@ go live.
 Everything it shares goes through files in `%APPDATA%\.minecraft\mc-status\`:
 
 - **`state.json`:** health, hunger, XP, hotbar, all 27 inventory slots, armor,
-  offhand (with durability and enchantments), position, dimension. Rewritten when
+  offhand (with durability and enchantments), position, dimension, FPS and game
+  memory. In singleplayer also the world card's facts, statistics and
+  advancements, read on the integrated server's thread every 10 s. Rewritten when
   something changes, and at least every 5 seconds. Written to a temp file and
   moved into place, so it's never half-written. On logout it's marked
   `online: false` and keeps the last inventory.
@@ -314,7 +323,8 @@ After a Minecraft update:
 Published: what the page shows, nothing more.
 
 Never read or sent:
-- local IP and hostname;
+- local IP, hostname and user name;
+- the world seed;
 - chat;
 - the local world path;
 - custom item names (unless you turn `share_item_names` on);
@@ -332,3 +342,6 @@ Decide for yourself:
   hides them on the page and removes the map marker. The logout map still shows
   that area, so turn `render_on_logout` off too if that matters.
 - **The map** shows everything within the rendered radius, including builds.
+- **World name, biome and statistics** of your own worlds are shown. Servers
+  never get this: the mod doesn't collect it there and the agent drops it too.
+- **Hardware names** (CPU and GPU model, Windows version) are on the machine card.

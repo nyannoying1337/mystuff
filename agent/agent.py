@@ -24,6 +24,8 @@ import requests
 from mcrcon import MCRcon
 from PIL import Image
 
+import sysinfo
+
 log = logging.getLogger("agent")
 
 # Fields we are willing to publish. Everything else in the NBT is dropped
@@ -44,7 +46,13 @@ MAX_DURABILITY = json.loads((Path(__file__).with_name("max_durability.json")).re
 PUBLISHED_PLAYER_KEYS = (
     "online", "name", "health", "foodlevel", "xplevel", "xpp", "selecteditemslot",
     "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand", "mode",
+    "world", "stats", "advancements", "game", "joined_at",
 )
+# Only known for your own worlds; the mod doesn't write them for servers, and
+# they're dropped here too in case an older or newer mod does.
+SINGLEPLAYER_ONLY_KEYS = ("position", "rotation", "world", "stats", "advancements")
+# Only meaningful while the game is running.
+LIVE_ONLY_KEYS = ("game", "joined_at")
 # The mod rewrites state.json at least every 5 s; much older means the game is gone.
 MOD_STALE_SECONDS = 30
 
@@ -103,6 +111,18 @@ def unwrap(tag):
 
 
 def collect_system() -> dict:
+    """Live CPU, GPU and memory load, plus temperatures when fastfetch can read them."""
+    try:
+        system = sysinfo.collect()
+    except Exception as err:  # never let a sensor take the whole push down
+        log.warning("system info failed: %s", err)
+        system = {}
+    for key, value in collect_fastfetch().items():
+        system.setdefault(key, value)
+    return system
+
+
+def collect_fastfetch() -> dict:
     """Run fastfetch and reduce it to the handful of fields we display."""
     if not shutil.which("fastfetch"):
         return {}
@@ -243,9 +263,12 @@ def collect_player_mod(config: dict, raw: dict | None) -> dict:
     mode = session_mode(raw)
     player["mode"] = mode
     if mode == "multiplayer":
-        # where you are on someone's server isn't yours to publish
-        player.pop("position", None)
-        player.pop("rotation", None)
+        # where you are on someone's server, and that server's world, aren't yours to publish
+        for key in SINGLEPLAYER_ONLY_KEYS:
+            player.pop(key, None)
+    if not player.get("online"):
+        for key in LIVE_ONLY_KEYS:
+            player.pop(key, None)
     return apply_privacy(config, player)
 
 
@@ -333,7 +356,7 @@ def curse_metrics(system: dict, player: dict) -> dict:
     """Numbers a curse rule can test against. Missing sensors are left out, so
     a rule on them simply never fires."""
     metrics = {}
-    for key in ("cpu_temp", "gpu_temp"):
+    for key in ("cpu_temp", "gpu_temp", "cpu_percent", "gpu_percent"):
         if isinstance(system.get(key), (int, float)):
             metrics[key] = float(system[key])
 

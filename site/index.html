@@ -114,7 +114,7 @@ main { flex: 1; padding: 28px 0 40px; }
 .link-button { background: none; border: 0; padding: 0; color: var(--text-3); text-decoration: underline; cursor: pointer; }
 .link-button:hover { color: var(--text-2); }
 
-/* ---- hero: the HUD over your latest frame ---- */
+/* ---- hero: your latest frame, then who you are and how you are doing ---- */
 .hero { padding: 0; overflow: hidden; }
 .scene {
   position: relative; aspect-ratio: 16 / 7; min-height: 260px;
@@ -136,9 +136,10 @@ main { flex: 1; padding: 28px 0 40px; }
 }
 .scene-note strong { font-size: 28px; font-weight: 800; }
 .scene-note span { color: var(--text-2); }
-.hud-dock { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 1; display: flex; justify-content: center; }
 
-.identity { display: flex; align-items: center; gap: 18px; padding: 18px 22px 22px; flex-wrap: wrap; }
+.identity { display: flex; align-items: center; gap: 18px 24px; padding: 18px 22px 22px; flex-wrap: wrap; }
+.vitals { width: min(100%, 364px); flex: none; margin-left: auto; }
+@media (max-width: 700px) { .vitals { margin: 4px auto 0; } }
 .avatar {
   width: 72px; height: 72px; flex: none; border: 2px solid var(--edge); border-radius: var(--radius);
   background: var(--tile); box-shadow: inset 0 2px 0 #5d5e60; display: grid; place-items: center; overflow: hidden;
@@ -171,6 +172,61 @@ dl { margin: 0; }
 .row:first-child { padding-top: 0; }
 .row dt { color: var(--text-3); }
 .row dd { margin: 0; text-align: right; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; word-break: break-word; }
+
+.stats-panel { margin-top: 20px; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.panel-head h2 { margin: 0; }
+.panel-head small { color: var(--text-3); font-size: 12px; }
+.subhead { margin: 18px 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-3); }
+
+/* icon + number tiles (world, statistics) */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 10px; }
+.tiles-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 420px) { .tiles-2 { grid-template-columns: minmax(0, 1fr); } }
+.tile {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 9px 12px 11px; border: 2px solid var(--edge); border-radius: var(--radius);
+  background: var(--panel-raised); box-shadow: inset 0 2px 0 #505153, inset 0 -3px 0 #2a2b2c;
+}
+.tile > img { width: 32px; height: 32px; flex: none; }
+.tile div { min-width: 0; }
+.tile .k { display: block; font-size: 12px; font-weight: 700; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .v { display: block; font-size: 17px; font-weight: 800; line-height: 1.3; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .s { display: block; font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* load bars (machine, advancement progress) */
+.meter + .meter { margin-top: 14px; }
+.meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.meter-head span { font-weight: 700; }
+.meter-head b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meter-note { display: block; margin-top: 4px; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 14px; background: var(--deep); border: 2px solid var(--edge); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--green); box-shadow: inset 0 2px 0 var(--green-top), inset 0 -3px 0 var(--green-lip); transition: width .4s ease; }
+.bar[data-level="warm"] i { background: #c7901a; box-shadow: inset 0 2px 0 #e7b441, inset 0 -3px 0 #7a5409; }
+.bar[data-level="hot"] i { background: #c0392b; box-shadow: inset 0 2px 0 #e0625a, inset 0 -3px 0 #6d1a12; }
+.bar-thin { height: 10px; }
+.machine-rows { margin-top: 18px; }
+
+/* advancements */
+.adv-total { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.adv-total strong { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.adv-total span { color: var(--text-2); }
+.adv-tabs { display: grid; gap: 8px; margin-top: 16px; }
+.adv-tab { display: grid; grid-template-columns: 20px minmax(78px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.adv-tab img { width: 20px; height: 20px; }
+.adv-tab b { font-weight: 500; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.adv-list { display: grid; gap: 8px; }
+.adv { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.adv-frame { position: relative; width: 52px; height: 52px; flex: none; }
+.adv-frame > img { position: absolute; image-rendering: pixelated; }
+.adv-frame .frame { inset: 0; width: 100%; height: 100%; }
+.adv-frame .icon { left: 10px; top: 10px; width: 32px; height: 32px; }
+.adv-body { min-width: 0; flex: 1; }
+.adv-title { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adv-title[data-type="challenge"] { color: #e7a8ff; }
+.adv-desc { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adv-when { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.adv-body .bar { margin-top: 5px; }
 
 .map-card p { margin: 0 0 16px; color: var(--text-2); }
 .map-card .btn { width: 100%; }
@@ -495,31 +551,37 @@ document.addEventListener("keydown", (event) => { if (event.key === "Escape") hi
 
 // ---- HUD and inventory ---------------------------------------------------------
 
-function hudNode(player) {
+// Armor, hearts, hunger and XP exactly as the game stacks them above the hotbar.
+// The hotbar itself isn't repeated: the inventory card already has it.
+function vitalsNode(player) {
   const health = Math.ceil(player.health ?? 0);
   const food = player.foodlevel ?? 0;
   const level = player.xplevel ?? 0;
-  const gui = makeGui(182, 39, "hud");
-  gui.node.setAttribute("aria-label", `${health / 2} of 10 hearts, hunger ${food / 2} of 10, level ${level}`);
-  gui.node.setAttribute("role", "group");
+  const armor = player.world?.armor ?? 0;
+  const top = armor > 0 ? 10 : 0;
+  const gui = makeGui(182, top + 15, "vitals");
+  gui.node.setAttribute("role", "img");
+  gui.node.setAttribute("aria-label", [
+    `${health / 2} of 10 hearts`, `hunger ${food / 2} of 10`, `level ${level}`,
+    armor > 0 ? `armor ${armor / 2} of 10` : null,
+  ].filter(Boolean).join(", "));
 
-  for (let i = 0; i < 10; i++) {
-    const x = i * 8;
-    sprite(gui, "heart_container", x, 0, 9, 9);
-    if (i * 2 + 1 < health) sprite(gui, "heart_full", x, 0, 9, 9);
-    else if (i * 2 + 1 === health) sprite(gui, "heart_half", x, 0, 9, 9);
-  }
-  for (let i = 0; i < 10; i++) {
-    const x = 182 - i * 8 - 9;
-    sprite(gui, "food_empty", x, 0, 9, 9);
-    if (i * 2 + 1 < food) sprite(gui, "food_full", x, 0, 9, 9);
-    else if (i * 2 + 1 === food) sprite(gui, "food_half", x, 0, 9, 9);
-  }
+  const row = (y, count, value, empty, half, full, fromRight) => {
+    for (let i = 0; i < 10; i++) {
+      const x = fromRight ? 182 - i * 8 - 9 : i * 8;
+      sprite(gui, empty, x, y, 9, 9);
+      if (i * 2 + 1 < value) sprite(gui, full, x, y, 9, 9);
+      else if (i * 2 + 1 === value) sprite(gui, half, x, y, 9, 9);
+    }
+  };
+  if (armor > 0) row(0, 10, armor, "armor_empty", "armor_half", "armor_full", false);
+  row(top, 10, health, "heart_container", "heart_half", "heart_full", false);
+  row(top, 10, food, "food_empty", "food_half", "food_full", true);
 
-  sprite(gui, "xp_background", 0, 10, 182, 5);
+  sprite(gui, "xp_background", 0, top + 10, 182, 5);
   const progress = Math.min(182, Math.floor((player.xpp ?? 0) * 183));
   if (progress > 0) {
-    const clip = gui.add(el("div"), 0, 10, progress, 5);
+    const clip = gui.add(el("div"), 0, top + 10, progress, 5);
     clip.style.overflow = "hidden";
     const bar = el("img", { src: `${ASSETS}/hud/xp_progress.png`, alt: "" });
     bar.style.cssText = `position:absolute;left:0;top:0;height:100%;width:${(182 / progress) * 100}%`;
@@ -528,13 +590,9 @@ function hudNode(player) {
   if (level > 0) {
     const text = String(level);
     const x = Math.floor((182 - textWidth(text)) / 2);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(gui, text, x + dx, 4 + dy, "#000000");
-    drawText(gui, text, x, 4, "#80ff20");
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(gui, text, x + dx, top + 4 + dy, "#000000");
+    drawText(gui, text, x, top + 4, "#80ff20");
   }
-
-  sprite(gui, "hotbar", 0, 17, 182, 22);
-  sprite(gui, "hotbar_selection", -1 + (player.selecteditemslot ?? 0) * 20, 16, 24, 23);
-  for (const item of player.hotbar || []) drawItem(gui, item, 3 + item.slot * 20, 20, `hud-${item.slot}`);
   return gui.node;
 }
 
@@ -617,6 +675,195 @@ function chip(label, value) {
 
 function itemIcon(name, className = "big-icon") {
   return el("img", { class: className, src: `${ASSETS}/item/${name}.png`, alt: "" });
+}
+
+function tile(icon, label, value, sub) {
+  const img = itemIcon(icon, "");
+  img.addEventListener("error", () => { img.src = `${ASSETS}/item/barrier.png`; }, { once: true });
+  const body = el("div", {}, [el("span", { class: "k", text: label }), el("span", { class: "v", text: String(value) })]);
+  if (sub) body.append(el("span", { class: "s", text: sub }));
+  return el("div", { class: "tile" }, [img, body]);
+}
+
+function bar(fraction, { thin = false, heat = false } = {}) {
+  const pct = Math.max(0, Math.min(1, fraction || 0)) * 100;
+  const node = el("div", { class: `bar${thin ? " bar-thin" : ""}`, role: "presentation" });
+  if (heat) node.dataset.level = pct >= 85 ? "hot" : pct >= 65 ? "warm" : "ok";
+  const fill = el("i");
+  fill.style.width = `${pct}%`;
+  node.append(fill);
+  return node;
+}
+
+function meter(label, valueText, fraction, note, heat = true) {
+  const node = el("div", { class: "meter" }, [
+    el("div", { class: "meter-head" }, [el("span", { text: label }), el("b", { text: valueText })]),
+    bar(fraction, { heat }),
+  ]);
+  if (note) node.append(el("span", { class: "meter-note", text: note }));
+  return node;
+}
+
+const numberFormat = new Intl.NumberFormat("en-US");
+const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const count = (n) => (n >= 100000 ? compactFormat.format(n) : numberFormat.format(n ?? 0));
+const gib = (bytes) => `${(bytes / 2 ** 30).toFixed(bytes >= 10 * 2 ** 30 ? 0 : 1)} GB`;
+
+function duration(seconds) {
+  const s = Math.max(0, Math.floor(seconds || 0));
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d) return `${d} d ${h} h`;
+  if (h) return `${h} h ${m} min`;
+  return `${m} min`;
+}
+
+function distance(cm) {
+  const m = (cm || 0) / 100;
+  return m >= 1000 ? `${(m / 1000).toFixed(m >= 100000 ? 0 : 1)} km` : `${Math.round(m)} m`;
+}
+
+const shortId = (id) => (id || "").replace(/^minecraft:/, "");
+const titleCase = (text) => text.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const biomeName = (id) => names.biomes?.[shortId(id)] || titleCase(shortId(id));
+const entityName = (id) => names.entities?.[shortId(id)] || titleCase(shortId(id));
+
+// 0 = 6:00 in the game's day
+function clockTime(ticks) {
+  const minutes = Math.floor((((ticks + 6000) % 24000) / 1000) * 60);
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function worldPanel(world) {
+  const t = world.time ?? 0;
+  const night = t >= 13000 && t < 23000;
+  const weather = { clear: ["sunflower", "Clear"], rain: ["water_bucket", "Rain"], thunder: ["lightning_rod", "Thunderstorm"] }[world.weather]
+    || ["sunflower", titleCase(world.weather || "clear")];
+  const mode = { survival: "iron_sword", creative: "grass_block", adventure: "map", spectator: "ender_eye" }[world.game_mode] || "iron_sword";
+  const tiles = el("div", { class: "tiles tiles-2" }, [
+    tile("clock", `Day ${count(world.day ?? 0)}`, clockTime(t), night ? "Night" : "Day"),
+    tile(weather[0], "Weather", weather[1]),
+    world.biome ? tile("filled_map", "Biome", biomeName(world.biome)) : null,
+    tile(world.hardcore ? "wither_rose" : "totem_of_undying", "Difficulty", world.hardcore ? "Hardcore" : titleCase(world.difficulty || "normal")),
+    world.game_mode ? tile(mode, "Game mode", titleCase(world.game_mode)) : null,
+  ].filter(Boolean));
+  return el("section", { class: "panel" }, [
+    el("div", { class: "panel-head" }, [el("h2", { text: "World" }), world.name ? el("small", { text: world.name }) : ""]),
+    tiles,
+  ]);
+}
+
+function machinePanel(system, game, online) {
+  const parts = [];
+  if (typeof system.cpu_percent === "number") {
+    parts.push(meter("CPU", `${Math.round(system.cpu_percent)}%`, system.cpu_percent / 100,
+      [system.cpu, system.cpu_cores ? `${system.cpu_cores} threads` : null].filter(Boolean).join(" · ")));
+  }
+  if (typeof system.gpu_percent === "number") {
+    parts.push(meter("GPU", `${Math.round(system.gpu_percent)}%`, system.gpu_percent / 100, system.gpu));
+  }
+  if (system.mem_used && system.mem_total) {
+    parts.push(meter("Memory", `${gib(system.mem_used)} / ${gib(system.mem_total)}`, system.mem_used / system.mem_total));
+  }
+  if (system.vram_used && system.vram_total) {
+    parts.push(meter("Video memory", `${gib(system.vram_used)} / ${gib(system.vram_total)}`, system.vram_used / system.vram_total));
+  }
+  const rows = [
+    ["FPS", online && game?.fps ? String(game.fps) : null],
+    ["Tick time", online && typeof game?.mspt === "number" ? `${game.mspt} ms` : null],
+    ["Game memory", online && game?.mem_max_mb ? `${numberFormat.format(game.mem_used_mb)} / ${numberFormat.format(game.mem_max_mb)} MB` : null],
+    ["CPU temp", system.cpu_temp ? `${Math.round(system.cpu_temp)} °C` : null],
+    ["GPU temp", system.gpu_temp ? `${Math.round(system.gpu_temp)} °C` : null],
+    ["OS", system.os],
+    ["Up for", system.uptime?.uptime ? duration(system.uptime.uptime / 1000) : null],
+  ];
+  // when there are no live numbers, still name the hardware
+  if (!parts.length) rows.unshift(["CPU", system.cpu], ["GPU", system.gpu]);
+  const list = statRows(rows);
+  if (parts.length) list.classList.add("machine-rows");
+  return panel("The machine", [...parts, list]);
+}
+
+const ADV_TABS = {
+  story: ["grass_block", "Minecraft"], nether: ["red_nether_bricks", "Nether"], end: ["end_stone", "The End"],
+  adventure: ["map", "Adventure"], husbandry: ["hay_block", "Husbandry"],
+};
+
+function advancementRow(adv, extra) {
+  const type = ["task", "goal", "challenge"].includes(adv.type) ? adv.type : "task";
+  const frame = el("div", { class: "adv-frame" }, [
+    el("img", { class: "frame", alt: "", src: `${ASSETS}/hud/${type}_frame${adv.percent === undefined ? "" : "_open"}.png` }),
+    el("img", { class: "icon", alt: "", src: `${ASSETS}/item/${shortId(adv.icon)}.png` }),
+  ]);
+  const title = el("span", { class: "adv-title", text: adv.title });
+  title.dataset.type = type;
+  const body = el("div", { class: "adv-body" }, [title, el("span", { class: "adv-desc", text: adv.description || "" })]);
+  const row = el("div", { class: "adv", title: adv.description || "" }, [frame, body]);
+  if (extra) (extra.classList?.contains("bar") ? body : row).append(extra);
+  return row;
+}
+
+function advancementsPanel(adv) {
+  const children = [
+    el("div", { class: "adv-total" }, [
+      el("strong", { text: `${adv.done} / ${adv.total}` }),
+      el("span", { text: `${adv.total ? Math.floor((adv.done / adv.total) * 100) : 0}% done` }),
+    ]),
+    bar(adv.total ? adv.done / adv.total : 0),
+  ];
+  const tabs = Object.entries(adv.tabs || {}).sort(([a], [b]) =>
+    (Object.keys(ADV_TABS).indexOf(a) + 99) % 99 - (Object.keys(ADV_TABS).indexOf(b) + 99) % 99);
+  if (tabs.length) {
+    children.push(el("div", { class: "adv-tabs" }, tabs.map(([name, [done, total]]) => {
+      const [icon, label] = ADV_TABS[name] || ["book", titleCase(name)];
+      return el("div", { class: "adv-tab" }, [
+        itemIcon(icon, ""), el("span", { text: label }), bar(total ? done / total : 0, { thin: true }), el("b", { text: `${done}/${total}` }),
+      ]);
+    })));
+  }
+  if (adv.recent?.length) {
+    children.push(el("h3", { class: "subhead", text: "Recently earned" }));
+    children.push(el("div", { class: "adv-list" }, adv.recent.map((item) =>
+      advancementRow(item, item.at ? el("span", { class: "adv-when", text: timeAgo(item.at) }) : null))));
+  }
+  if (adv.in_progress?.length) {
+    children.push(el("h3", { class: "subhead", text: "Almost there" }));
+    children.push(el("div", { class: "adv-list" }, adv.in_progress.map((item) => {
+      const row = advancementRow(item, bar(item.percent, { thin: true }));
+      if (item.progress) row.append(el("span", { class: "adv-when", text: item.progress }));
+      return row;
+    })));
+  }
+  return panel("Advancements", children);
+}
+
+function statsPanel(stats, online) {
+  const top = (entry, icon) => entry && entry.id ? icon(entry) : null;
+  const mobIcon = (id) => `${shortId(id)}_spawn_egg`;
+  const tiles = [
+    tile("clock", "Play time", duration((stats.play_time ?? 0) / 20)),
+    tile("bone", "Deaths", count(stats.deaths),
+      stats.deaths ? `last ${duration((stats.time_since_death ?? 0) / 20)} ago` : "never died"),
+    tile("iron_sword", "Mobs killed", count(stats.mob_kills)),
+    tile("diamond_pickaxe", "Blocks mined", count(stats.blocks_mined)),
+    tile("leather_boots", "Travelled", distance(stats.travel_cm), stats.flown_cm ? `${distance(stats.flown_cm)} by elytra` : null),
+    tile("crafting_table", "Items crafted", count(stats.items_crafted)),
+    tile("golden_sword", "Damage dealt", `${count(Math.round((stats.damage_dealt ?? 0) / 20))} ♥`),
+    tile("iron_chestplate", "Damage taken", `${count(Math.round((stats.damage_taken ?? 0) / 20))} ♥`),
+    tile("rabbit_foot", "Jumps", count(stats.jumps)),
+    stats.fish_caught ? tile("cod", "Fish caught", count(stats.fish_caught)) : null,
+    stats.animals_bred ? tile("wheat", "Animals bred", count(stats.animals_bred)) : null,
+    stats.traded ? tile("emerald", "Villager trades", count(stats.traded)) : null,
+    stats.enchanted ? tile("enchanting_table", "Items enchanted", count(stats.enchanted)) : null,
+    stats.slept ? tile("red_bed", "Nights slept", count(stats.slept)) : null,
+    stats.raids_won ? tile("ominous_bottle", "Raids won", count(stats.raids_won)) : null,
+    top(stats.top_mined, (e) => tile(shortId(e.id), "Mined the most", itemName(e), `${count(e.count)} blocks`)),
+    top(stats.top_killed, (e) => tile(mobIcon(e.id), "Hunted the most", entityName(e.id), `${count(e.count)} killed`)),
+    top(stats.top_killed_by, (e) => tile(mobIcon(e.id), "Nemesis", entityName(e.id), `killed you ${count(e.count)}×`)),
+  ].filter(Boolean);
+  return el("section", { class: "panel stats-panel" }, [
+    el("div", { class: "panel-head" }, [el("h2", { text: "Statistics" }), online ? "" : el("small", { text: "as of the last session" })]),
+    el("div", { class: "tiles" }, tiles),
+  ]);
 }
 
 function setPill(state, text) {
@@ -758,8 +1005,11 @@ function render(data) {
       el("strong", { text: "Logged out" }),
       el("span", { text: seen.at ? `Last seen ${timeAgo(seen.at)}` : "Not in a world right now" }),
     ]));
-  } else if (glyphWidths) {
-    scene.append(el("div", { class: "hud-dock" }, [hudNode(player)]));
+  } else if (online && multiplayer) {
+    scene.append(el("div", { class: "scene-note" }, [
+      el("strong", { text: "On a server" }),
+      el("span", { text: "No frames or coordinates from other people's worlds." }),
+    ]));
   }
 
   const chips = el("div", { class: "chips" });
@@ -774,15 +1024,17 @@ function render(data) {
     if (seen.dimension) chips.append(chip("Last in", dimensionName(seen.dimension)));
     if (seen.position) chips.append(chip("XYZ", coords(seen.position)));
   }
-  if (online && !glyphWidths) chips.append(chip("Level", String(player.xplevel ?? 0)));
+  if (online && player.joined_at) chips.append(chip("Playing for", duration((Date.now() - player.joined_at) / 1000)));
+  if (online && !glyphWidths) {
+    chips.append(chip("Health", `${Math.ceil(player.health ?? 0) / 2} ♥`), chip("Food", `${(player.foodlevel ?? 0) / 2}`), chip("Level", String(player.xplevel ?? 0)));
+  }
 
-  const hero = el("section", { class: "panel hero" }, [
-    scene,
-    el("div", { class: "identity" }, [
-      avatar(player.name),
-      el("div", { class: "who" }, [el("h1", { text: player.name || "Unknown player" }), chips]),
-    ]),
+  const identity = el("div", { class: "identity" }, [
+    avatar(player.name),
+    el("div", { class: "who" }, [el("h1", { text: player.name || "Unknown player" }), chips]),
   ]);
+  if (online && glyphWidths) identity.append(vitalsNode(player));
+  const hero = el("section", { class: "panel hero" }, [scene, identity]);
 
   // ---- cards ----
   const left = el("div", { class: "col" });
@@ -797,6 +1049,11 @@ function render(data) {
   } else {
     left.append(panel("Inventory", [el("p", { class: "empty", text: "Nothing in the inventory." })]));
   }
+  // your own worlds only: the agent never sends these for servers
+  if (player.advancements?.total) left.append(advancementsPanel(player.advancements));
+
+  if (online && !multiplayer && player.world) right.append(worldPanel(player.world));
+  if (Object.keys(system).length) right.append(machinePanel(system, player.game, online));
 
   const mapButton = document.getElementById("map-button");
   mapButton.hidden = !mapInfo;
@@ -817,25 +1074,15 @@ function render(data) {
     ]))]));
   }
 
-  if (Object.keys(system).length) {
-    right.append(panel("The machine", [statRows([
-      ["OS", system.os],
-      ["Kernel", system.kernel],
-      ["Desktop", system.de],
-      ["CPU", system.cpu],
-      ["CPU temp", system.cpu_temp ? `${Math.round(system.cpu_temp)} °C` : null],
-      ["GPU", system.gpu],
-      ["GPU temp", system.gpu_temp ? `${Math.round(system.gpu_temp)} °C` : null],
-      ["Uptime", system.uptime && system.uptime.uptime ? `${Math.floor(system.uptime.uptime / 3600000)} h` : null],
-    ])]));
-  }
-
   const grid = el("div", { class: "grid" }, [left]);
   if (right.childElementCount) grid.append(right);
   else grid.style.gridTemplateColumns = "minmax(0, 1fr)";
 
+  const sections = [hero, grid];
+  if (player.stats && !multiplayer) sections.push(statsPanel(player.stats, online));
+
   const activeKey = tooltipKey;
-  root.replaceChildren(hero, grid);
+  root.replaceChildren(...sections);
   // updates re-render everything; keep an open tooltip attached to its slot
   if (activeKey) {
     const again = root.querySelector(`[data-key="${activeKey}"]`);
@@ -844,7 +1091,7 @@ function render(data) {
   }
 }
 
-const CURSE_UNITS = { cpu_temp: " °C", gpu_temp: " °C", mem_percent: "%", uptime_hours: " h" };
+const CURSE_UNITS = { cpu_temp: " °C", gpu_temp: " °C", cpu_percent: "%", gpu_percent: "%", mem_percent: "%", uptime_hours: " h" };
 
 function timeAgo(ms) {
   const minutes = Math.round((Date.now() - ms) / 60000);

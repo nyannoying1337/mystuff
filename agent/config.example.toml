@@ -56,8 +56,9 @@ hide_coordinates = false
 # commands as the server console. Try them on a copy of your world first:
 # fire spreads.
 #
-# `when` is "<metric> <op> <number>". Metrics: cpu_temp, gpu_temp (°C),
-# mem_percent, uptime_hours, health (0-20), foodlevel (0-20), xplevel.
+# `when` is "<metric> <op> <number>". Metrics: cpu_percent, gpu_percent,
+# mem_percent, uptime_hours, health (0-20), foodlevel (0-20), xplevel, and
+# cpu_temp, gpu_temp (°C) when fastfetch is installed and can read them.
 # A rule fires when its condition holds, then again every cooldown_seconds
 # while it still does. {player} becomes rcon.player.
 # Run `agent.py --dry-run` to see live metrics and which rules would fire.

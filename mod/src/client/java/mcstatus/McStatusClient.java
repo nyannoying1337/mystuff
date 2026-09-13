@@ -32,11 +32,13 @@ public class McStatusClient implements ClientModInitializer {
 		ModConfig config = ModConfig.load(FabricLoader.getInstance().getConfigDir().resolve("mc-status.properties"));
 		Path dir = Minecraft.getInstance().gameDirectory.toPath().resolve("mc-status");
 
-		StateWriter state = new StateWriter(dir.resolve("state.json"), config);
+		Progress progress = new Progress();
+		StateWriter state = new StateWriter(dir.resolve("state.json"), config, progress);
 		CommandQueue commands = new CommandQueue(dir.resolve("commands"));
 		FrameCapture capture = new FrameCapture(dir.resolve("latest.png"), config);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			progress.tick(client);
 			state.tick(client);
 			commands.tick(client);
 		});

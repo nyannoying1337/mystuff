@@ -2,3 +2,4 @@ requests>=2.31
 nbtlib>=2.0
 mcrcon>=0.7
 Pillow>=10.0
+psutil>=5.9

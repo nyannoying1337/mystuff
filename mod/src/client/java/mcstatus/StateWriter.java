@@ -10,6 +10,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.Holder;
@@ -34,14 +35,17 @@ final class StateWriter {
 
 	private final Path file;
 	private final ModConfig config;
+	private final Progress progress;
 	private int ticks;
+	private long joinedAt;
 	private JsonObject last;
 	private String lastBody = "";
 	private long lastWrittenAt;
 
-	StateWriter(Path file, ModConfig config) {
+	StateWriter(Path file, ModConfig config, Progress progress) {
 		this.file = file;
 		this.config = config;
+		this.progress = progress;
 	}
 
 	void tick(Minecraft client) {
@@ -49,9 +53,11 @@ final class StateWriter {
 		ticks = 0;
 		LocalPlayer player = client.player;
 		if (player == null || client.level == null) return;
+		if (joinedAt == 0) joinedAt = System.currentTimeMillis();
 
 		JsonObject state = snapshot(client, player);
 		String body = GSON.toJson(state);
+		state.addProperty("joined_at", joinedAt);
 		long now = System.currentTimeMillis();
 		// Unchanged state is still rewritten now and then, so the agent can tell
 		// a quiet player from a crashed game.
@@ -67,6 +73,7 @@ final class StateWriter {
 
 	/** Called on disconnect and shutdown: keep the last inventory, flag it offline. */
 	void markOffline() {
+		joinedAt = 0;
 		if (last == null) return;
 		JsonObject state = last.deepCopy();
 		state.addProperty("online", false);
@@ -111,7 +118,13 @@ final class StateWriter {
 		state.addProperty("mode", server != null ? "singleplayer" : "multiplayer");
 		if (server != null) {
 			state.addProperty("world_path", server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString());
+			state.add("world", world(client, server, player));
+			JsonObject stats = progress.stats();
+			if (stats != null) state.add("stats", stats);
+			JsonObject advancements = progress.advancements();
+			if (advancements != null) state.add("advancements", advancements);
 		}
+		state.add("game", game(client, server));
 
 		Inventory inventory = player.getInventory();
 		state.addProperty("selecteditemslot", inventory.getSelectedSlot());
@@ -133,6 +146,35 @@ final class StateWriter {
 		JsonObject offhand = item(player.getOffhandItem(), -1);
 		if (offhand != null) state.add("offhand", offhand);
 		return state;
+	}
+
+	/** Singleplayer only: the world you're in, without its seed or location on disk. */
+	private static JsonObject world(Minecraft client, IntegratedServer server, LocalPlayer player) {
+		ClientLevel level = client.level;
+		JsonObject world = new JsonObject();
+		world.addProperty("name", server.getWorldData().getLevelName());
+		long time = level.getOverworldClockTime();
+		world.addProperty("day", time / 24000);
+		world.addProperty("time", Math.floorMod(time, 24000L));
+		world.addProperty("weather", level.isThundering() ? "thunder" : level.isRaining() ? "rain" : "clear");
+		level.getBiome(player.blockPosition()).unwrapKey()
+			.ifPresent(key -> world.addProperty("biome", key.identifier().toString()));
+		world.addProperty("difficulty", level.getLevelData().getDifficulty().getSerializedName());
+		world.addProperty("hardcore", level.getLevelData().isHardcore());
+		if (client.gameMode != null) world.addProperty("game_mode", client.gameMode.getPlayerMode().getName());
+		world.addProperty("armor", player.getArmorValue());
+		return world;
+	}
+
+	/** How the game itself is running. Rounded so it doesn't rewrite the file every tick. */
+	private static JsonObject game(Minecraft client, IntegratedServer server) {
+		JsonObject game = new JsonObject();
+		game.addProperty("fps", client.getFps());
+		Runtime runtime = Runtime.getRuntime();
+		game.addProperty("mem_used_mb", (runtime.totalMemory() - runtime.freeMemory()) >> 20);
+		game.addProperty("mem_max_mb", runtime.maxMemory() >> 20);
+		if (server != null) game.addProperty("mspt", Math.round(server.getAverageTickTimeNanos() / 1e5) / 10.0);
+		return game;
 	}
 
 	private JsonObject item(ItemStack stack, int slot) {

@@ -50,6 +50,15 @@ HUD_SPRITES = {
     "slot_leggings": "gui/sprites/container/slot/leggings.png",
     "slot_boots": "gui/sprites/container/slot/boots.png",
     "slot_shield": "gui/sprites/container/slot/shield.png",
+    "armor_empty": "gui/sprites/hud/armor_empty.png",
+    "armor_full": "gui/sprites/hud/armor_full.png",
+    "armor_half": "gui/sprites/hud/armor_half.png",
+    "task_frame": "gui/sprites/advancements/task_frame_obtained.png",
+    "goal_frame": "gui/sprites/advancements/goal_frame_obtained.png",
+    "challenge_frame": "gui/sprites/advancements/challenge_frame_obtained.png",
+    "task_frame_open": "gui/sprites/advancements/task_frame_unobtained.png",
+    "goal_frame_open": "gui/sprites/advancements/goal_frame_unobtained.png",
+    "challenge_frame_open": "gui/sprites/advancements/challenge_frame_unobtained.png",
 }
 INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
@@ -465,9 +474,9 @@ def render_item(assets: Assets, item: str) -> Image.Image | None:
 # ----------------------------------------------------------------------- main
 
 def build_names(assets: Assets) -> None:
-    """English item and enchantment names for the inventory tooltips."""
+    """English names for tooltips, biomes and the stats card's mobs."""
     lang = assets.json("lang/en_us.json") or {}
-    blocks, items, enchantments, levels = {}, {}, {}, {}
+    blocks, items, enchantments, levels, biomes, entities = {}, {}, {}, {}, {}, {}
     for key, value in lang.items():
         kind, _, rest = key.partition(".")
         namespace, _, name = rest.partition(".")
@@ -481,9 +490,14 @@ def build_names(assets: Assets) -> None:
             enchantments[name] = value
         elif kind == "enchantment" and namespace == "level":
             levels[name] = value
+        elif kind == "biome" and namespace == "minecraft":
+            biomes[name] = value
+        elif kind == "entity" and namespace == "minecraft":
+            entities[name] = value
     items = {**blocks, **items}  # an item's own name wins over its block's
     (OUT / "names.json").write_text(
-        json.dumps({"items": items, "enchantments": enchantments, "levels": levels}, separators=(",", ":")),
+        json.dumps({"items": items, "enchantments": enchantments, "levels": levels,
+                    "biomes": biomes, "entities": entities}, separators=(",", ":")),
         encoding="utf-8",
     )
 

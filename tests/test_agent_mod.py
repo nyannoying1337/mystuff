@@ -205,3 +205,38 @@ agent.track_presence(config, state, agent.collect_player(config, raw), raw)
 assert state["last_seen"] == {"mode": "multiplayer", "at": 5555}
 
 print("SINGLEPLAYER/MULTIPLAYER TESTS PASSED")
+
+# ============================================================ world, stats, advancements (mod 1.0.2)
+extras = dict(
+    world={"name": "My World", "day": 12, "time": 6000, "weather": "rain", "biome": "minecraft:plains"},
+    stats={"play_time": 72000, "deaths": 3},
+    advancements={"done": 10, "total": 125, "recent": [], "in_progress": []},
+    game={"fps": 144, "mem_used_mb": 2048, "mem_max_mb": 4096},
+    joined_at=1234,
+)
+
+# --- singleplayer: all published
+write_state(mode="singleplayer", **extras)
+player = agent.collect_player(config, agent.read_mod_state(config))
+for key in extras:
+    assert key in player, key
+
+# --- multiplayer: world, stats and advancements dropped even if a mod sends them
+write_state(mode="multiplayer", world_path=None, **extras)
+player = agent.collect_player(config, agent.read_mod_state(config))
+assert not {"world", "stats", "advancements", "position"} & player.keys(), player.keys()
+assert player["game"]["fps"] == 144
+
+# --- offline: stats stay (last known), live-only fields go
+write_state(mode="singleplayer", online=False, **extras)
+player = agent.collect_player(config, agent.read_mod_state(config))
+assert "stats" in player and "advancements" in player
+assert "game" not in player and "joined_at" not in player
+
+# --- system collector never raises and never reads identifying names
+system = agent.collect_system()
+assert not {"hostname", "host", "user", "ip"} & system.keys(), system.keys()
+metrics = agent.curse_metrics(dict(system, cpu_percent=50.0, gpu_percent=20.0), {})
+assert metrics["cpu_percent"] == 50.0 and metrics["gpu_percent"] == 20.0
+
+print("WORLD/STATS/SYSTEM TESTS PASSED")
