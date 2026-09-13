@@ -7,9 +7,10 @@ rendered icons with the site. See the usage-guidelines note in the README.
 
 Output (site/assets/mc/):
   item/<id>.png   48×48 inventory icon for every item, 3D blocks included
-  hud/*.png       hearts, hunger, XP bar, hotbar sprites
+  hud/*.png       hearts, hunger, XP bar, hotbar, inventory screen, empty-slot sprites
   font/<n>.png    digit and "/" glyphs from the default font
   glint.png       enchantment glint texture
+  names.json      English item and enchantment names for tooltips
 """
 
 from __future__ import annotations
@@ -44,7 +45,13 @@ HUD_SPRITES = {
     "xp_progress": "gui/sprites/hud/experience_bar_progress.png",
     "hotbar": "gui/sprites/hud/hotbar.png",
     "hotbar_selection": "gui/sprites/hud/hotbar_selection.png",
+    "slot_helmet": "gui/sprites/container/slot/helmet.png",
+    "slot_chestplate": "gui/sprites/container/slot/chestplate.png",
+    "slot_leggings": "gui/sprites/container/slot/leggings.png",
+    "slot_boots": "gui/sprites/container/slot/boots.png",
+    "slot_shield": "gui/sprites/container/slot/shield.png",
 }
+INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
 
 
@@ -457,6 +464,30 @@ def render_item(assets: Assets, item: str) -> Image.Image | None:
 
 # ----------------------------------------------------------------------- main
 
+def build_names(assets: Assets) -> None:
+    """English item and enchantment names for the inventory tooltips."""
+    lang = assets.json("lang/en_us.json") or {}
+    blocks, items, enchantments, levels = {}, {}, {}, {}
+    for key, value in lang.items():
+        kind, _, rest = key.partition(".")
+        namespace, _, name = rest.partition(".")
+        if not name or "." in name:
+            continue
+        if kind == "block" and namespace == "minecraft":
+            blocks[name] = value
+        elif kind == "item" and namespace == "minecraft":
+            items[name] = value
+        elif kind == "enchantment" and namespace == "minecraft":
+            enchantments[name] = value
+        elif kind == "enchantment" and namespace == "level":
+            levels[name] = value
+    items = {**blocks, **items}  # an item's own name wins over its block's
+    (OUT / "names.json").write_text(
+        json.dumps({"items": items, "enchantments": enchantments, "levels": levels}, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+
 def build_font(assets: Assets) -> None:
     sheet = assets.image("font/ascii.png")
     cell = sheet.width // 16
@@ -484,8 +515,11 @@ def main() -> int:
     (OUT / "hud").mkdir(parents=True, exist_ok=True)
     for name, path in HUD_SPRITES.items():
         assets.image(path).save(OUT / "hud" / f"{name}.png")
+    screen_path, screen_box = INVENTORY_SCREEN
+    assets.image(screen_path).crop(screen_box).save(OUT / "hud" / "inventory.png")
     assets.image("misc/enchanted_glint_item.png").save(OUT / "glint.png")
     build_font(assets)
+    build_names(assets)
 
     items = sorted(
         Path(name).stem for name in assets.names

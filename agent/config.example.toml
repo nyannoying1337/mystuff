@@ -1,28 +1,51 @@
 [worker]
-# Where you routed the Cloudflare Worker.
-url = "https://status-api.yourdomain.tld"
+# Where the Cloudflare Worker runs.
+url = "https://status-api.nyannoying.de"
 # Same value you set with: npx wrangler secret put PUSH_TOKEN
 token = "change-me"
 
 [agent]
-interval_seconds = 20
+interval_seconds = 10
+
+[source]
+# "mod"  — singleplayer: the mc-status Fabric mod writes your state, and runs
+#          curses in your world. Needs the mod installed.
+# "rcon" — a server you run: the agent asks it over RCON (see [rcon]).
+type = "mod"
+# Where the game lives. Default: %APPDATA%/.minecraft on Windows, ~/.minecraft elsewhere.
+# game_dir = "%APPDATA%/.minecraft"
 
 [rcon]
+# Only used with source.type = "rcon".
 host = "127.0.0.1"
 port = 25575
 password = "your-rcon-password"
-# Exact in-game name. RCON only works on servers you control —
-# leave this out entirely to publish system stats only.
+# Exact in-game name. RCON only works on servers you control.
 player = "nyannoying"
 
 [screenshot]
-# Press F2 in game (or install the mod in mod/) and the newest file here gets published.
-directory = "~/.minecraft/screenshots"
+# With the mod, its small HUD-free frames in <game_dir>/mc-status are used and
+# F2 screenshots are never published. Set a folder here to override that.
+# directory = "~/.minecraft/screenshots"
 max_width = 1280
 quality = 78
 
+[map]
+# When you log out, render the area around where you were and publish it to
+# the repo's `map` branch (see map/render.py). Needs Java 21+ and git push access.
+render_on_logout = false
+radius_chunks = 8
+# BlueMap downloads textures from the Minecraft client jar. Setting this means
+# you own the game and accept Mojang's EULA (https://www.minecraft.net/eula).
+accept_mojang_eula = false
+publish = true
+# java = "C:/Program Files/Eclipse Adoptium/jre-21/bin/java.exe"
+# For a server (rcon source), point at its world folder:
+# world = "/srv/minecraft/world"
+
 [privacy]
-# Set true if anyone else has your server address.
+# Hides your coordinates on the page and the map marker. The logout map still
+# renders around your position — turn render_on_logout off if that's a concern.
 hide_coordinates = false
 
 [cursed]

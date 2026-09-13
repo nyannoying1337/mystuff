@@ -43,6 +43,7 @@ async function bluemapPlayers(env, mapId) {
     const status = JSON.parse(stored);
     const player = status.player || {};
     const fresh = Date.now() - (status.received_at || 0) < STALE_MS;
+    const seen = status.last_seen || {};
     if (fresh && player.online && Array.isArray(player.position)) {
       const [x, y, z] = player.position;
       const [yaw, pitch] = Array.isArray(player.rotation) ? player.rotation : [0, 0];
@@ -55,6 +56,22 @@ async function bluemapPlayers(env, mapId) {
         position: { x, y, z },
         rotation: { yaw, pitch, roll: 0 },
       });
+    } else if (player.name) {
+      // Logged out (or the machine went quiet): mark where they were last,
+      // which is also what the logout map was rendered around.
+      const spot = !player.online && Array.isArray(seen.position)
+        ? { position: seen.position, dimension: seen.dimension }
+        : { position: player.position, dimension: player.dimension };
+      if (Array.isArray(spot.position)) {
+        const [x, y, z] = spot.position;
+        players.push({
+          uuid: `${player.name}-last-seen`,
+          name: `${player.name} (last seen)`,
+          foreign: spot.dimension !== MAP_DIMENSIONS[mapId],
+          position: { x, y, z },
+          rotation: { yaw: 0, pitch: 0, roll: 0 },
+        });
+      }
     }
   }
   return json({ players }, 200, { "Cache-Control": "no-store" });

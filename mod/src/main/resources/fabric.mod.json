@@ -1,14 +1,14 @@
 {
 	"schemaVersion": 1,
-	"id": "mc-status-shot",
+	"id": "mc-status",
 	"version": "${version}",
-	"name": "mc-status screenshots",
-	"description": "Overwrites screenshots/latest.png every few seconds so the mc-status agent always has a fresh frame to publish.",
+	"name": "mc-status",
+	"description": "Shares your health, hunger, XP, inventory and a small HUD-free frame of the world with the mc-status agent, and runs its curses in singleplayer.",
 	"license": "MIT",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"mcstatus.shot.ShotClient"
+			"mcstatus.McStatusClient"
 		]
 	},
 	"depends": {

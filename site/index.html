@@ -89,7 +89,6 @@ h2 {
   margin: 0 0 8px;
 }
 
-/* The in-game HUD, laid out in its native 182×39 GUI pixels and scaled as one. */
 .viewport {
   background: #1c2230;
   background-image: linear-gradient(#5a7bb5, #9dbbe8 60%, #4d6b3a 60%, #3b5230);
@@ -100,13 +99,40 @@ h2 {
   padding: 18px 10px 10px;
   margin-bottom: 14px;
 }
-.hud {
-  position: relative;
-  width: min(100%, 546px);
-  aspect-ratio: 182 / 39;
-  margin: 0 auto;
+/* Game GUIs laid out in native GUI pixels and scaled as one: the HUD (182×39)
+   and the inventory screen (176×166). */
+.gui { position: relative; margin: 0 auto; }
+.gui > * { position: absolute; display: block; }
+.hud { width: min(100%, 546px); }
+.inventory { width: min(100%, 528px); margin-bottom: 4px; }
+.slot-hit {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: help;
 }
-.hud > * { position: absolute; display: block; }
+.slot-hit:hover { background: rgba(255, 255, 255, .5); }
+.slot-hit:focus-visible { outline: 2px solid #ffffff; outline-offset: 0; }
+
+.tooltip {
+  position: fixed;
+  z-index: 10;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1.9;
+  color: #ffffff;
+  background: rgba(16, 0, 16, .94);
+  border: 2px solid #28007f;
+  outline: 2px solid rgba(16, 0, 16, .94);
+  box-shadow: inset 0 0 0 1px #5000ff;
+  pointer-events: none;
+  text-shadow: 1px 1px 0 #3f3f3f;
+}
+.tooltip .title { color: #ffffff; }
+.tooltip .title[data-enchanted="true"] { color: #55ffff; }
+.tooltip .custom { font-style: italic; }
+.tooltip .line { color: #aaaaaa; }
 .glyph {
   mask-size: 100% 100%;
   -webkit-mask-size: 100% 100%;
@@ -215,22 +241,24 @@ button:active {
 </footer>
 
 <script>
-const API = "https://status-api.yourdomain.tld";
+const API = "https://status-api.nyannoying.de";
 const POLL_MS = 15000;
 const STALE_MS = 90000;
 
 // Built at deploy time by site/build_assets.py from the Minecraft client jar.
 const ASSETS = "assets/mc";
-const HUD_W = 182;
-const HUD_H = 39;
 
-// Glyph widths for the game font; false when the assets weren't built, in
-// which case the page falls back to plain text.
+// Glyph widths for the game font and English names; false when the assets
+// weren't built, in which case the page falls back to plain text.
 let glyphWidths = null;
-const assetsReady = fetch(`${ASSETS}/font/widths.json`)
-  .then((response) => (response.ok ? response.json() : false))
-  .catch(() => false)
-  .then((widths) => { glyphWidths = widths; });
+let names = { items: {}, enchantments: {}, levels: {} };
+const assetsReady = Promise.all([
+  fetch(`${ASSETS}/font/widths.json`).then((r) => (r.ok ? r.json() : false)).catch(() => false),
+  fetch(`${ASSETS}/names.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+]).then(([widths, loadedNames]) => {
+  glyphWidths = widths;
+  if (loadedNames) names = loadedNames;
+});
 
 function colorFor(id) {
   let hash = 0;
@@ -238,8 +266,22 @@ function colorFor(id) {
   return `hsl(${Math.abs(hash) % 360} 42% 46%)`;
 }
 
-function prettyName(id) {
-  return id.replace(/^minecraft:/, "").replace(/_/g, " ");
+function itemName(item) {
+  const short = item.id.replace(/^minecraft:/, "");
+  return names.items[short] || short.replace(/_/g, " ");
+}
+
+// Enchantments that only have one level; the game shows them without "I".
+const SINGLE_LEVEL = new Set([
+  "mending", "silk_touch", "infinity", "flame", "channeling", "multishot",
+  "aqua_affinity", "binding_curse", "vanishing_curse",
+]);
+
+function enchantmentName(enchantment) {
+  const short = enchantment.id.replace(/^minecraft:/, "");
+  const name = names.enchantments[short] || short.replace(/_/g, " ");
+  if (SINGLE_LEVEL.has(short) && enchantment.level === 1) return name;
+  return `${name} ${names.levels[String(enchantment.level)] || enchantment.level}`;
 }
 
 function el(tag, props = {}, children = []) {
@@ -253,23 +295,32 @@ function el(tag, props = {}, children = []) {
   return node;
 }
 
-// ---- HUD ------------------------------------------------------------------
+// ---- game GUI drawing --------------------------------------------------------
 
-// Positions are in GUI pixels, converted to percentages of the 182×39 box.
-function place(node, x, y, w, h) {
-  node.style.left = `${(x / HUD_W) * 100}%`;
-  node.style.top = `${(y / HUD_H) * 100}%`;
-  node.style.width = `${(w / HUD_W) * 100}%`;
-  node.style.height = `${(h / HUD_H) * 100}%`;
-  return node;
+// A box measured in GUI pixels; children are placed by percentage so the whole
+// thing scales crisply as one image would.
+function makeGui(width, height, className) {
+  const node = el("div", { class: `gui ${className}` });
+  node.style.aspectRatio = `${width} / ${height}`;
+  return {
+    node,
+    add(child, x, y, w, h) {
+      child.style.left = `${(x / width) * 100}%`;
+      child.style.top = `${(y / height) * 100}%`;
+      child.style.width = `${(w / width) * 100}%`;
+      child.style.height = `${(h / height) * 100}%`;
+      node.append(child);
+      return child;
+    },
+  };
 }
 
-function sprite(name, x, y, w, h) {
-  return place(el("img", { src: `${ASSETS}/hud/${name}.png`, alt: "" }), x, y, w, h);
+function sprite(gui, name, x, y, w, h) {
+  return gui.add(el("img", { src: `${ASSETS}/hud/${name}.png`, alt: "" }), x, y, w, h);
 }
 
-function fill(x, y, w, h, color) {
-  const node = place(el("div"), x, y, w, h);
+function fill(gui, x, y, w, h, color) {
+  const node = gui.add(el("div"), x, y, w, h);
   node.style.background = color;
   return node;
 }
@@ -286,123 +337,234 @@ function textWidth(text) {
   return width;
 }
 
-function drawText(hud, text, x, y, color) {
+function drawText(gui, text, x, y, color) {
   let cursor = x;
   for (const char of text) {
     const width = glyphWidths[char];
     if (width === undefined) { cursor += 6; continue; }
-    const glyph = masked(place(el("div", { class: "glyph" }), cursor, y, width, 8),
-      `${ASSETS}/font/${char.charCodeAt(0)}.png`);
+    const glyph = gui.add(el("div", { class: "glyph" }), cursor, y, width, 8);
+    masked(glyph, `${ASSETS}/font/${char.charCodeAt(0)}.png`);
     glyph.style.background = color;
-    hud.append(glyph);
     cursor += width + 1;
   }
 }
 
-function drawShadowText(hud, text, x, y) {
-  drawText(hud, text, x + 1, y + 1, "#3f3f3f");
-  drawText(hud, text, x, y, "#ffffff");
+function drawShadowText(gui, text, x, y) {
+  drawText(gui, text, x + 1, y + 1, "#3f3f3f");
+  drawText(gui, text, x, y, "#ffffff");
 }
 
-function drawItem(hud, item) {
-  const x = 3 + item.slot * 20;
-  const y = 20;
-  const label = `${prettyName(item.id)}${item.count > 1 ? ` ×${item.count}` : ""}`;
-  const name = item.id.startsWith("minecraft:") ? item.id.slice(10) : null;
-  const url = `${ASSETS}/item/${name}.png`;
+// One item at slot position (x, y), drawn like the game: icon, glint, count,
+// durability bar, plus an invisible button that shows the tooltip.
+function drawItem(gui, item, x, y, key) {
+  const short = item.id.startsWith("minecraft:") ? item.id.slice(10) : null;
+  const url = `${ASSETS}/item/${short}.png`;
 
   const swatch = () => {
-    const node = place(el("div", { class: "swatch", title: label }), x + 2, y + 2, 12, 12);
+    const node = el("div", { class: "swatch" });
     node.style.background = colorFor(item.id);
     return node;
   };
 
-  if (name) {
-    const icon = place(el("img", { src: url, alt: "", title: label }), x, y, 16, 16);
-    icon.addEventListener("error", () => icon.replaceWith(swatch()), { once: true });
-    hud.append(icon);
-    if (item.enchanted) hud.append(masked(place(el("div", { class: "glint" }), x, y, 16, 16), url));
+  if (short) {
+    const icon = gui.add(el("img", { src: url, alt: "" }), x, y, 16, 16);
+    // banners, shields, modded items…: no rendered icon, show a colour swatch
+    icon.addEventListener("error", () => icon.replaceWith(gui.add(swatch(), x + 2, y + 2, 12, 12)), { once: true });
+    if (item.enchanted) masked(gui.add(el("div", { class: "glint" }), x, y, 16, 16), url);
   } else {
-    hud.append(swatch());
+    gui.add(swatch(), x + 2, y + 2, 12, 12);
   }
 
   if (item.count > 1) {
     const text = String(item.count);
-    drawShadowText(hud, text, x + 19 - 2 - textWidth(text), y + 9);
+    drawShadowText(gui, text, x + 19 - 2 - textWidth(text), y + 9);
   }
 
-  // Same maths as the game: 13px bar, green → red by hue.
   if (item.damage && item.max_damage) {
     const left = Math.max(0, (item.max_damage - item.damage) / item.max_damage);
     const width = Math.round(13 - (item.damage * 13) / item.max_damage);
-    hud.append(fill(x + 2, y + 13, 13, 2, "#000000"));
-    hud.append(fill(x + 2, y + 13, Math.max(0, width), 1, `hsl(${Math.round(left * 120)} 100% 50%)`));
+    fill(gui, x + 2, y + 13, 13, 2, "#000000");
+    fill(gui, x + 2, y + 13, Math.max(0, width), 1, `hsl(${Math.round(left * 120)} 100% 50%)`);
+  }
+
+  const hit = gui.add(el("button", {
+    type: "button",
+    class: "slot-hit",
+    "aria-label": tooltipLines(item).map((line) => line.text).join(", "),
+    "data-key": key,
+  }), x, y, 16, 16);
+  bindTooltip(hit, item);
+}
+
+// ---- tooltips ------------------------------------------------------------------
+
+const tooltip = el("div", { class: "tooltip", role: "tooltip", hidden: "" });
+document.body.append(tooltip);
+let tooltipKey = null;
+let tooltipPinned = false;
+
+function tooltipLines(item) {
+  const lines = [item.name
+    ? { text: item.name, cls: "title custom" }
+    : { text: itemName(item), cls: "title" }];
+  for (const enchantment of item.enchantments || []) lines.push({ text: enchantmentName(enchantment), cls: "line" });
+  if (item.max_damage) {
+    lines.push({ text: `Durability: ${item.max_damage - (item.damage || 0)} / ${item.max_damage}`, cls: "line" });
+  }
+  return lines;
+}
+
+function showTooltip(item, key, anchor) {
+  tooltip.replaceChildren(...tooltipLines(item).map((line) => {
+    const row = el("div", { class: line.cls, text: line.text });
+    if (line.cls.includes("title") && item.enchanted) row.dataset.enchanted = "true";
+    return row;
+  }));
+  tooltip.hidden = false;
+  tooltipKey = key;
+  if (anchor) {
+    const rect = anchor.getBoundingClientRect();
+    moveTooltip(rect.right + 6, rect.top - 4);
   }
 }
+
+function moveTooltip(x, y) {
+  const width = tooltip.offsetWidth;
+  const height = tooltip.offsetHeight;
+  const left = Math.min(x, window.innerWidth - width - 8);
+  const top = Math.min(Math.max(8, y), window.innerHeight - height - 8);
+  tooltip.style.left = `${Math.max(8, left)}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+function hideTooltip() {
+  tooltip.hidden = true;
+  tooltipKey = null;
+  tooltipPinned = false;
+}
+
+function bindTooltip(button, item) {
+  const key = button.dataset.key;
+  button.addEventListener("pointerenter", (event) => {
+    if (event.pointerType !== "mouse") return;
+    showTooltip(item, key, null);
+    moveTooltip(event.clientX + 12, event.clientY - 16);
+  });
+  button.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "mouse" && tooltipKey === key && !tooltipPinned) {
+      moveTooltip(event.clientX + 12, event.clientY - 16);
+    }
+  });
+  button.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse" && !tooltipPinned) hideTooltip();
+  });
+  button.addEventListener("focus", () => showTooltip(item, key, button));
+  button.addEventListener("blur", () => { if (!tooltipPinned) hideTooltip(); });
+  // taps: pin it until the next tap elsewhere
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (tooltipPinned && tooltipKey === key) { hideTooltip(); return; }
+    showTooltip(item, key, button);
+    tooltipPinned = true;
+  });
+}
+
+document.addEventListener("click", () => { if (tooltipPinned) hideTooltip(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") hideTooltip(); });
+
+// ---- HUD and inventory ---------------------------------------------------------
 
 function hudNode(player) {
   const health = Math.ceil(player.health ?? 0);
   const food = player.foodlevel ?? 0;
   const level = player.xplevel ?? 0;
-  const hotbar = player.hotbar || [];
-
-  const hud = el("div", {
-    class: "hud",
-    role: "img",
-    "aria-label": `${health / 2} of 10 hearts, hunger ${food / 2} of 10, level ${level}. Hotbar: `
-      + (hotbar.map((item) => `${prettyName(item.id)} ×${item.count}`).join(", ") || "empty"),
-  });
+  const gui = makeGui(182, 39, "hud");
+  gui.node.setAttribute("aria-label", `${health / 2} of 10 hearts, hunger ${food / 2} of 10, level ${level}`);
+  gui.node.setAttribute("role", "group");
 
   for (let i = 0; i < 10; i++) {
     const x = i * 8;
-    hud.append(sprite("heart_container", x, 0, 9, 9));
-    if (i * 2 + 1 < health) hud.append(sprite("heart_full", x, 0, 9, 9));
-    else if (i * 2 + 1 === health) hud.append(sprite("heart_half", x, 0, 9, 9));
+    sprite(gui, "heart_container", x, 0, 9, 9);
+    if (i * 2 + 1 < health) sprite(gui, "heart_full", x, 0, 9, 9);
+    else if (i * 2 + 1 === health) sprite(gui, "heart_half", x, 0, 9, 9);
   }
-
   for (let i = 0; i < 10; i++) {
-    const x = HUD_W - i * 8 - 9;
-    hud.append(sprite("food_empty", x, 0, 9, 9));
-    if (i * 2 + 1 < food) hud.append(sprite("food_full", x, 0, 9, 9));
-    else if (i * 2 + 1 === food) hud.append(sprite("food_half", x, 0, 9, 9));
+    const x = 182 - i * 8 - 9;
+    sprite(gui, "food_empty", x, 0, 9, 9);
+    if (i * 2 + 1 < food) sprite(gui, "food_full", x, 0, 9, 9);
+    else if (i * 2 + 1 === food) sprite(gui, "food_half", x, 0, 9, 9);
   }
 
-  hud.append(sprite("xp_background", 0, 10, 182, 5));
+  sprite(gui, "xp_background", 0, 10, 182, 5);
   const progress = Math.min(182, Math.floor((player.xpp ?? 0) * 183));
   if (progress > 0) {
-    const clip = place(el("div"), 0, 10, progress, 5);
+    const clip = gui.add(el("div"), 0, 10, progress, 5);
     clip.style.overflow = "hidden";
     const bar = el("img", { src: `${ASSETS}/hud/xp_progress.png`, alt: "" });
     bar.style.cssText = `position:absolute;left:0;top:0;height:100%;width:${(182 / progress) * 100}%`;
     clip.append(bar);
-    hud.append(clip);
   }
   if (level > 0) {
     const text = String(level);
-    const x = Math.floor((HUD_W - textWidth(text)) / 2);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(hud, text, x + dx, 4 + dy, "#000000");
-    drawText(hud, text, x, 4, "#80ff20");
+    const x = Math.floor((182 - textWidth(text)) / 2);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) drawText(gui, text, x + dx, 4 + dy, "#000000");
+    drawText(gui, text, x, 4, "#80ff20");
   }
 
-  hud.append(sprite("hotbar", 0, 17, 182, 22));
-  const selected = player.selecteditemslot ?? 0;
-  hud.append(sprite("hotbar_selection", -1 + selected * 20, 16, 24, 23));
-  for (const item of hotbar) drawItem(hud, item);
+  sprite(gui, "hotbar", 0, 17, 182, 22);
+  sprite(gui, "hotbar_selection", -1 + (player.selecteditemslot ?? 0) * 20, 16, 24, 23);
+  for (const item of player.hotbar || []) drawItem(gui, item, 3 + item.slot * 20, 20, `hud-${item.slot}`);
 
-  return el("div", { class: "viewport" }, [hud]);
+  return el("div", { class: "viewport" }, [gui.node]);
+}
+
+const ARMOR_SLOTS = [["head", "slot_helmet"], ["chest", "slot_chestplate"], ["legs", "slot_leggings"], ["feet", "slot_boots"]];
+
+// The survival inventory screen, slots where the game puts them.
+function inventoryNode(player) {
+  const gui = makeGui(176, 166, "inventory");
+  gui.node.setAttribute("role", "group");
+  gui.node.setAttribute("aria-label", "Inventory");
+  sprite(gui, "inventory", 0, 0, 176, 166);
+
+  const armor = player.armor || {};
+  ARMOR_SLOTS.forEach(([slot, empty], i) => {
+    const y = 8 + i * 18;
+    if (armor[slot]) drawItem(gui, armor[slot], 8, y, `armor-${slot}`);
+    else sprite(gui, empty, 8, y, 16, 16);
+  });
+  if (player.offhand) drawItem(gui, player.offhand, 77, 62, "offhand");
+  else sprite(gui, "slot_shield", 77, 62, 16, 16);
+
+  for (const item of player.inventory || []) {
+    const index = item.slot - 9;
+    if (index < 0 || index >= 27) continue;
+    drawItem(gui, item, 8 + (index % 9) * 18, 84 + Math.floor(index / 9) * 18, `inv-${item.slot}`);
+  }
+  for (const item of player.hotbar || []) {
+    drawItem(gui, item, 8 + item.slot * 18, 142, `bar-${item.slot}`);
+  }
+  return gui.node;
+}
+
+function hasInventory(player) {
+  return Boolean((player.hotbar || []).length || (player.inventory || []).length
+    || Object.keys(player.armor || {}).length || player.offhand);
 }
 
 // Used when the icon assets weren't built: the same facts, as text.
 function plainStats(player) {
+  const list = (items) => (items || []).map((item) => `${itemName(item)} ×${item.count}`).join(", ") || "empty";
   return statRows([
     ["health", `${Math.ceil(player.health ?? 0)} / 20`],
     ["food", `${player.foodlevel ?? 0} / 20`],
     ["level", player.xplevel ?? 0],
-    ["hotbar", (player.hotbar || []).map((item) => `${prettyName(item.id)} ×${item.count}`).join(", ") || "empty"],
+    ["hotbar", list(player.hotbar)],
+    ["inventory", list(player.inventory)],
   ]);
 }
 
-// ---- panels -----------------------------------------------------------------
+// ---- panels ------------------------------------------------------------------
 
 function statRows(pairs) {
   const list = el("dl");
@@ -427,12 +589,17 @@ function disconnectPanel(title, detail) {
   return panel;
 }
 
+const dimensionName = (id) => (id || "").replace(/^minecraft:/, "").replace(/^the_/, "the ");
+const coords = (position) => (position ? position.map((n) => Math.round(n)).join("  ") : "hidden");
+
 function render(data) {
   const root = document.getElementById("root");
   const frag = document.createDocumentFragment();
   const age = Date.now() - (data.received_at || data.generated_at || 0);
+  const player = data.player || {};
+  const system = data.system || {};
 
-  if (age > STALE_MS) {
+  if (age > STALE_MS && !data.last_seen && !hasInventory(player)) {
     root.replaceChildren(disconnectPanel(
       "Connection lost",
       `Last heard from the machine ${Math.round(age / 60000)} min ago.`
@@ -440,44 +607,45 @@ function render(data) {
     return;
   }
 
-  const player = data.player || {};
-  const system = data.system || {};
-
+  const online = player.online && age <= STALE_MS;
   const status = el("section", { class: "panel" });
-  const badge = el("span", { class: "badge", text: player.online ? "in game" : "not playing" });
-  badge.dataset.state = player.online ? "online" : "offline";
-  status.append(el("div", { class: "head" }, [
-    el("h1", { text: player.name || "status" }),
-    badge,
-  ]));
+  const badge = el("span", { class: "badge", text: online ? "in game" : "not playing" });
+  badge.dataset.state = online ? "online" : "offline";
+  status.append(el("div", { class: "head" }, [el("h1", { text: player.name || "status" }), badge]));
 
-  if (player.online) {
+  if (online) {
     status.append(glyphWidths ? hudNode(player) : plainStats(player));
-    const position = player.position
-      ? player.position.map((n) => Math.round(n)).join("  ")
-      : "hidden";
     status.append(statRows([
-      ["x y z", position],
-      ["dimension", (player.dimension || "").replace(/^minecraft:/, "")],
+      ["x y z", coords(player.position)],
+      ["dimension", dimensionName(player.dimension)],
+    ]));
+  } else if (data.last_seen) {
+    status.append(statRows([
+      ["last seen", timeAgo(data.last_seen.at)],
+      ["where", dimensionName(data.last_seen.dimension)],
+      ["x y z", coords(data.last_seen.position)],
     ]));
   } else {
     status.append(el("p", { text: "No world loaded right now." }));
   }
   frag.append(status);
 
-  if (data.screenshot_at) {
-    const shot = el("section", { class: "panel" }, [
-      el("h2", { text: "Last thing seen" }),
+  if (glyphWidths && hasInventory(player)) {
+    const inventory = el("section", { class: "panel" }, [
+      el("h2", { text: online ? "Inventory" : "Logged out with" }),
+      inventoryNode(player),
     ]);
-    const image = el("img", {
-      class: "shot",
-      alt: "The most recent in-game screenshot.",
-      loading: "lazy",
-    });
+    frag.append(inventory);
+  } else if (!glyphWidths && !online && hasInventory(player)) {
+    frag.append(el("section", { class: "panel" }, [el("h2", { text: "Logged out with" }), plainStats(player)]));
+  }
+
+  if (data.screenshot_at) {
+    const shot = el("section", { class: "panel" }, [el("h2", { text: "Last thing seen" })]);
+    const image = el("img", { class: "shot", alt: "The most recent frame of the world.", loading: "lazy" });
     image.src = `${API}/shot?t=${data.screenshot_at}`;
     shot.append(image);
-    const when = new Date(data.screenshot_at);
-    shot.append(el("div", { class: "caption", text: when.toLocaleString() }));
+    shot.append(el("div", { class: "caption", text: `captured ${timeAgo(data.screenshot_at)}` }));
     frag.append(shot);
   }
 
@@ -508,12 +676,22 @@ function render(data) {
     frag.append(curses);
   }
 
-  if (mapAvailable) {
-    const link = el("a", { class: "map-link", href: "map/", text: "Open the world map" });
-    frag.append(el("section", { class: "panel" }, [link]));
+  if (mapInfo) {
+    const where = mapInfo.center ? ` around ${player.name || "the"} last logout` : "";
+    const link = el("a", { class: "map-link", href: "map/", text: `Explore the map${where}` });
+    const panel = el("section", { class: "panel" }, [link]);
+    if (mapInfo.rendered_at) panel.append(el("div", { class: "caption", text: `rendered ${timeAgo(mapInfo.rendered_at)}` }));
+    frag.append(panel);
   }
 
+  const activeKey = tooltipKey;
   root.replaceChildren(frag);
+  // polling re-renders everything; keep an open tooltip attached to its slot
+  if (activeKey) {
+    const again = root.querySelector(`[data-key="${activeKey}"]`);
+    if (again) again.dispatchEvent(new Event("focus"));
+    else hideTooltip();
+  }
 }
 
 const CURSE_UNITS = { cpu_temp: " c", gpu_temp: " c", mem_percent: "%", uptime_hours: "h" };
@@ -522,15 +700,17 @@ function timeAgo(ms) {
   const minutes = Math.round((Date.now() - ms) / 60000);
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes} min ago`;
-  return `${Math.round(minutes / 60)}h ago`;
+  if (minutes < 48 * 60) return `${Math.round(minutes / 60)}h ago`;
+  return `${Math.round(minutes / 1440)} days ago`;
 }
 
 // The map is rendered separately and may not exist yet; only link it if it does.
-let mapAvailable = false;
-fetch("map/settings.json", { method: "HEAD" })
-  .then((response) => {
-    mapAvailable = response.ok;
-    if (mapAvailable) refresh();
+let mapInfo = null;
+fetch("map/mc-status.json", { cache: "no-store" })
+  .then((response) => (response.ok ? response.json() : null))
+  .then((info) => {
+    mapInfo = info;
+    if (mapInfo) refresh();
   })
   .catch(() => {});
 
@@ -547,6 +727,7 @@ async function refresh() {
     if (!response.ok) throw new Error(`http ${response.status}`);
     render(await response.json());
   } catch (err) {
+    console.error(err);
     document.getElementById("root").replaceChildren(
       disconnectPanel("Can't reach the server", "Check back in a moment.")
     );

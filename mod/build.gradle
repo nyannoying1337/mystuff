@@ -10,7 +10,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"mc-status-shot" {
+		"mc-status" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

@@ -3,15 +3,25 @@
 
 The world lives on your machine, so the render happens here. GitHub Pages then
 serves the result under /map, and the Worker feeds your live position into it.
+
+With --center, only a square of --radius-chunks around that spot in one
+dimension is rendered, and everything from the previous render is dropped, so
+the published map stays small (about 10 MB at the default radius of 8). The
+agent does this automatically when you log out.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
+import json
+import os
+import re
 import shutil
 import subprocess
 import sys
+import time
 import tomllib
 import urllib.request
 from pathlib import Path
@@ -42,7 +52,30 @@ def q(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def write_config(world: Path, live_root: str, accept_download: bool, threads: int) -> None:
+def map_for_dimension(dimension: str) -> tuple[str, tuple]:
+    for map_id, spec in MAPS.items():
+        if spec[0] == dimension:
+            return map_id, spec
+    # a modded dimension: render it with neutral colours under a URL-safe id
+    map_id = re.sub(r"[^a-z0-9_-]+", "-", dimension.lower()).strip("-") or "dimension"
+    return map_id, (dimension, dimension, "#7dabff", "#000000", 0.3, -10000, False)
+
+
+def area_mask(center: tuple[int, int], radius_chunks: int) -> dict:
+    """Block bounds of the square of chunks around a position, edges inclusive."""
+    chunk_x, chunk_z = center[0] // 16, center[1] // 16
+    return {
+        "min-x": (chunk_x - radius_chunks) * 16,
+        "max-x": (chunk_x + radius_chunks + 1) * 16 - 1,
+        "min-z": (chunk_z - radius_chunks) * 16,
+        "max-z": (chunk_z + radius_chunks + 1) * 16 - 1,
+    }
+
+
+def write_config(world: Path, live_root: str, accept_download: bool, threads: int,
+                 maps: dict[str, tuple] = MAPS, area: dict | None = None,
+                 start: tuple[int, int] | None = None) -> None:
+    shutil.rmtree(CONFIG / "maps", ignore_errors=True)  # only the maps asked for this time
     (CONFIG / "maps").mkdir(parents=True, exist_ok=True)
     (CONFIG / "storages").mkdir(parents=True, exist_ok=True)
 
@@ -82,21 +115,52 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         encoding="utf-8",
     )
 
-    for map_id, (dimension, name, sky, void, ambient, caves, no_ceiling) in MAPS.items():
-        mask = "render-mask: [ { subtract: true, min-y: 90, max-y: 127 } ]\n" if no_ceiling else ""
+    for index, (map_id, (dimension, name, sky, void, ambient, caves, no_ceiling)) in enumerate(maps.items()):
+        masks = []
+        if area:
+            masks.append("{ " + ", ".join(f"{key}: {value}" for key, value in area.items()) + " }")
+        if no_ceiling:
+            masks.append("{ subtract: true, min-y: 90, max-y: 127 }")
+        mask = f"render-mask: [ {', '.join(masks)} ]\n" if masks else ""
+        start_pos = f"start-pos: {{ x: {start[0]}, z: {start[1]} }}\n" if start else ""
         (CONFIG / "maps" / f"{map_id}.conf").write_text(
             f"world: {q(str(world))}\n"
             f"dimension: {q(dimension)}\n"
             f"name: {q(name)}\n"
-            f"sorting: {list(MAPS).index(map_id)}\n"
+            f"sorting: {index}\n"
             f"sky-color: {q(sky)}\n"
             f"void-color: {q(void)}\n"
             f"ambient-light: {ambient}\n"
             f"remove-caves-below-y: {caves}\n"
+            f"{start_pos}"
             f"{mask}"
             'storage: "file"\n',
             encoding="utf-8",
         )
+
+
+def find_java(explicit: str | None) -> str | None:
+    """--java, then JAVA_HOME, then PATH, then the Minecraft launcher's own runtime."""
+    exe = "java.exe" if os.name == "nt" else "java"
+    candidates = []
+    if explicit:
+        candidates.append(explicit)
+    if os.environ.get("JAVA_HOME"):
+        candidates.append(str(Path(os.environ["JAVA_HOME"]) / "bin" / exe))
+    if shutil.which("java"):
+        candidates.append(shutil.which("java"))
+    patterns = [
+        os.path.expandvars(f"%APPDATA%/.minecraft/runtime/*/*/*/bin/{exe}"),
+        os.path.expandvars(f"%LOCALAPPDATA%/Packages/Microsoft.4297127D64EC6_8wekyb3d8bbwe/LocalCache/Local/runtime/*/*/*/bin/{exe}"),
+        os.path.expanduser(f"~/.minecraft/runtime/*/*/*/bin/{exe}"),
+    ]
+    for pattern in patterns:
+        # newest runtime component names sort last (alpha, beta, gamma, delta…)
+        candidates += sorted(glob.glob(pattern), reverse=True)
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return candidate
+    return None
 
 
 def fetch_bluemap() -> Path:
@@ -164,6 +228,11 @@ def main() -> int:
     parser.add_argument("--threads", type=int, default=-1,
                         help="render threads; negative means all cores minus that many (default -1)")
     parser.add_argument("--force", action="store_true", help="re-render everything, not just changed chunks")
+    parser.add_argument("--center", type=int, nargs=2, metavar=("X", "Z"),
+                        help="only render around this block position, replacing the previous render")
+    parser.add_argument("--radius-chunks", type=int, default=8, help="with --center: chunks in each direction (default 8)")
+    parser.add_argument("--dimension", default="minecraft:overworld", help="with --center: which dimension")
+    parser.add_argument("--java", help="java executable (default: JAVA_HOME, PATH, or the Minecraft launcher's runtime)")
     parser.add_argument("--publish", action="store_true", help="push the result to the map branch")
     parser.add_argument("--publish-only", action="store_true", help="skip rendering, just push")
     parser.add_argument("--remote", default="origin")
@@ -181,13 +250,23 @@ def main() -> int:
         live_root = args.live_url or live_root_from_agent()
         if not live_root:
             parser.error("pass --live-url, or fill in worker.url in agent/config.toml")
-        if not shutil.which("java"):
-            raise SystemExit("java not found — BlueMap needs Java 21 or newer")
+        java = find_java(args.java)
+        if not java:
+            raise SystemExit("java not found — BlueMap needs Java 21 or newer (pass --java)")
 
         jar = fetch_bluemap()
-        write_config(args.world.resolve(), live_root, args.accept_mojang_eula, args.threads)
+        if args.center:
+            map_id, spec = map_for_dimension(args.dimension)
+            maps = {map_id: spec}
+            area = area_mask(tuple(args.center), max(1, args.radius_chunks))
+            # a fresh webroot each time: the published map is only ever this one area
+            shutil.rmtree(WEBROOT / "maps", ignore_errors=True)
+            write_config(args.world.resolve(), live_root, args.accept_mojang_eula, args.threads,
+                         maps, area, tuple(args.center))
+        else:
+            write_config(args.world.resolve(), live_root, args.accept_mojang_eula, args.threads)
 
-        command = ["java", "-jar", str(jar), "-c", str(CONFIG), "-r", "-g", "-s"]
+        command = [java, "-jar", str(jar), "-c", str(CONFIG), "-r", "-g", "-s"]
         if args.force:
             command.append("-f")
         run(command, cwd=WORK)
@@ -197,6 +276,13 @@ def main() -> int:
         (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
         for script in ("live-throttle.js", "disclaimer.js"):
             shutil.copy2(HERE / script, WEBROOT / "js" / script)
+        # Tells the status page what this map shows.
+        (WEBROOT / "mc-status.json").write_text(json.dumps({
+            "rendered_at": int(time.time() * 1000),
+            "center": args.center,
+            "radius_chunks": args.radius_chunks if args.center else None,
+            "dimension": args.dimension if args.center else None,
+        }), encoding="utf-8")
         print(f"rendered to {WEBROOT}")
 
     if args.publish or args.publish_only:

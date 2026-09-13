@@ -1,216 +1,186 @@
 # mc-status
 
-A live status page for your machine and your Minecraft session, hosted free on
-GitHub Pages. Your PC pushes; the page pulls. Nothing inbound, so it works fine
-behind a captive portal.
+A live status page for your Minecraft session and the machine it runs on, hosted
+free on GitHub Pages. Your PC pushes; the page pulls. Nothing inbound, so it
+works fine behind a captive portal.
 
 ```
-your PC                     Cloudflare Worker              GitHub Pages
-┌──────────────┐   POST     ┌──────────────┐    GET      ┌──────────────┐
-│ agent.py     │ ─────────▶ │ /status /shot│ ◀────────── │ index.html   │
-│ fastfetch    │  every 20s │ /bluemap/…   │  every 15s  │ map/ (render)│
-│ RCON ◀─curses│            │  + KV store  │             │ your domain  │
-│ screenshots/ │            └──────────────┘             └──────────────┘
-└──────────────┘
-      ▲ latest.png every 15s          map/render.py ──▶ `map` branch ──▶ /map
-  mod/ (Fabric)
+          your PC                           Cloudflare Worker        GitHub Pages
+┌─────────────────────────────┐   POST    ┌────────────────┐  GET  ┌──────────────┐
+│ Minecraft + mc-status mod   │           │ /status /shot  │ ◀──── │ status page  │
+│   writes state.json,        │           │ /bluemap/…     │       │ /map         │
+│   latest.png; runs curses   │           │  + KV store    │       └──────▲───────┘
+│        ▲ commands  │ files  │           └───────▲────────┘              │
+│        │           ▼        │                   │                       │
+│ agent.py ───────────────────┼───────────────────┘                       │
+│   fastfetch, curse rules,   │                                           │
+│   on logout: map/render.py ─┼──▶ `map` branch ─────────────────────────┘
+└─────────────────────────────┘
 ```
 
 | Folder | What it is |
 | --- | --- |
+| `mod/` | Fabric client mod: shares your state and a small frame of the world, runs curses |
+| `agent/` | Python agent: reads the mod's files, adds system stats, pushes, renders the map on logout |
 | `worker/` | Cloudflare Worker: stores the latest push, serves it to the page and the map |
-| `agent/` | Python agent on your PC: collects, pushes, runs curses |
 | `site/` | The status page |
-| `mod/` | Optional Fabric client mod that keeps a fresh screenshot on disk |
 | `map/` | BlueMap render + publish script |
 
 ## What shows up
 
-Health and hunger with half-icons, XP bar and level, the full hotbar with stack
-counts, durability bars and an enchant tint, coordinates, dimension, your most
-recent in-game screenshot, the usual fastfetch line-up, recently fired curses,
-and a link to the 3D world map with you on it. When the agent goes quiet for 90
-seconds the page swaps to a "connection lost" panel instead of showing stale
-numbers.
+- **In game:** the real HUD (hearts, hunger, XP and level, hotbar), your full
+  inventory on the inventory screen with tooltips, coordinates, and a recent
+  frame of the world.
+- **Logged out:** when and where you were last seen, what you logged out with,
+  and a 3D map of the area around that spot with a marker on it.
+- **Always:** the machine's fastfetch line-up and any curses that fired
+  recently.
 
-## 1. The Worker
+## Setup (singleplayer on Windows)
+
+About 30 minutes. The account steps (Cloudflare login, Fabric installer) are
+yours to click through.
+
+### 1. The Worker
 
 ```bash
 cd worker
+npx wrangler login
 npx wrangler kv namespace create STATUS     # paste the id into wrangler.toml
-npx wrangler secret put PUSH_TOKEN          # any long random string
+npx wrangler secret put PUSH_TOKEN          # any long random string; keep it for step 3
 npx wrangler deploy
 ```
 
-Then in the Cloudflare dashboard, route it at a subdomain of yours —
-`status-api.yourdomain.tld/*`. The free tier covers this comfortably: 100k
-requests a day, and the page only polls while its tab is visible.
+`wrangler.toml` routes it at `status-api.nyannoying.de`. Cloudflare creates that
+DNS record on deploy, because the domain's DNS is on Cloudflare. The free tier
+covers this comfortably: 100k requests a day.
 
-## 2. The agent
+### 2. The mod
+
+1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for Minecraft 26.2.
+2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and the mc-status jar in
+   `%APPDATA%\.minecraft\mods`.
+   - **Get the jar:** the repo's *Actions* tab → *Build mod* → latest run →
+     *mc-status-mod* artifact.
+   - **Or build it:** `cd mod && gradlew build` (Java 25). The jar lands in
+     `mod/build/libs/`.
+3. Start the game once. The mod writes `config/mc-status.properties`:
+
+```properties
+capture_interval_seconds=60   # how often "last thing seen" updates
+capture_width=640
+state_interval_ticks=20       # how often state.json is refreshed (20 = 1 s)
+share_item_names=false        # custom item names can contain anything
+```
+
+### 3. The agent
 
 ```bash
 cd agent
-python -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp config.example.toml config.toml    # fill in url, token, rcon password
-.venv/bin/python agent.py --dry-run   # prints what it would publish
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+copy config.example.toml config.toml
+.venv\Scripts\python agent.py --dry-run
 ```
 
-`--dry-run` is the one to check before anything goes public. It prints the exact
-payload so you can see what's in it.
+In `config.toml`, set `token` to the `PUSH_TOKEN` from step 1. Leave
+`source.type = "mod"`.
 
-Enable RCON in your server's `server.properties`:
+Check `--dry-run` before anything goes public: it prints exactly what would be
+published. Start a world and run it again to see your inventory come through.
 
-```
-enable-rcon=true
-rcon.port=25575
-rcon.password=something-long
-```
-
-Bind RCON to localhost only. It is an unencrypted remote console — never expose
-that port.
-
-Once the dry run looks right:
+To run it at every login, with no console window and logs in `agent/agent.log`:
 
 ```bash
-cp mc-status-agent.service ~/.config/systemd/user/
-systemctl --user enable --now mc-status-agent
+powershell -ExecutionPolicy Bypass -File agent\install-windows.ps1
 ```
 
-## 3. The page
+Optional: `winget install fastfetch` for the machine panel. On Windows it often
+can't read CPU/GPU temperatures, so temperature curses may never fire there.
 
-Edit the `API` constant at the top of the script block in `site/index.html` to
-point at your Worker. Push, then either set Pages to deploy from `/site` via the
-included workflow, or drop the file at the repo root.
+### 4. The page
 
-For your custom domain, add a `CNAME` file containing your domain and point the
-DNS record at GitHub. If the domain is already on Cloudflare, set that record to
-DNS-only rather than proxied.
+The `pages.yml` workflow deploys `site/` on every push to `main` or `map`.
+Under Settings → Pages, set the source to *GitHub Actions*. Enforce HTTPS while
+you're there.
 
-## Screenshots
+## The mod
 
-The agent watches your screenshots folder and publishes whichever file is
-newest. So out of the box, **F2 in game is the publish button** — no mod needed.
+Everything it shares goes through files in `%APPDATA%\.minecraft\mc-status\`:
 
-### The mod (optional)
+- **`state.json`:** health, hunger, XP, hotbar, all 27 inventory slots, armor,
+  offhand (with durability and enchantments), position, dimension. Rewritten when
+  something changes, and at least every 5 seconds. Written to a temp file and
+  moved into place, so it's never half-written. On logout it's marked
+  `online: false` and keeps the last inventory.
+- **`latest.png`:** a 640px frame of the world, taken after the world is drawn
+  but before the HUD, so chat and coordinates never appear in it. Captured every
+  60 s, and when you open the pause menu (which covers Save & Quit).
+- **`commands/*.json`:** how curses reach a singleplayer world, which has no
+  RCON. The mod runs each file's commands as the integrated server, then deletes
+  the file. At most 20 commands per file. Ignored on multiplayer servers.
 
-`mod/` is a Fabric client mod for Minecraft 26.2 that overwrites
-`screenshots/latest.png` every 15 seconds, so the page always has a recent
-frame. The agent keeps doing the uploading.
+### Why the capture doesn't lag
 
-- **Get the jar:** every push that touches `mod/` builds it. Open the repo's
-  *Actions* tab → *Build mod* → the latest run → *mc-status-shot* artifact. Or
-  build it yourself with `cd mod && ./gradlew build` (Java 25), which puts the
-  jar in `mod/build/libs/`.
-- **Install:** drop it into `.minecraft/mods/` next to Fabric API.
-- **Configure:** the first launch writes `config/mc-status-shot.properties`:
+The first version used the game's screenshot code. That reads back the whole
+frame and loops over every pixel on the render thread. Measured on Intel
+integrated graphics at 854×480, it froze the game for about **600 ms** per
+capture, worse at higher resolutions.
 
-  ```properties
-  interval_seconds=15
-  hide_hud=true        # hides HUD and chat for the one captured frame
-  file_name=latest.png
-  ```
-
-It only captures actual gameplay. It skips frames while any menu is open
-(chat included), while paused, or while no world is loaded. Each file is written
-to `latest.png.tmp` first and then moved into place, so the agent never uploads
-a half-written image.
-
-## Minecraft assets
-
-The page draws the real HUD: hearts, hunger, XP bar and level, the hotbar with
-item icons, stack counts in the game font, durability bars and the enchantment
-glint.
-
-This is a fan site using Minecraft assets to present Minecraft information,
-which the [Minecraft Usage Guidelines](https://www.minecraft.net/en-us/usage-guidelines)
-allow on three conditions: include their disclaimer, don't look official, and
-don't redistribute game files. So:
-
-- **Disclaimer:** the page footer and the map carry "NOT AN OFFICIAL MINECRAFT
-  WEBSITE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." Keep it if
-  you restyle either one.
-- **Nothing from the game is committed.** At deploy, `site/build_assets.py`
-  downloads the client jar from Mojang (checksum-verified), renders every
-  item's inventory icon (3D blocks included) plus the HUD sprites into
-  `site/assets/mc/`, and the workflow publishes them with the site. The folder
-  is gitignored.
-- **Local preview:** run `pip install Pillow && python site/build_assets.py`
-  once. Pass `--jar` to reuse a client jar you already have.
-
-A few items are drawn by special renderers in the game (banners, shields,
-decorated pots, conduits, copper golem statues, dragon heads). They show a
-coloured swatch instead of an icon. So do modded items. Chests, shulker boxes
-and mob heads are rebuilt as boxes and render properly.
-
-Durability uses `agent/max_durability.json`, taken from the game's own data
-reports. After a Minecraft update, regenerate it with
-`python agent/update_durability.py --server-jar server.jar`, and bump
-`MC_VERSION` in `site/build_assets.py`.
-
-## Privacy
-
-Deliberately never collected: local IP, hostname, and everything in the player
-NBT except an allowlist in `SAFE_STATS`. A Minecraft update can add fields to
-that blob, and an allowlist means new ones can't start leaking on their own.
-
-Two things to decide for yourself:
-
-- **Coordinates.** Fine for a solo world. If anyone else has your server
-  address, set `hide_coordinates = true`.
-- **Screenshots.** F2 captures your HUD, which includes chat. The mod hides the
-  HUD for its frames (`hide_hud=true`), but anything you press F2 on yourself is
-  published as-is.
-- **The map.** It shows your whole world to anyone with the link, including
-  bases. Your marker follows `hide_coordinates`: when it's on, no marker.
+The mod now shrinks the frame on the GPU and reads back only 640×360. The slow
+part, copying out of the driver's mapped memory (~45 ms on that GPU), runs on a
+background thread. Frame times around a capture stay at their normal 5–10 ms.
 
 ## The map
 
-A BlueMap 3D render of your world at `/map`, with your live position on top.
+A BlueMap 3D render of the area around where you last logged out, at `/map`.
 
-The world only exists on your machine, so the render runs there too.
-`map/render.py` renders it and force-pushes the result to a separate `map`
-branch as a single commit, so re-renders never pile tile history onto `main`.
-Any push to `map` redeploys Pages, and the workflow copies the branch into
-`/map`.
+When you log out, the agent:
+1. waits for the world save to finish;
+2. runs `map/render.py` for an 8-chunk radius around your position, only in
+   that dimension;
+3. force-pushes the result to the `map` branch as a single commit.
 
-Run it on the machine that has the world (Python 3.11+, Java 21+, git with push
-access):
+Each render replaces the previous one, so the map stays around 10 MB and git
+history never grows. Pages redeploys and serves it under `/map`.
 
-```bash
-python map/render.py --world ~/server/world --accept-mojang-eula --publish
+Enable it in `agent/config.toml`:
+
+```toml
+[map]
+render_on_logout = true
+radius_chunks = 8
+accept_mojang_eula = true   # BlueMap downloads textures from the client jar
 ```
 
-- **`--accept-mojang-eula`:** BlueMap needs textures from the Minecraft
-  client jar and downloads it from Mojang. The flag confirms you own the game.
-  The jar stays in `map/work/` and is never published.
-- **Live marker URL:** taken from `worker.url` in `agent/config.toml`. Pass
-  `--live-url https://status-api.yourdomain.tld/bluemap` to override.
-- **Re-rendering:** later runs only re-render chunks that changed. Add `--force`
-  after changing map settings.
-- **Automating:** a nightly cron or systemd timer running the same command
-  works. The render is incremental.
+- **Java 21+:** `winget install EclipseAdoptium.Temurin.21.JRE`, or set `java =`
+  to any Java 21+ executable.
+- **Git push access:** the clone the agent runs from needs it. Git Credential
+  Manager handles this after one normal `git push`.
 
-How the live marker works: the map's `live-data-root` points at the Worker. The
-Worker answers BlueMap's `…/live/players.json` requests from your last status
-push, and only shows the marker on the map for your current dimension.
-BlueMap normally polls every second. `map/live-throttle.js` slows that to every
-15 seconds and pauses while the tab is hidden, so one open tab stays well
-inside the Workers free tier. It depends on BlueMap internals, so if you bump
-`BLUEMAP_VERSION` in `render.py`, check the marker still moves.
+To render by hand:
 
-**Size:** tiles stay gzipped and the browser decompresses them. A 169-chunk
-test world rendered to about 6 MB, so expect roughly 35 MB per 1,000 explored
-chunks. GitHub Pages caps a site at 1 GB, so for a huge world add a
-`render-mask` in `render.py`.
+```bash
+python map/render.py --world "%APPDATA%\.minecraft\saves\My World" --center 120 -40 --dimension minecraft:overworld --accept-mojang-eula --publish
+```
+
+Without `--center` it renders the whole world. That's fine locally, but can
+outgrow GitHub Pages' 1 GB limit on a big world.
+
+While you're online, the Worker feeds your live position into the map. Once
+you log out, it shows a "(last seen)" marker instead. BlueMap normally polls
+every second; `map/live-throttle.js` slows that to 15 s and pauses in hidden
+tabs. It relies on BlueMap internals, so check the marker after bumping
+`BLUEMAP_VERSION`.
 
 ## Cursed mode
 
 The machine reaches into the world: a hot GPU sets the ground around you on
 fire, a hot CPU brings a thunderstorm, low RAM makes you slow, and 12 hours of
-uptime tells you to go to bed. Fired curses show up on the status page.
+uptime tells you to go to bed. Fired curses show up on the page.
 
-It is off by default. Enable it under `[cursed]` in `agent/config.toml`. Rules
-are plain RCON commands, so you can write your own:
+It is off by default. Rules are plain Minecraft commands, so you can write your
+own:
 
 ```toml
 [[cursed.rules]]
@@ -222,11 +192,72 @@ commands = ['execute at {player} run fill ~-2 ~ ~-2 ~2 ~ ~2 minecraft:fire repla
 
 A rule fires when its condition becomes true, then again every
 `cooldown_seconds` while it stays true. Curses only run while you're in game.
-`agent.py --dry-run` prints the live metrics and which rules would fire,
-without running anything.
 
-Temperatures come from fastfetch's `--cpu-temp` / `--gpu-temp`, which need
-sensor support on your system. If `--dry-run` shows no `cpu_temp`, rules on it
-never fire.
+**Fire kills.** In testing, a fire rule on a 60 s cooldown burned the player to
+death and they dropped everything. Use long cooldowns, and try rules on a copy
+of your world first.
 
-**Fire spreads.** Try the fire rule on a copy of your world first.
+## Running on a server instead
+
+Set `source.type = "rcon"` and fill in `[rcon]`. Enable RCON in
+`server.properties` and bind it to localhost only; it's an unencrypted remote
+console.
+
+```
+enable-rcon=true
+rcon.port=25575
+rcon.password=something-long
+```
+
+Curses then go over RCON. For logout renders, set `map.world` to the server's
+world folder. On Linux, `agent/mc-status-agent.service` runs the agent as a
+systemd user service. Without the mod, there's no screenshot unless you point
+`screenshot.directory` at a folder.
+
+## Minecraft assets
+
+The page draws real item icons, HUD sprites and the inventory screen. This is a
+fan site presenting Minecraft information, which the
+[Minecraft Usage Guidelines](https://www.minecraft.net/en-us/usage-guidelines)
+allow on three conditions: include their disclaimer, don't look official, and
+don't redistribute game files.
+
+- **Disclaimer:** "NOT AN OFFICIAL MINECRAFT WEBSITE. NOT APPROVED BY OR
+  ASSOCIATED WITH MOJANG OR MICROSOFT." It's in the page footer and on the map.
+  Keep it if you restyle either one.
+- **Nothing from the game is committed.** At deploy, `site/build_assets.py`
+  downloads the client jar from Mojang (checksum-verified), then renders every
+  item icon (3D blocks included), the HUD and inventory sprites, and the item
+  names into `site/assets/mc/`. The workflow publishes them with the site, and
+  the folder is gitignored.
+- **Local preview:** `pip install Pillow && python site/build_assets.py`. Pass
+  `--jar` to reuse a client jar you already have.
+
+Banners, shields, decorated pots, conduits, copper golem statues, dragon heads
+and modded items show a coloured swatch; the game draws those with special
+renderers. Chests, shulker boxes and mob heads are rebuilt as boxes.
+
+After a Minecraft update:
+1. Bump `MC_VERSION` in `site/build_assets.py`.
+2. Update the versions in `mod/gradle.properties`.
+3. For the RCON path, regenerate `agent/max_durability.json` with
+   `python agent/update_durability.py --server-jar server.jar`.
+
+## Privacy
+
+Published: what the page shows, nothing more.
+
+Never read or sent:
+- local IP and hostname;
+- chat;
+- the local world path;
+- custom item names (unless you turn `share_item_names` on);
+- any field the mod or NBT adds that isn't on an explicit allowlist. So a
+  Minecraft update can't quietly start leaking something.
+
+Decide for yourself:
+
+- **Coordinates.** Fine for a solo world. `privacy.hide_coordinates = true`
+  hides them on the page and removes the map marker. The logout map still shows
+  that area, so turn `render_on_logout` off too if that matters.
+- **The map** shows everything within the rendered radius, including builds.

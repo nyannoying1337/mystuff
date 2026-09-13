@@ -8,12 +8,15 @@ import io
 import json
 import logging
 import operator
+import os
 import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import tomllib
+import uuid
 from pathlib import Path
 
 import nbtlib
@@ -36,6 +39,17 @@ PLAYER_NAME = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 # the default; regenerate with update_durability.py after a Minecraft update.
 MAX_DURABILITY = json.loads((Path(__file__).with_name("max_durability.json")).read_text(encoding="utf-8"))
 
+# What the mod's state.json may contribute to the published payload. Anything
+# else in that file (like the local world path) stays on this machine.
+PUBLISHED_PLAYER_KEYS = (
+    "online", "name", "health", "foodlevel", "xplevel", "xpp", "selecteditemslot",
+    "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand",
+)
+# The mod rewrites state.json at least every 5 s; much older means the game is gone.
+MOD_STALE_SECONDS = 30
+
+RENDER_SCRIPT = Path(__file__).resolve().parent.parent / "map" / "render.py"
+
 CURSE_CONDITION = re.compile(r"^\s*([a-z_]+)\s*(>=|<=|>|<|==)\s*(-?\d+(?:\.\d+)?)\s*$")
 COMPARE = {
     ">=": operator.ge,
@@ -49,6 +63,28 @@ COMPARE = {
 def load_config(path: Path) -> dict:
     with path.open("rb") as handle:
         return tomllib.load(handle)
+
+
+def source_type(config: dict) -> str:
+    """"mod" reads the Fabric mod's files (singleplayer); "rcon" asks a server."""
+    return config.get("source", {}).get("type", "rcon")
+
+
+def game_dir(config: dict) -> Path:
+    default = "%APPDATA%/.minecraft" if os.name == "nt" else "~/.minecraft"
+    raw = config.get("source", {}).get("game_dir", default)
+    return Path(os.path.expandvars(raw)).expanduser()
+
+
+def mod_dir(config: dict) -> Path:
+    return game_dir(config) / "mc-status"
+
+
+def apply_privacy(config: dict, player: dict) -> dict:
+    if config.get("privacy", {}).get("hide_coordinates", False) and "position" in player:
+        player["position"] = None
+        player.pop("rotation", None)
+    return player
 
 
 def unwrap(tag):
@@ -179,7 +215,41 @@ def normalise_item(entry: dict) -> dict | None:
     return item
 
 
-def collect_player(config: dict) -> dict:
+def read_mod_state(config: dict) -> dict | None:
+    path = mod_dir(config) / "state.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError) as err:
+        log.warning("could not read %s: %s", path, err)
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def collect_player_mod(config: dict, raw: dict | None) -> dict:
+    """The player as the mod last wrote it, reduced to publishable fields."""
+    if not raw:
+        return {"online": False}
+    player = {key: raw[key] for key in PUBLISHED_PLAYER_KEYS if key in raw}
+    if not PLAYER_NAME.match(str(player.get("name", ""))):
+        log.warning("state.json has no valid player name — reporting offline")
+        return {"online": False}
+    written_at = raw.get("written_at")
+    if player.get("online") and (
+        not isinstance(written_at, (int, float)) or time.time() - written_at / 1000 > MOD_STALE_SECONDS
+    ):
+        player["online"] = False  # game closed or crashed without saying goodbye
+    return apply_privacy(config, player)
+
+
+def collect_player(config: dict, raw: dict | None = None) -> dict:
+    if source_type(config) == "mod":
+        return collect_player_mod(config, raw if raw is not None else read_mod_state(config))
+    return collect_player_rcon(config)
+
+
+def collect_player_rcon(config: dict) -> dict:
     rcon_config = config.get("rcon", {})
     player = rcon_config.get("player")
     if not player:
@@ -237,13 +307,18 @@ def collect_player(config: dict) -> dict:
             (item for item in items if item["slot"] > 8),
             key=lambda item: item["slot"],
         )
-        armor = data.get("equipment")
-        if isinstance(armor, dict):
-            result["equipment"] = {
-                slot: normalise_item(value)
-                for slot, value in armor.items()
-                if isinstance(value, dict)
+        equipment = data.get("equipment")
+        if isinstance(equipment, dict):
+            # same shape the mod writes: armor by slot, offhand on its own
+            result["armor"] = {
+                slot: item
+                for slot, value in equipment.items()
+                if slot in ("head", "chest", "legs", "feet") and isinstance(value, dict)
+                and (item := normalise_item(value))
             }
+            offhand = equipment.get("offhand")
+            if isinstance(offhand, dict) and (item := normalise_item(offhand)):
+                result["offhand"] = item
 
     return result
 
@@ -302,10 +377,30 @@ def due_curses(config: dict, metrics: dict, state: dict, now: float) -> list[dic
     return due
 
 
+def queue_mod_commands(config: dict, commands: list[str]) -> Path:
+    """Hand commands to the mod, which runs them in the singleplayer world."""
+    folder = mod_dir(config) / "commands"
+    folder.mkdir(parents=True, exist_ok=True)
+    # timestamp first: the mod runs files in name order
+    target = folder / f"{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}.json"
+    temp = target.with_suffix(".tmp")
+    temp.write_text(json.dumps({"commands": commands}), encoding="utf-8")
+    os.replace(temp, target)
+    return target
+
+
 def cast_curses(config: dict, player: str, curses: list[dict], state: dict, now: float) -> None:
-    """Send each due rule's commands over one RCON connection."""
-    rcon_config = config.get("rcon", {})
+    """Send each due rule's commands to the server (RCON) or the mod (singleplayer)."""
     try:
+        if source_type(config) == "mod":
+            for curse in curses:
+                commands = [template.replace("{player}", player) for template in curse["rule"].get("commands", [])]
+                queue_mod_commands(config, commands)
+                log.info("curse %r: queued %d command(s) for the mod", curse["name"], len(commands))
+                record_curse(state, curse, now)
+            return
+
+        rcon_config = config.get("rcon", {})
         with MCRcon(
             rcon_config.get("host", "127.0.0.1"),
             rcon_config["password"],
@@ -317,17 +412,150 @@ def cast_curses(config: dict, player: str, curses: list[dict], state: dict, now:
                     command = template.replace("{player}", player)
                     reply = rcon.command(command)
                     log.info("curse %r: /%s -> %s", curse["name"], command, reply.strip()[:120] or "ok")
-                state["curse_fired"][curse["name"]] = now
-                recent = state.setdefault("curse_log", [])
-                recent.insert(0, {
-                    "name": curse["name"],
-                    "metric": curse["metric"],
-                    "value": curse["value"],
-                    "at": int(now * 1000),
-                })
-                del recent[5:]
+                record_curse(state, curse, now)
     except Exception as err:
         log.warning("could not cast curses: %s", err)
+
+
+def record_curse(state: dict, curse: dict, now: float) -> None:
+    state.setdefault("curse_fired", {})[curse["name"]] = now
+    recent = state.setdefault("curse_log", [])
+    recent.insert(0, {
+        "name": curse["name"],
+        "metric": curse["metric"],
+        "value": curse["value"],
+        "at": int(now * 1000),
+    })
+    del recent[5:]
+
+
+# ---------------------------------------------------------------- logout map
+
+def track_presence(config: dict, state: dict, player: dict, raw: dict | None) -> None:
+    """Remember where the player was; when they leave, render that spot."""
+    source = raw if raw else player
+    if player.get("online"):
+        state["was_online"] = True
+        position = source.get("position")
+        if isinstance(position, list) and len(position) == 3:
+            state["last_seen"] = {
+                "position": position,
+                "dimension": source.get("dimension"),
+                "at": int(time.time() * 1000),
+            }
+        if raw and raw.get("world_path"):
+            state["world_path"] = raw["world_path"]
+        return
+
+    if state.get("was_online"):
+        state["was_online"] = False
+        start_logout_render(config, state)
+
+
+def last_seen_payload(config: dict, state: dict) -> dict | None:
+    seen = state.get("last_seen")
+    if not seen:
+        return None
+    payload = dict(seen)
+    if config.get("privacy", {}).get("hide_coordinates", False):
+        payload["position"] = None
+    return payload
+
+
+def start_logout_render(config: dict, state: dict) -> None:
+    map_config = config.get("map", {})
+    if not map_config.get("render_on_logout", False):
+        return
+    world = map_config.get("world") or state.get("world_path")
+    seen = state.get("last_seen") or {}
+    if not world or not seen.get("position") or not seen.get("dimension"):
+        log.info("logout render skipped: no world path or last position known")
+        return
+    running = state.get("render_thread")
+    if running and running.is_alive():
+        log.info("logout render skipped: previous render still running")
+        return
+    thread = threading.Thread(
+        target=render_after_save,
+        args=(config, Path(world), seen, lambda: state.get("was_online", False)),
+        name="map-render",
+        daemon=True,
+    )
+    state["render_thread"] = thread
+    thread.start()
+
+
+def session_lock_released(world: Path) -> bool:
+    """Minecraft holds session.lock while the world is open; on Windows the
+    lock makes the file unreadable, elsewhere it can't be seen this way."""
+    try:
+        with (world / "session.lock").open("rb") as handle:
+            handle.read(1)
+        return True
+    except FileNotFoundError:
+        return True
+    except PermissionError:
+        return False
+
+
+def wait_for_world_saved(world: Path, rejoined, quiet_seconds: float = 5, timeout: float = 180,
+                         poll: float = 1.0) -> bool:
+    """True once the save looks finished; False if the player came back first."""
+    deadline = time.time() + timeout
+    level = world / "level.dat"
+    while time.time() < deadline:
+        if rejoined():
+            return False
+        try:
+            settled = time.time() - level.stat().st_mtime >= quiet_seconds
+        except FileNotFoundError:
+            settled = True
+        if settled and session_lock_released(world):
+            return True
+        time.sleep(poll)
+    log.warning("world %s still looks busy after %ds — rendering anyway", world, timeout)
+    return True
+
+
+def render_command(config: dict, world: Path, seen: dict) -> list[str]:
+    map_config = config.get("map", {})
+    x, _, z = seen["position"]
+    command = [
+        sys.executable, str(RENDER_SCRIPT),
+        "--world", str(world),
+        "--center", str(int(x)), str(int(z)),
+        "--radius-chunks", str(int(map_config.get("radius_chunks", 8))),
+        "--dimension", seen["dimension"],
+        "--live-url", f"{config['worker']['url'].rstrip('/')}/bluemap",
+    ]
+    if map_config.get("accept_mojang_eula", False):
+        command.append("--accept-mojang-eula")
+    if map_config.get("java"):
+        command += ["--java", str(map_config["java"])]
+    if map_config.get("publish", True):
+        command.append("--publish")
+    return command
+
+
+def render_after_save(config: dict, world: Path, seen: dict, rejoined) -> None:
+    if not wait_for_world_saved(world, rejoined):
+        log.info("logout render cancelled: player rejoined")
+        return
+    command = render_command(config, world, seen)
+    log.info("rendering map around %s in %s", seen["position"], seen["dimension"])
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                   encoding="utf-8", errors="replace")
+        for line in process.stdout:
+            log.info("render: %s", line.rstrip())
+        code = process.wait(timeout=30 * 60)
+    except (OSError, subprocess.SubprocessError) as err:
+        log.warning("map render failed to run: %s", err)
+        return
+    if code:
+        log.warning("map render exited with %d", code)
+    else:
+        log.info("map render finished")
 
 
 def newest_screenshot(directory: Path) -> Path | None:
@@ -375,26 +603,38 @@ def push_screenshot(config: dict, image: bytes) -> None:
     response.raise_for_status()
 
 
+def screenshot_directory(config: dict) -> Path | None:
+    directory = config.get("screenshot", {}).get("directory")
+    if directory:
+        return Path(os.path.expandvars(directory)).expanduser()
+    # With the mod, only its own HUD-free frames are published — never F2 shots.
+    return mod_dir(config) if source_type(config) == "mod" else None
+
+
 def run_once(config: dict, state: dict) -> None:
+    raw = read_mod_state(config) if source_type(config) == "mod" else None
     payload = {
         "generated_at": int(time.time() * 1000),
         "system": collect_system(),
-        "player": collect_player(config),
+        "player": collect_player(config, raw),
     }
 
     player = payload["player"]
+    track_presence(config, state, player, raw)
     if player.get("online"):
         now = time.time()
         curses = due_curses(config, curse_metrics(payload["system"], player), state, now)
         if curses:
             cast_curses(config, player["name"], curses, state, now)
+    elif (seen := last_seen_payload(config, state)):
+        payload["last_seen"] = seen
     if state.get("curse_log"):
         payload["curses"] = state["curse_log"]
 
     screenshot_config = config.get("screenshot", {})
-    directory = screenshot_config.get("directory")
+    directory = screenshot_directory(config)
     if directory:
-        latest = newest_screenshot(Path(directory).expanduser())
+        latest = newest_screenshot(directory)
         if latest:
             stamp = latest.stat().st_mtime
             if stamp != state.get("last_shot"):
@@ -414,9 +654,9 @@ def run_once(config: dict, state: dict) -> None:
     push_status(config, payload)
     player = payload["player"]
     log.info(
-        "pushed — player %s, %d hotbar items",
+        "pushed — player %s, %d items",
         "online" if player.get("online") else "offline",
-        len(player.get("hotbar", [])),
+        len(player.get("hotbar", [])) + len(player.get("inventory", [])),
     )
 
 
@@ -425,12 +665,18 @@ def main() -> int:
     parser.add_argument("--config", default="config.toml", type=Path)
     parser.add_argument("--once", action="store_true", help="collect and push a single time")
     parser.add_argument("--dry-run", action="store_true", help="print the payload, push nothing")
+    parser.add_argument("--log-file", type=Path, help="also log here, rotated at 1 MB (for running without a console)")
     args = parser.parse_args()
 
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if args.log_file:
+        from logging.handlers import RotatingFileHandler
+        handlers.append(RotatingFileHandler(args.log_file, maxBytes=1_000_000, backupCount=3, encoding="utf-8"))
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
+        handlers=handlers,
     )
 
     if not args.config.is_file():
@@ -440,7 +686,8 @@ def main() -> int:
     config = load_config(args.config)
 
     if args.dry_run:
-        system, player = collect_system(), collect_player(config)
+        raw = read_mod_state(config) if source_type(config) == "mod" else None
+        system, player = collect_system(), collect_player(config, raw)
         metrics = curse_metrics(system, player)
         would_fire = [
             {"name": curse["name"], "commands": curse["rule"].get("commands", [])}
@@ -448,6 +695,10 @@ def main() -> int:
         ] if player.get("online") else []
         print(json.dumps(
             {
+                "source": source_type(config),
+                "mod_dir": str(mod_dir(config)) if source_type(config) == "mod" else None,
+                "world_path_for_map": (raw or {}).get("world_path") or config.get("map", {}).get("world"),
+                "screenshot_directory": str(screenshot_directory(config)),
                 "system": system,
                 "player": player,
                 "curse_metrics": metrics,

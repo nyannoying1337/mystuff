@@ -2,6 +2,12 @@ name = "mc-status"
 main = "worker.js"
 compatibility_date = "2026-01-01"
 
+# Served at its own subdomain; Cloudflare creates the DNS record on deploy
+# (the domain's DNS has to be on Cloudflare, which nyannoying.de is).
+routes = [
+  { pattern = "status-api.nyannoying.de", custom_domain = true },
+]
+
 # Create the namespace first:
 #   npx wrangler kv namespace create STATUS
 # then paste the returned id below.
@@ -11,6 +17,3 @@ id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
 
 # Set the shared secret (never commit it):
 #   npx wrangler secret put PUSH_TOKEN
-#
-# Route it at your own domain in the Cloudflare dashboard, e.g.
-#   status-api.yourdomain.tld/*
