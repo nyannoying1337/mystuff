@@ -20,7 +20,8 @@ import org.slf4j.LoggerFactory;
  *
  * <ul>
  *   <li>{@code state.json} — health, hunger, XP, full inventory, position</li>
- *   <li>{@code latest.png} — a small frame of the world, without the HUD</li>
+ *   <li>{@code latest.png} — a frame of the world, without the HUD</li>
+ *   <li>{@code panorama.png} + {@code .json} — a 360° view, taken when pausing in singleplayer</li>
  *   <li>{@code commands/*.json} — written by the agent (curses), run here in singleplayer</li>
  * </ul>
  */
@@ -36,20 +37,25 @@ public class McStatusClient implements ClientModInitializer {
 		StateWriter state = new StateWriter(dir.resolve("state.json"), config, progress);
 		CommandQueue commands = new CommandQueue(dir.resolve("commands"));
 		FrameCapture capture = new FrameCapture(dir.resolve("latest.png"), config);
+		PanoramaCapture panorama = new PanoramaCapture(dir.resolve("panorama.png"), dir.resolve("panorama.json"));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			progress.tick(client);
 			state.tick(client);
 			commands.tick(client);
+			panorama.tick(client);
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> state.markOffline());
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> state.markOffline());
 
 		LevelRenderEvents.END_MAIN.register(context -> capture.onLevelRendered(Minecraft.getInstance()));
 		// Pausing (and Save & Quit, which always goes through the pause menu)
-		// grabs the last thing you were looking at.
+		// grabs the last thing you were looking at, and a 360° view for when you're gone.
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			if (screen instanceof PauseScreen) capture.requestSoon();
+			if (screen instanceof PauseScreen) {
+				capture.requestSoon();
+				panorama.requestSoon();
+			}
 		});
 
 		LOG.info("writing to {} (capture every {}s at {}px)", dir, config.captureIntervalSeconds, config.captureWidth);

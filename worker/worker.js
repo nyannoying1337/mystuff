@@ -10,8 +10,12 @@ const MAP_DIMENSIONS = {
   end: "minecraft:the_end",
 };
 
-// Matches the status page: older than this and the live marker becomes "last seen".
+// Older than this and the page calls the machine quiet, and the live marker
+// becomes "last seen". Sent to the page with every status.
 const STALE_MS = 90000;
+
+// Durable Object values max out at 2 MB.
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024 - 1024;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -91,7 +95,7 @@ export function playersFor(status, mapId) {
 function statusMessage(current) {
   const status = JSON.parse(current);
   const players = Object.fromEntries(Object.keys(MAP_DIMENSIONS).map((id) => [id, playersFor(status, id)]));
-  return JSON.stringify({ type: "status", status, players });
+  return JSON.stringify({ type: "status", status, players, stale_ms: STALE_MS });
 }
 
 // A WebSocket that is closed straight away, so the browser can see why.
@@ -135,6 +139,11 @@ export class StatusStore extends DurableObject {
   async publishShot(image) {
     await this.ctx.storage.put({ shot: image, "shot-taken-at": String(Date.now()) });
     await this.broadcast(image);
+  }
+
+  // The logout panorama isn't broadcast: the page fetches it only when it shows it.
+  async storePanorama(image) {
+    await this.ctx.storage.put({ pano: image });
   }
 
   viewerCount() {
@@ -212,7 +221,7 @@ export default {
     if (path === "/live" && request.method === "GET") {
       if (request.headers.get("Upgrade") !== "websocket") return json({ error: "expected websocket" }, 426);
       // Refused here, before the Durable Object is touched.
-      if (!canView(url, env)) return refuseSocket(4001, "invite invalid", { type: "invalid" });
+      if (!canView(url, env)) return refuseSocket(4001, "invite invalid");
       const headers = new Headers(request.headers);
       headers.set("X-Key-Hash", await sha256(env.VIEW_KEY));
       return store(env).fetch(new Request(request.url, { headers }));
@@ -267,18 +276,24 @@ export default {
       });
     }
 
-    if (path === "/shot" && request.method === "POST") {
+    if ((path === "/shot" || path === "/pano") && request.method === "POST") {
       if (!authorized(request, env)) return json({ error: "unauthorized" }, 401);
-
       const image = await request.arrayBuffer();
       if (image.byteLength === 0) return json({ error: "empty body" }, 400);
-      // Durable Object values max out at 2 MB; the agent sends ~50 kB JPEGs.
-      if (image.byteLength > 2 * 1024 * 1024 - 1024) {
-        return json({ error: "screenshot too large" }, 413);
-      }
-
-      await store(env).publishShot(image);
+      if (image.byteLength > MAX_IMAGE_BYTES) return json({ error: "image too large" }, 413);
+      if (path === "/shot") await store(env).publishShot(image);
+      else await store(env).storePanorama(image);
       return json({ ok: true, bytes: image.byteLength });
+    }
+
+    if (path === "/pano" && request.method === "GET") {
+      if (!canView(url, env)) return json({ error: "invite required" }, 401);
+      const pano = await store(env).read("pano");
+      if (!pano) return json({ error: "no panorama yet" }, 404);
+      // The page adds ?t=<panorama_at>, so each panorama is its own URL and can be cached for good.
+      return new Response(pano, {
+        headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000, immutable", ...CORS },
+      });
     }
 
     return json({ error: "not found" }, 404);

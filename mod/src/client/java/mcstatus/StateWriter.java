@@ -56,8 +56,10 @@ final class StateWriter {
 		if (joinedAt == 0) joinedAt = System.currentTimeMillis();
 
 		JsonObject state = snapshot(client, player);
+		// The clock, FPS and memory change every second. They don't count as a
+		// change on their own: they're added after the check and ride along with
+		// real changes or the heartbeat. That's ~5× fewer writes while standing still.
 		String body = GSON.toJson(state);
-		state.addProperty("joined_at", joinedAt);
 		long now = System.currentTimeMillis();
 		// Unchanged state is still rewritten now and then, so the agent can tell
 		// a quiet player from a crashed game.
@@ -66,6 +68,14 @@ final class StateWriter {
 		last = state;
 		lastBody = body;
 		lastWrittenAt = now;
+		state.add("game", game(client, client.getSingleplayerServer()));
+		if (state.has("world")) {
+			long time = client.level.getOverworldClockTime();
+			JsonObject world = state.getAsJsonObject("world");
+			world.addProperty("day", time / 24000);
+			world.addProperty("time", Math.floorMod(time, 24000L));
+		}
+		state.addProperty("joined_at", joinedAt);
 		state.addProperty("written_at", now);
 		String json = GSON.toJson(state);
 		Util.ioPool().execute(() -> write(json));
@@ -135,10 +145,8 @@ final class StateWriter {
 			JsonObject advancements = progress.advancements();
 			if (advancements != null) state.add("advancements", advancements);
 		}
-		state.add("game", game(client, server));
 
 		Inventory inventory = player.getInventory();
-		state.addProperty("selecteditemslot", inventory.getSelectedSlot());
 		JsonArray hotbar = new JsonArray();
 		JsonArray main = new JsonArray();
 		for (int slot = 0; slot < 36; slot++) {
@@ -164,9 +172,6 @@ final class StateWriter {
 		ClientLevel level = client.level;
 		JsonObject world = new JsonObject();
 		world.addProperty("name", server.getWorldData().getLevelName());
-		long time = level.getOverworldClockTime();
-		world.addProperty("day", time / 24000);
-		world.addProperty("time", Math.floorMod(time, 24000L));
 		world.addProperty("weather", level.isThundering() ? "thunder" : level.isRaining() ? "rain" : "clear");
 		level.getBiome(player.blockPosition()).unwrapKey()
 			.ifPresent(key -> world.addProperty("biome", key.identifier().toString()));

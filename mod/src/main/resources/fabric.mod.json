@@ -3,7 +3,7 @@
 	"id": "mc-status",
 	"version": "${version}",
 	"name": "mc-status",
-	"description": "Shares your health, hunger, XP, inventory and a small HUD-free frame of the world with the mc-status agent, and runs its curses in singleplayer.",
+	"description": "Shares your status, inventory, stats, advancements, a HUD-free frame and a logout panorama with the mc-status agent, and runs its curses in singleplayer.",
 	"license": "MIT",
 	"environment": "client",
 	"entrypoints": {

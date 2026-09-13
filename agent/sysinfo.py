@@ -2,22 +2,29 @@
 
 psutil covers CPU, memory and uptime everywhere. On Windows the GPU name comes
 from the registry and its load and memory from the same performance counters
-Task Manager reads. Hostname, user name and addresses are never read.
+Task Manager reads. Temperatures need fastfetch (optional). Hostname, user
+name and addresses are never read.
 """
 
 from __future__ import annotations
 
-import logging
+import json
 import platform
+import shutil
+import subprocess
 import sys
 import time
 
 import psutil
 
-log = logging.getLogger("agent")
+from common import log
+
+TEMPERATURE_INTERVAL = 300
 
 _static: dict | None = None
 _gpu_counters = None
+_temps: dict = {}
+_temps_at = float("-inf")
 
 
 def _windows_cpu_name() -> str | None:
@@ -62,6 +69,24 @@ def _windows_gpu() -> tuple[str | None, int | None]:
     return best
 
 
+def _linux_cpu_name() -> str | None:
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as handle:
+            for line in handle:
+                if line.lower().startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or None
+
+
+def _sysctl(name: str) -> str | None:
+    try:
+        return subprocess.run(["sysctl", "-n", name], capture_output=True, text=True, timeout=5).stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def _static_info() -> dict:
     global _static
     if _static is None:
@@ -70,12 +95,13 @@ def _static_info() -> dict:
             "cpu_cores": psutil.cpu_count(),
         }
         if sys.platform == "win32":
-            info["kernel"] = platform.version()
             info["cpu"] = _windows_cpu_name()
             info["gpu"], info["vram_total"] = _windows_gpu()
+        elif sys.platform == "darwin":
+            info["os"] = f"macOS {platform.mac_ver()[0]}".strip()
+            info["cpu"] = _sysctl("machdep.cpu.brand_string")
         else:
-            info["kernel"] = platform.release()
-            info["cpu"] = platform.processor() or None
+            info["cpu"] = _linux_cpu_name()
         _static = {key: value for key, value in info.items() if value}
         psutil.cpu_percent(None)  # prime: the first reading is always 0
     return dict(_static)
@@ -154,6 +180,36 @@ def _gpu_sample() -> dict:
         return {}
 
 
+def _temperatures() -> dict:
+    """CPU/GPU temperatures from fastfetch, if it's installed and can read them.
+    It's a subprocess, so it runs at most every few minutes, not every push."""
+    global _temps, _temps_at
+    if time.time() - _temps_at < TEMPERATURE_INTERVAL:
+        return _temps
+    _temps_at = time.time()
+    if not shutil.which("fastfetch"):
+        _temps = {}
+        return _temps
+    try:
+        raw = subprocess.run(
+            ["fastfetch", "--format", "json", "--structure", "CPU:GPU", "--cpu-temp", "true", "--gpu-temp", "true"],
+            capture_output=True, text=True, timeout=15, check=True,
+        ).stdout
+        modules = {module.get("type"): module.get("result") for module in json.loads(raw) if isinstance(module, dict)}
+    except (OSError, subprocess.SubprocessError, ValueError) as err:
+        log.info("fastfetch temperatures unavailable: %s", err)
+        _temps = {}
+        return _temps
+    cpu = modules.get("CPU") if isinstance(modules.get("CPU"), dict) else {}
+    gpus = modules.get("GPU") if isinstance(modules.get("GPU"), list) else []
+    gpu = gpus[0] if gpus and isinstance(gpus[0], dict) else {}
+    _temps = {key: value for key, value in {
+        "cpu_temp": cpu.get("temperature"),
+        "gpu_temp": gpu.get("temperature"),
+    }.items() if isinstance(value, (int, float))}
+    return _temps
+
+
 def collect() -> dict:
     """CPU and GPU load are averaged since the previous call, i.e. over one push interval."""
     first = _static is None
@@ -164,7 +220,17 @@ def collect() -> dict:
     system.update(
         mem_used=memory.total - memory.available,
         mem_total=memory.total,
-        uptime={"uptime": int((time.time() - psutil.boot_time()) * 1000)},
+        uptime_seconds=int(time.time() - psutil.boot_time()),
     )
     system.update(_gpu_sample())
+    system.update(_temperatures())
     return system
+
+
+def collect_safely() -> dict:
+    """collect(), but a failing sensor never takes the whole push down."""
+    try:
+        return collect()
+    except Exception as err:
+        log.warning("system info failed: %s", err)
+        return {}

@@ -1,0 +1,42 @@
+// Game textures and English names, built at deploy time by site/build_assets.py
+// from Minecraft's client jar. Nothing from the game is committed to the repo.
+import { shortId, titleCase } from "./util.js";
+
+export const ASSETS = "assets/mc";
+
+// Glyph widths for the game font; false when the assets weren't built, in which
+// case the page falls back to plain text.
+export let glyphWidths = null;
+export let names = { items: {}, enchantments: {}, levels: {}, biomes: {}, entities: {} };
+
+export const assetsReady = Promise.all([
+  fetch(`${ASSETS}/font/widths.json`).then((r) => (r.ok ? r.json() : false)).catch(() => false),
+  fetch(`${ASSETS}/names.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+]).then(([widths, loadedNames]) => {
+  glyphWidths = widths;
+  if (loadedNames) names = { ...names, ...loadedNames };
+});
+
+export const itemUrl = (id) => `${ASSETS}/item/${shortId(id)}.png`;
+export const spriteUrl = (name) => `${ASSETS}/hud/${name}.png`;
+
+export function itemName(item) {
+  const short = shortId(item.id);
+  return names.items[short] || short.replace(/_/g, " ");
+}
+
+// Enchantments that only have one level; the game shows them without "I".
+const SINGLE_LEVEL = new Set([
+  "mending", "silk_touch", "infinity", "flame", "channeling", "multishot",
+  "aqua_affinity", "binding_curse", "vanishing_curse",
+]);
+
+export function enchantmentName(enchantment) {
+  const short = shortId(enchantment.id);
+  const name = names.enchantments[short] || short.replace(/_/g, " ");
+  if (SINGLE_LEVEL.has(short) && enchantment.level === 1) return name;
+  return `${name} ${names.levels[String(enchantment.level)] || enchantment.level}`;
+}
+
+export const biomeName = (id) => names.biomes[shortId(id)] || titleCase(shortId(id));
+export const entityName = (id) => names.entities[shortId(id)] || titleCase(shortId(id));

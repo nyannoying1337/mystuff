@@ -7,10 +7,10 @@ rendered icons with the site. See the usage-guidelines note in the README.
 
 Output (site/assets/mc/):
   item/<id>.png   48×48 inventory icon for every item, 3D blocks included
-  hud/*.png       hearts, hunger, XP bar, hotbar, inventory screen, empty-slot sprites
+  hud/*.png       hearts, hunger, armor, XP bar, inventory screen, empty slots, advancement frames and toast
   font/<color>/<n>.png  printable ASCII glyphs from the default font, pre-tinted
   glint.png       enchantment glint texture
-  names.json      English item and enchantment names for tooltips
+  names.json      English names: items, enchantments, levels, biomes, mobs
 """
 
 from __future__ import annotations
@@ -43,8 +43,6 @@ HUD_SPRITES = {
     "food_half": "gui/sprites/hud/food_half.png",
     "xp_background": "gui/sprites/hud/experience_bar_background.png",
     "xp_progress": "gui/sprites/hud/experience_bar_progress.png",
-    "hotbar": "gui/sprites/hud/hotbar.png",
-    "hotbar_selection": "gui/sprites/hud/hotbar_selection.png",
     "slot_helmet": "gui/sprites/container/slot/helmet.png",
     "slot_chestplate": "gui/sprites/container/slot/chestplate.png",
     "slot_leggings": "gui/sprites/container/slot/leggings.png",

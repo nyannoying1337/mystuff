@@ -179,6 +179,7 @@ def find_java(explicit: str | None) -> str | None:
         os.path.expandvars(f"%APPDATA%/.minecraft/runtime/*/*/*/bin/{exe}"),
         os.path.expandvars(f"%LOCALAPPDATA%/Packages/Microsoft.4297127D64EC6_8wekyb3d8bbwe/LocalCache/Local/runtime/*/*/*/bin/{exe}"),
         os.path.expanduser(f"~/.minecraft/runtime/*/*/*/bin/{exe}"),
+        os.path.expanduser("~/Library/Application Support/minecraft/runtime/*/*/*/jre.bundle/Contents/Home/bin/java"),
     ]
     for pattern in patterns:
         # newest runtime component names sort last (alpha, beta, gamma, delta…)
@@ -218,6 +219,17 @@ def live_root_from_agent() -> str | None:
     return f"{url.rstrip('/')}/bluemap" if url else None
 
 
+def install_web_additions() -> None:
+    """Our scripts and theme go into the webapp on every render and every publish,
+    so a change to them ships even without re-rendering (--publish-only)."""
+    (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
+    (WEBROOT / "css").mkdir(parents=True, exist_ok=True)
+    for script in WEB_SCRIPTS:
+        shutil.copy2(HERE / script, WEBROOT / "js" / script)
+    for style in WEB_STYLES:
+        shutil.copy2(HERE / style, WEBROOT / "css" / style)
+
+
 def run(command: list[str], cwd: Path | None = None) -> None:
     print("$", " ".join(command))
     subprocess.run(command, cwd=cwd, check=True)
@@ -237,6 +249,7 @@ def publish(remote: str) -> None:
         cwd=HERE, capture_output=True, text=True, check=True,
     ).stdout.strip()
 
+    install_web_additions()
     stage = WORK / "publish"
     shutil.rmtree(stage, ignore_errors=True)
     run(["git", "init", "-q", "-b", "map", str(stage)])
@@ -309,20 +322,11 @@ def main() -> int:
 
         # Only used with SQL storage; a static host would serve it as plain text.
         (WEBROOT / "sql.php").unlink(missing_ok=True)
-        (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
-        (WEBROOT / "css").mkdir(parents=True, exist_ok=True)
-        for retired in ("disclaimer.js", "live-throttle.js"):  # replaced by site-chrome.js / live-feed.js
-            (WEBROOT / "js" / retired).unlink(missing_ok=True)
-        for script in WEB_SCRIPTS:
-            shutil.copy2(HERE / script, WEBROOT / "js" / script)
-        for style in WEB_STYLES:
-            shutil.copy2(HERE / style, WEBROOT / "css" / style)
-        # Tells the status page what this map shows.
+        install_web_additions()
+        # Tells the status page when this map was made and whether it's a logout area.
         (WEBROOT / "mc-status.json").write_text(json.dumps({
             "rendered_at": int(time.time() * 1000),
             "center": args.center,
-            "radius_chunks": args.radius_chunks if args.center else None,
-            "dimension": args.dimension if args.center else None,
         }), encoding="utf-8")
         print(f"rendered to {WEBROOT}")
 

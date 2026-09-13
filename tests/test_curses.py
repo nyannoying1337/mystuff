@@ -3,7 +3,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent / "agent"))
-import agent
+import agent, collect, cursed, media, playtime, presence, sysinfo, upload
 
 sent = []
 
@@ -19,17 +19,17 @@ class FakeRcon:
                     'Rotation: [90.0f, 12.5f], SelectedItemSlot: 0, Inventory: []}')
         return "ok"
 
-agent.MCRcon = FakeRcon
+collect.MCRcon = FakeRcon
 config = tomllib.loads((HERE.parent / "agent" / "config.example.toml").read_text(encoding="utf-8"))
 config["cursed"]["enabled"] = True
 config["source"] = {"type": "rcon"}  # this test covers the server path
 import tempfile
 config.setdefault("agent", {})["playtime_file"] = str(Path(tempfile.mkdtemp()) / "playtime.json")
 
-hot = {"cpu_temp": 70.0, "gpu_temp": 83.2, "mem_used": 15e9, "mem_total": 16e9, "uptime": {"uptime": 13 * 3600_000}}
-agent.collect_system = lambda: hot
+hot = {"cpu_temp": 70.0, "gpu_temp": 83.2, "mem_used": 15e9, "mem_total": 16e9, "uptime_seconds": 13 * 3600}
+sysinfo.collect_safely = lambda: hot
 pushed = []
-agent.push_status = lambda cfg, payload: pushed.append(payload)
+upload.push_status = lambda cfg, payload: pushed.append(payload)
 
 state = {}
 t = [1000.0]
@@ -63,10 +63,10 @@ assert [c for c in sent if not c.startswith("data get")] == []
 
 # bad player name is refused before reaching rcon
 config["rcon"]["player"] = "x; op everyone"
-assert agent.collect_player(config) == {"online": False}
+assert collect.collect_player(config) == {"online": False}
 
 # bad condition is skipped, not fatal
 config["cursed"] = {"enabled": True, "rules": [{"name": "bad", "when": "gpu_temp >>= 1", "commands": ["say hi"]}]}
-assert agent.due_curses(config, {"gpu_temp": 99}, {}, 0) == []
+assert cursed.due(config, {"gpu_temp": 99}, {}, 0) == []
 print("payload curses:", pushed[-1].get("curses"))
 print("ALL CURSE TESTS PASSED")

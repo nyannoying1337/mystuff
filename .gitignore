@@ -3,12 +3,13 @@ agent/.venv/
 map/work/
 site/assets/mc/
 site/.cache/
-.wrangler/
 node_modules/
 __pycache__/
 agent/agent.log*
 tests/worker-under-test.mjs
 worker/.dev.vars
-worker/.wrangler/
+.wrangler/
+worker/wrangler.generated.toml
 agent/playtime.json
-agent/playtime.tmp
+agent/*.json.tmp
+site/_preview/

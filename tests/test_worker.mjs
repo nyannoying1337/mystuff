@@ -92,6 +92,24 @@ assert.equal(shot.status, 200);
 assert.deepEqual([...new Uint8Array(await shot.arrayBuffer())], [1, 2, 3]);
 assert.ok(Number(shot.headers.get("X-Taken-At")) > 0);
 
+// --- logout panorama: stored, not broadcast, keyed and cacheable fetch
+const sentBefore = viewer.sent.length;
+assert.equal((await call(`/pano${K}`)).status, 404, "no panorama yet");
+assert.equal((await call("/pano", { method: "POST", body: new Uint8Array([9]) })).status, 401, "push token required");
+assert.equal((await call("/pano", { method: "POST", headers: { Authorization: "Bearer secret-token" }, body: new Uint8Array(0) })).status, 400);
+assert.equal((await call("/pano", { method: "POST", headers: { Authorization: "Bearer secret-token" }, body: new Uint8Array(2 * 1024 * 1024) })).status, 413);
+assert.equal((await call("/pano", { method: "POST", headers: { Authorization: "Bearer secret-token" }, body: new Uint8Array([7, 8, 9]) })).status, 200);
+assert.equal(viewer.sent.length, sentBefore, "panoramas aren't pushed to viewers");
+assert.equal((await call("/pano")).status, 401);
+const pano = await call(`/pano${K}&t=123`);
+assert.equal(pano.status, 200);
+assert.deepEqual([...new Uint8Array(await pano.arrayBuffer())], [7, 8, 9]);
+assert.match(pano.headers.get("Cache-Control"), /immutable/);
+
+// --- the status message tells the page when to call the machine quiet
+await push({ player: { online: false } });
+assert.equal(JSON.parse(viewer.sent.at(-1)).stale_ms, 90000);
+
 // --- playersFor: marker rules
 const { playersFor } = mod;
 const now = Date.now();
