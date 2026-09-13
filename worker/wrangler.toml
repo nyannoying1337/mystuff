@@ -13,7 +13,7 @@ routes = [
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "STATUS"
-id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+id = "802ad94f883342dca526bf223c7077e0"
 
 # Set the shared secret (never commit it):
 #   npx wrangler secret put PUSH_TOKEN

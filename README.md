@@ -47,9 +47,15 @@ yours to click through.
 cd worker
 npx wrangler login
 npx wrangler kv namespace create STATUS     # paste the id into wrangler.toml
-npx wrangler secret put PUSH_TOKEN          # any long random string; keep it for step 3
 npx wrangler deploy
+cd ..
+powershell -ExecutionPolicy Bypass -File setup-token.ps1
 ```
+
+`setup-token.ps1` generates a random push token and stores it as the Worker's
+`PUSH_TOKEN` secret. It also writes the token into `agent/config.toml` and
+checks that the Worker accepts it. The token is never printed. Run it again to
+rotate the token.
 
 `wrangler.toml` routes it at `status-api.nyannoying.de`. Cloudflare creates that
 DNS record on deploy, because the domain's DNS is on Cloudflare. The free tier
@@ -79,11 +85,10 @@ share_item_names=false        # custom item names can contain anything
 cd agent
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
-copy config.example.toml config.toml
 .venv\Scripts\python agent.py --dry-run
 ```
 
-In `config.toml`, set `token` to the `PUSH_TOKEN` from step 1. Leave
+`setup-token.ps1` already created `config.toml` with the token. Leave
 `source.type = "mod"`.
 
 Check `--dry-run` before anything goes public: it prints exactly what would be
