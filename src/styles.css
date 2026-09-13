@@ -8,7 +8,6 @@
   --bg-surface:    #252538;
   --bg-card:       #2d2d48;
   --bg-card-hover: #363658;
-  --bg-cover:      #1a0e1e;
   --border:        rgba(255, 102, 170, 0.18);
   --border-subtle: rgba(255, 255, 255, 0.06);
   --text:          #ffffff;
@@ -16,6 +15,7 @@
   --text-dim:      rgba(255, 255, 255, 0.32);
   --shadow:        0 4px 24px rgba(0, 0, 0, 0.45);
   --radius:        8px;
+  --nav-height:    54px;
 }
 
 * { box-sizing: border-box; }
@@ -29,12 +29,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.site-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 /* ── Navbar ─────────────────────────────────────────────────── */
 .site-nav {
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 54px;
+  height: var(--nav-height);
+  flex: 0 0 var(--nav-height);
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
@@ -44,7 +51,7 @@ body {
 }
 
 .nav-inner {
-  max-width: 960px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
   display: flex;
@@ -58,1001 +65,180 @@ body {
   gap: 0.4rem;
   text-decoration: none;
   color: var(--pink);
-  font-weight: 700;
-  font-size: 1.1rem;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
 }
 
 .nav-tilde {
-  font-size: 1.4rem;
-  line-height: 1;
-  opacity: 0.85;
+  color: var(--pink-dark);
+  font-weight: 700;
 }
 
 .nav-tagline {
-  margin-left: auto;
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
 }
 
-/* ── Profile Hero ────────────────────────────────────────────── */
-.profile-hero {
+.nav-action {
+  margin-left: auto;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.nav-action:hover {
+  color: var(--pink);
+  border-color: var(--border);
+  background: var(--pink-subtle);
+}
+
+/* ── Map ────────────────────────────────────────────────────── */
+.map-shell {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--bg-surface);
 }
 
-.cover-bg {
-  height: 210px;
-  background:
-    linear-gradient(160deg, #1a0a14 0%, #2d1020 45%, #3d1535 75%, #1e0a1a 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* subtle animated glowing circles in the cover background */
-.cover-bg::before {
-  content: '';
+.map-caption {
   position: absolute;
-  width: 500px;
-  height: 500px;
-  top: -200px;
-  right: -100px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,102,170,0.12) 0%, transparent 70%);
-  animation: cover-pulse 6s ease-in-out infinite alternate;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+  padding: 0.6rem 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(30, 30, 46, 0.82);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  pointer-events: none;
 }
 
-.cover-bg::after {
-  content: '';
+.map-caption-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.map-caption-sub {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.map-stage {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, var(--bg-surface) 100%);
 }
 
-@keyframes cover-pulse {
-  0%   { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.15) translate(-40px, 20px); }
-}
-
-.profile-bar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.profile-bar-inner {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 2rem 1.5rem;
-  display: flex;
-  align-items: flex-end;
-  gap: 1.5rem;
-}
-
-.avatar-section {
-  margin-top: -64px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
-}
-
-.profile-avatar {
-  width: 110px;
-  height: 110px;
-  border-radius: var(--radius);
-  border: 3px solid var(--pink);
-  background: var(--bg-card);
-  object-fit: cover;
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
   display: block;
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 6px 24px rgba(255, 102, 170, 0.3);
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
 
-.profile-info {
-  flex: 1;
-  min-width: 0;
-  padding-bottom: 0.2rem;
-}
+.map-frame.loaded { opacity: 1; }
 
-.username-row {
+/* ── Placeholder (no tiles rendered yet) ────────────────────── */
+.map-stage-empty {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  overflow-y: auto;
 }
 
-.profile-username {
-  font-size: 1.7rem;
-  font-weight: 700;
-  margin: 0;
-  color: var(--text);
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-}
-
-.wave {
-  display: inline-block;
-  font-size: 1.4rem;
-  animation: wave 2.5s ease-in-out infinite;
-  transform-origin: 70% 80%;
-}
-
-@keyframes wave {
-  0%, 100% { transform: rotate(0deg); }
-  15%       { transform: rotate(14deg); }
-  30%       { transform: rotate(-8deg); }
-  45%       { transform: rotate(10deg); }
-  60%       { transform: rotate(-5deg); }
-  75%       { transform: rotate(6deg); }
-}
-
-.profile-bio {
-  margin: 0.25rem 0 0.6rem;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.profile-tags {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.profile-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 99px;
-  background: var(--pink-subtle);
-  border: 1px solid var(--border);
-  color: var(--pink);
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-
-/* ── Content Area ────────────────────────────────────────────── */
-.content-area {
-  max-width: 960px;
-  margin: 2rem auto 3rem;
-  padding: 0 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2.25rem;
-}
-
-/* ── Section Headings ────────────────────────────────────────── */
-.section-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 1rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-}
-
-.section-icon {
-  color: var(--pink);
-  font-size: 0.95rem;
-  flex-shrink: 0;
-}
-
-.osu-cookie-sm {
-  width: 16px;
-  height: 16px;
-}
-
-.section-link {
-  margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--pink);
-  text-decoration: none;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  opacity: 0.75;
-  transition: opacity 0.2s;
-  white-space: nowrap;
-}
-
-.section-link:hover {
-  opacity: 1;
-}
-
-/* ── osu! Stats Card ─────────────────────────────────────────── */
-.osu-stats-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+.map-placeholder {
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  padding: 2rem 1.75rem;
   border-radius: var(--radius);
-  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   box-shadow: var(--shadow);
 }
 
-.rank-banner {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  padding: 1.4rem 2rem;
-  background: linear-gradient(135deg, #2a0f22 0%, #3d1535 60%, #2a0a20 100%);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
-  flex-wrap: wrap;
-}
-
-/* decorative circles in rank banner */
-.rank-banner::before {
-  content: '';
-  position: absolute;
-  right: -60px;
-  top: -60px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  border: 30px solid rgba(255,102,170,0.06);
-  pointer-events: none;
-}
-
-.rank-banner::after {
-  content: '';
-  position: absolute;
-  right: 80px;
-  bottom: -80px;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  border: 40px solid rgba(255,102,170,0.04);
-  pointer-events: none;
-}
-
-.rank-item {
-  display: flex;
-  flex-direction: column;
-  min-width: 90px;
-}
-
-.rank-hash {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--pink);
-  line-height: 1;
-  margin-bottom: 0.1rem;
-}
-
-.rank-number {
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.rank-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 0.3rem;
-}
-
-.rank-divider {
-  width: 1px;
-  height: 48px;
-  background: rgba(255,255,255,0.1);
-  flex-shrink: 0;
-}
-
-.rank-pp-badge {
-  margin-left: auto;
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-  background: var(--pink-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
-}
-
-.pp-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--pink);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.pp-label {
-  font-size: 0.9rem;
-  color: var(--pink);
-  font-weight: 600;
-  opacity: 0.7;
-}
-
-.osu-detail-stats {
-  padding: 0.25rem 0;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.65rem 2rem;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.15s;
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.detail-label {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-}
-
-.detail-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Steam Stats Card ────────────────────────────────────────── */
-.steam-stats-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  box-shadow: var(--shadow);
-}
-
-.steam-stat-item {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  padding: 0 1.5rem;
-}
-
-.steam-stat-item:first-child {
-  padding-left: 0;
-}
-
-.steam-stat-value {
+.map-placeholder-icon {
   font-size: 2rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-.steam-last-played-item .steam-stat-value {
-  font-size: 1.1rem;
-  line-height: 1.3;
-}
-
-.steam-stat-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-top: 0.3rem;
-}
-
-.steam-stat-divider {
-  width: 1px;
-  height: 52px;
-  background: var(--border-subtle);
-  flex-shrink: 0;
-}
-
-/* ── Links Grid ──────────────────────────────────────────────── */
-.links-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.75rem;
-}
-
-.link-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.9rem 1.1rem;
-  text-decoration: none;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: var(--shadow);
-}
-
-.link-card:hover {
-  background: var(--bg-card-hover);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-}
-
-.link-icon {
-  font-size: 1.4rem;
-  width: 1.75rem;
-  height: 1.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.osu-link-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.link-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.link-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  display: block;
-  line-height: 1.2;
-}
-
-.link-desc {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* platform accent colors on hover */
-.link-card.steam  .link-icon { color: #c7d5e0; }
-.link-card.osu    .link-icon { color: #ff66aa; }
-.link-card.discord .link-icon { color: #7289da; }
-.link-card.twitter .link-icon { color: #1da1f2; }
-.link-card.xbox   .link-icon { color: #52b043; }
-.link-card.mal    .link-icon { color: #6baed0; }
-.link-card.youtube .link-icon { color: #ff4444; }
-.link-card.twitch .link-icon { color: #9146ff; }
-.link-card.github .link-icon { color: #e4e4e4; }
-
-.link-card.steam:hover  { border-color: #c7d5e0; }
-.link-card.osu:hover    { border-color: #ff66aa; box-shadow: 0 8px 30px rgba(255,102,170,0.2); }
-.link-card.discord:hover { border-color: #7289da; }
-.link-card.twitter:hover { border-color: #1da1f2; }
-.link-card.xbox:hover   { border-color: #52b043; }
-.link-card.mal:hover    { border-color: #6baed0; }
-.link-card.youtube:hover { border-color: #ff4444; }
-.link-card.twitch:hover { border-color: #9146ff; }
-.link-card.github:hover { border-color: #e4e4e4; }
-
-/* ── Blog / Notes ────────────────────────────────────────────── */
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.post-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--pink);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  opacity: 0;
-  transform: translateY(16px);
-  animation: fade-up 0.45s ease forwards;
-  animation-delay: 0.1s;
-}
-
-.post-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  cursor: pointer;
-  transition: background 0.15s;
-  user-select: none;
-}
-
-.post-header:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.post-title {
-  flex: 1;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0;
-}
-
-.post-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.post-date {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.post-tags {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.post-tag {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 99px;
-  background: var(--pink-subtle);
-  border: 1px solid var(--border);
   color: var(--pink);
-  letter-spacing: 0.03em;
-}
-
-.post-chevron {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-
-.post-card.expanded .post-chevron {
-  transform: rotate(180deg);
-}
-
-.post-body {
-  display: none;
-  padding: 0 1.5rem 1.25rem;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.post-card.expanded .post-body {
-  display: block;
-}
-
-.post-content {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  line-height: 1.75;
-  white-space: pre-wrap;
-  margin: 0.85rem 0 0;
-}
-
-.posts-empty {
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  padding: 1rem 0;
-}
-
-/* ── Footer ──────────────────────────────────────────────────── */
-.osu-footer {
-  text-align: center;
-  padding: 2rem 1rem 2.5rem;
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  border-top: 1px solid var(--border-subtle);
-  margin-top: 1rem;
-}
-
-.footer-heart {
-  color: var(--pink);
-  opacity: 0.8;
-}
-
-/* ── Entrance Animations ─────────────────────────────────────── */
-.osu-stats-card,
-.steam-stats-card,
-.link-card,
-.profile-bar {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: fade-up 0.45s ease forwards;
-}
-
-.profile-bar              { animation-delay: 0.05s; }
-.osu-stats-card           { animation-delay: 0.15s; }
-.steam-stats-card         { animation-delay: 0.25s; }
-.link-card:nth-child(1)   { animation-delay: 0.30s; }
-.link-card:nth-child(2)   { animation-delay: 0.35s; }
-.link-card:nth-child(3)   { animation-delay: 0.40s; }
-.link-card:nth-child(4)   { animation-delay: 0.45s; }
-.link-card:nth-child(5)   { animation-delay: 0.50s; }
-.link-card:nth-child(6)   { animation-delay: 0.55s; }
-.link-card:nth-child(7)   { animation-delay: 0.60s; }
-.link-card:nth-child(8)   { animation-delay: 0.65s; }
-.link-card:nth-child(9)   { animation-delay: 0.70s; }
-
-@keyframes fade-up {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ── Loading skeleton pulse ──────────────────────────────────── */
-.loading {
-  color: var(--text-dim) !important;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.65; }
-}
-
-/* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  .profile-bar-inner {
-    padding: 0 1rem 1.25rem;
-    gap: 1rem;
-  }
-
-  .avatar-section {
-    margin-top: -48px;
-  }
-
-  .profile-avatar {
-    width: 88px;
-    height: 88px;
-  }
-
-  .profile-username {
-    font-size: 1.35rem;
-  }
-
-  .content-area {
-    padding: 0 1rem;
-    gap: 1.75rem;
-    margin: 1.5rem auto 2rem;
-  }
-
-  .rank-banner {
-    padding: 1.1rem 1.25rem;
-    gap: 1.25rem;
-  }
-
-  .rank-number {
-    font-size: 1.75rem;
-  }
-
-  .rank-pp-badge {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .osu-detail-stats .detail-row {
-    padding: 0.6rem 1.25rem;
-  }
-
-  .steam-stats-card {
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    padding: 1.25rem;
-  }
-
-  .steam-stat-item {
-    padding: 0;
-    flex: unset;
-    min-width: 40%;
-  }
-
-  .steam-stat-divider {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .cover-bg {
-    height: 160px;
-  }
-
-  .links-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .rank-banner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .rank-divider {
-    display: none;
-  }
-}
-
-/* ── Profile Meta Row ────────────────────────────────────────── */
-.profile-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.6rem;
-}
-
-.profile-meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.profile-meta-item i {
-  color: var(--pink);
-  font-size: 0.7rem;
   opacity: 0.75;
 }
 
-.profile-meta-sep {
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  user-select: none;
-}
-
-#osu-title-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.55rem;
-  border-radius: 99px;
-  background: var(--pink-subtle);
-  border: 1px solid var(--border);
-  color: var(--pink);
-  font-size: 0.72rem;
+.map-placeholder-title {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  margin-right: 0.2rem;
 }
 
-/* ── Steam Level Badge ───────────────────────────────────────── */
-.steam-level-item {
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.steam-level-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1b2838 0%, #2a475e 100%);
-  border: 2px solid #c7d5e0;
-  box-shadow: 0 0 12px rgba(199, 213, 224, 0.15);
-}
-
-.steam-level-number {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #c7d5e0;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-/* ── Steam card top / top-games panel ───────────────────────── */
-.steam-card-top {
-  border-radius: var(--radius) var(--radius) 0 0;
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: none;
-}
-
-.steam-top-games-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.steam-top-games-header {
-  padding: 0.5rem 1.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.top-game-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 1.5rem;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.15s;
-}
-
-.top-game-row:last-child {
-  border-bottom: none;
-}
-
-.top-game-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.top-game-rank {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--pink);
-  width: 1.8rem;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.top-game-name {
-  flex: 1;
+.map-placeholder-text,
+.map-placeholder-note {
+  margin: 0;
+  color: var(--text-muted);
   font-size: 0.88rem;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
-.top-game-hours {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ── osu! recent plays ───────────────────────────────────────── */
-.osu-recent-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  margin-top: 0;
-}
-
-.osu-recent-header {
-  padding: 0.5rem 1.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.recent-play-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1.5rem;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.15s;
-}
-
-.recent-play-row:last-child { border-bottom: none; }
-.recent-play-row:hover { background: rgba(255, 255, 255, 0.03); }
-
-.recent-play-rank {
+.map-placeholder-note {
+  margin-top: 0.85rem;
   font-size: 0.8rem;
-  font-weight: 800;
-  width: 2rem;
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.recent-play-rank.rank-xh,
-.recent-play-rank.rank-x  { color: #e0d0a0; }
-.recent-play-rank.rank-sh,
-.recent-play-rank.rank-s  { color: #f0c060; }
-.recent-play-rank.rank-a  { color: #6abf69; }
-.recent-play-rank.rank-b  { color: #5b9bd5; }
-.recent-play-rank.rank-c  { color: #b06ac0; }
-.recent-play-rank.rank-d,
-.recent-play-rank.rank-f  { color: #d05050; }
-
-.recent-play-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.recent-play-title {
-  font-size: 0.85rem;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recent-play-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.recent-play-time {
-  font-size: 0.75rem;
   color: var(--text-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
-/* ── Steam status bar ────────────────────────────────────────── */
-.steam-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.5rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: none;
-  font-size: 0.82rem;
+.map-placeholder code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  color: var(--pink);
+  background: var(--pink-subtle);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.map-placeholder-code {
+  margin: 1.1rem 0 0;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.map-placeholder-code code {
+  background: none;
+  padding: 0;
   color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  white-space: pre;
 }
 
-.steam-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--text-dim);
-}
+/* ── Small screens ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .site-nav { padding: 0 1rem; }
+  .nav-tagline { display: none; }
 
-.steam-status-dot.online  { background: #57ab5a; }
-.steam-status-dot.ingame  { background: #3db3c0; }
-.steam-status-dot.away    { background: #c9a227; }
-.steam-status-dot.busy    { background: #d05050; }
-.steam-status-dot.offline { background: #666; }
-
-/* ── Steam recently played ───────────────────────────────────── */
-.steam-recent-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  margin-top: 0.75rem;
-}
-
-@media (max-width: 700px) {
-  .steam-level-item {
-    flex: unset;
-    min-width: 40%;
-    padding: 0;
+  .map-caption {
+    top: 0.65rem;
+    left: 0.65rem;
+    padding: 0.45rem 0.75rem;
   }
 
-  .steam-top-games-header,
-  .top-game-row {
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
-  }
+  .map-caption-title { font-size: 0.92rem; }
+  .map-placeholder { padding: 1.5rem 1.15rem; }
 }
