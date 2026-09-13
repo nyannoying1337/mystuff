@@ -199,14 +199,17 @@ function playerPage(player, isAdmin) {
       ? el("div", { class: "vitals-well" }, [vitalsNode(player)]) : null,
   ]);
 
+  // statistics sit under the inventory, so the left column keeps pace with the
+  // (usually much longer) advancements list on the right
   const left = el("div", { class: "col" }, [
     player.online && glyphWidths ? panel("Inventory", [el("div", { class: "inventory-well" }, [inventoryNode(player)])])
       : panel("Inventory", [el("p", { class: "empty", text: "Only shown while they're online." })]),
+    player.stats ? statsPanel(player.stats, player.online) : null,
   ]);
   const right = el("div", { class: "col" }, [
     player.advancements?.total ? advancementsPanel(player.advancements) : panel("Advancements", [el("p", { class: "empty", text: "None yet." })]),
   ]);
-  return [identity, el("div", { class: "grid" }, [left, right]), player.stats ? statsPanel(player.stats, player.online) : null];
+  return [identity, el("div", { class: "grid" }, [left, right])];
 }
 
 function render() {

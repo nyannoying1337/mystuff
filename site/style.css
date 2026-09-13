@@ -363,3 +363,6 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 .player-identity { padding: 0; }
 .vitals-well { margin-top: 16px; padding: 12px; background: var(--deep); border: 2px solid var(--edge); border-radius: var(--radius); }
 .vitals-well .gui { margin: 0 auto; }
+/* statistics inside a column (player pages): no extra gap, two tiles per row */
+.col .stats-panel { margin-top: 0; }
+.col .stats-panel .tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
