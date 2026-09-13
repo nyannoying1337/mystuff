@@ -2,13 +2,13 @@ name = "mc-status"
 main = "worker.js"
 compatibility_date = "2026-01-01"
 
-# Served at its own subdomain; Cloudflare creates the DNS record on deploy
-# (the domain's DNS has to be on Cloudflare, which nyannoying.de is).
-routes = [
-  { pattern = "status-api.nyannoying.de", custom_domain = true },
-]
+# No custom domain here, so a fork deploys as-is to mc-status.<you>.workers.dev.
+# To serve it on your own domain (its DNS must be on Cloudflare), deploy with the
+# generated config instead, which adds the route:
+#   python setup.py deploy            (from your machine)
+#   the "Deploy Worker" workflow      (with the MCS_API_URL repository variable set)
 
-# State lives in a SQLite-backed Durable Object: free plan allows 100,000
+# State lives in a SQLite-backed Durable Object: the free plan allows 100,000
 # writes a day (KV would only allow 1,000). Nothing to create by hand.
 [[durable_objects.bindings]]
 name = "STORE"
@@ -18,5 +18,5 @@ class_name = "StatusStore"
 tag = "v1"
 new_sqlite_classes = ["StatusStore"]
 
-# The push token is a secret, never committed. setup-token.ps1 sets it:
-#   npx wrangler secret put PUSH_TOKEN
+# Secrets, never committed: PUSH_TOKEN (the agent's) and VIEW_KEY (the invite key).
+# setup.py sets both.

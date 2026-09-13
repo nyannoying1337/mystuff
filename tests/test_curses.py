@@ -23,6 +23,7 @@ collect.MCRcon = FakeRcon
 config = tomllib.loads((HERE.parent / "agent" / "config.example.toml").read_text(encoding="utf-8"))
 config["cursed"]["enabled"] = True
 config["source"] = {"type": "rcon"}  # this test covers the server path
+config["rcon"]["player"] = "nyannoying"
 import tempfile
 config.setdefault("agent", {})["playtime_file"] = str(Path(tempfile.mkdtemp()) / "playtime.json")
 

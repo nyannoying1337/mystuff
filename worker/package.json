@@ -1,0 +1,13 @@
+{
+  "name": "mc-status-worker",
+  "private": true,
+  "description": "The mc-status Cloudflare Worker. Deploy with `python setup.py deploy` or the Deploy Worker workflow.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

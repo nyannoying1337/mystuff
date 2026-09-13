@@ -1,0 +1,73 @@
+name: Deploy Worker
+
+# Optional: deploys the Cloudflare Worker from GitHub instead of your machine.
+# Needs the repository secrets CLOUDFLARE_API_TOKEN (API token from the "Edit
+# Cloudflare Workers" template) and CLOUDFLARE_ACCOUNT_ID. Without them the job
+# says so and stops, so forks that deploy with `python setup.py deploy` see no
+# failures. PUSH_TOKEN and VIEW_KEY secrets, if set, are copied to the Worker.
+
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**', '.github/workflows/worker.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      MCS_API_URL: ${{ vars.MCS_API_URL }}
+    steps:
+      - name: Check for Cloudflare credentials
+        id: credentials
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::No CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets: skipping. Deploy with python setup.py deploy, or add them to deploy from here."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.credentials.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.credentials.outputs.ready == 'true'
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        if: steps.credentials.outputs.ready == 'true'
+        with:
+          python-version: '3.12'
+
+      # A custom domain from MCS_API_URL becomes a route; *.workers.dev needs none.
+      - name: Deploy
+        if: steps.credentials.outputs.ready == 'true'
+        working-directory: worker
+        run: |
+          python3 ../setup.py worker-config
+          npx --yes wrangler@4 deploy -c wrangler.generated.toml
+
+      - name: Sync secrets
+        if: steps.credentials.outputs.ready == 'true'
+        working-directory: worker
+        env:
+          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+          VIEW_KEY: ${{ secrets.VIEW_KEY }}
+        run: |
+          for name in PUSH_TOKEN VIEW_KEY; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | npx --yes wrangler@4 secret put "$name" -c wrangler.generated.toml
+            else
+              echo "no $name secret in GitHub; leaving the Worker's as it is"
+            fi
+          done

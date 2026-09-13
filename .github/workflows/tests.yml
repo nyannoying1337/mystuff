@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  agent-and-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: pip install -r agent/requirements.txt
+      - name: Agent
+        run: |
+          python tests/test_agent_mod.py
+          python tests/test_curses.py
+      - name: Worker
+        run: node tests/test_worker.mjs
+      - name: Setup wizard (dry run)
+        run: python setup.py --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev

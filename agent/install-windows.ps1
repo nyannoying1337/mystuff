@@ -14,10 +14,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not (Test-Path $Python)) {
-    throw "No Python at $Python. Create the venv first: python -m venv agent\.venv; agent\.venv\Scripts\pip install -r agent\requirements.txt"
+    throw "No Python at $Python. Run python setup.py first (it creates agent\.venv)."
 }
 if (-not (Test-Path $Config)) {
-    throw "No config at $Config. Copy config.example.toml to config.toml and fill it in."
+    throw "No config at $Config. Run python setup.py first."
 }
 
 $agent = Join-Path $PSScriptRoot "agent.py"

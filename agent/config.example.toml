@@ -1,20 +1,31 @@
+# The agent's settings. `python setup.py` creates agent/config.toml from this
+# file and fills in the Worker URL and token; edit the rest by hand if you like.
+# config.toml is gitignored: it holds the push token.
+
+[site]
+# Where your status page lives. Only used to print invite links.
+url = "https://your-name.github.io/mc-status/"
+
 [worker]
-# Where the Cloudflare Worker runs.
-url = "https://status-api.nyannoying.de"
-# Same value you set with: npx wrangler secret put PUSH_TOKEN
+# Where the Cloudflare Worker runs: https://mc-status.<you>.workers.dev or your own domain.
+url = "https://mc-status.your-account.workers.dev"
+# The Worker's PUSH_TOKEN secret. setup.py generates and stores both.
 token = "change-me"
 
 [agent]
 # How often to push while you're in game, and while you're not.
 interval_seconds = 10
 offline_interval_seconds = 60
+# Time in game per day is kept here (default: agent/playtime.json).
+# playtime_file = "~/mc-status-playtime.json"
 
 [source]
 # "mod"  — singleplayer: the mc-status Fabric mod writes your state, and runs
 #          curses in your world. Needs the mod installed.
 # "rcon" — a server you run: the agent asks it over RCON (see [rcon]).
 type = "mod"
-# Where the game lives. Default: %APPDATA%/.minecraft on Windows, ~/.minecraft elsewhere.
+# Where the game lives. Default: %APPDATA%/.minecraft on Windows,
+# ~/Library/Application Support/minecraft on macOS, ~/.minecraft elsewhere.
 # game_dir = "%APPDATA%/.minecraft"
 
 [rcon]
@@ -23,11 +34,12 @@ host = "127.0.0.1"
 port = 25575
 password = "your-rcon-password"
 # Exact in-game name. RCON only works on servers you control.
-player = "nyannoying"
+player = "YourName"
 
 [screenshot]
-# With the mod, its small HUD-free frames in <game_dir>/mc-status are used and
-# F2 screenshots are never published. Set a folder here to override that.
+# With the mod, its HUD-free frame <game_dir>/mc-status/latest.png is used and
+# F2 screenshots are never published. For a server, set a folder to take the
+# newest image from.
 # directory = "~/.minecraft/screenshots"
 max_width = 1920
 quality = 82
@@ -41,26 +53,28 @@ radius_chunks = 8
 # you own the game and accept Mojang's EULA (https://www.minecraft.net/eula).
 accept_mojang_eula = false
 publish = true
+# The git remote the map branch is pushed to.
+# remote = "origin"
 # Found automatically (JAVA_HOME, PATH, or the Minecraft launcher's own Java).
 # java = "C:/path/to/java.exe"
 # For a server (rcon source), point at its world folder:
 # world = "/srv/minecraft/world"
 
 [privacy]
-# Hides your coordinates on the page and the map marker. The logout map still
-# renders around your position — turn render_on_logout off if that's a concern.
+# Hides your coordinates on the page, the map marker and the death marker. The
+# logout map still renders around your position: turn render_on_logout off if
+# that's a concern.
 hide_coordinates = false
 
 [cursed]
-# The machine reaches into the world. Off until you mean it — these run real
-# commands as the server console. Try them on a copy of your world first:
-# fire spreads.
+# The machine reaches into the world. Off until you mean it: these run real
+# commands in your world. Try them on a copy first; fire spreads.
 #
 # `when` is "<metric> <op> <number>". Metrics: cpu_percent, gpu_percent,
 # mem_percent, uptime_hours, health (0-20), foodlevel (0-20), xplevel, and
 # cpu_temp, gpu_temp (°C) when fastfetch is installed and can read them.
 # A rule fires when its condition holds, then again every cooldown_seconds
-# while it still does. {player} becomes rcon.player.
+# while it still does. {player} becomes your in-game name.
 # Run `agent.py --dry-run` to see live metrics and which rules would fire.
 enabled = false
 
