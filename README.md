@@ -49,12 +49,16 @@ npx wrangler login
 npx wrangler deploy
 cd ..
 powershell -ExecutionPolicy Bypass -File setup-token.ps1
+powershell -ExecutionPolicy Bypass -File setup-view-key.ps1
 ```
 
 `setup-token.ps1` generates a random push token and stores it as the Worker's
 `PUSH_TOKEN` secret. It also writes the token into `agent/config.toml` and
 checks that the Worker accepts it. The token is never printed. Run it again to
 rotate the token.
+
+`setup-view-key.ps1` creates the invite key and prints the invite link (see
+[Who can watch](#who-can-watch)).
 
 `wrangler.toml` routes it at `status-api.nyannoying.de`. Cloudflare creates that
 DNS record on deploy, because the domain's DNS is on Cloudflare.
@@ -64,7 +68,8 @@ makes requests fail until 00:00 UTC, it never bills you.
 
 | Service | Free limit | This setup uses |
 | --- | --- | --- |
-| Workers requests | 100,000/day | agent: ~8,600/day if you play all day, 1,440/day while away; plus ~5,800/day per viewer with the page open all day |
+| Workers requests | 100,000/day | agent: ~8,600/day if you play all day, 1,440/day while away; viewers: about one per page load or reconnect, not per update |
+| Durable Object requests | 100,000/day | the same pushes, plus one per viewer connection |
 | Storage writes | 100,000/day (SQLite Durable Object) | one per push |
 | GitHub Actions | unlimited on public repos | one deploy per logout or push to `main` |
 | GitHub Pages | 1 GB site, 100 GB/month bandwidth | ~10 MB map + page |
@@ -72,6 +77,29 @@ makes requests fail until 00:00 UTC, it never bills you.
 State lives in a SQLite-backed Durable Object rather than KV on purpose: KV's
 free plan allows only 1,000 writes a day, which an agent pushing every 10 s
 uses up in under three hours.
+
+Viewers don't poll. The page and the map open one WebSocket to that Durable
+Object, and every push from the agent is broadcast over it. On Cloudflare,
+opening the socket costs one request. Messages sent to viewers and the
+keep-alive pings are free, so a tab left open all day costs about the same as
+one page load. Hidden tabs disconnect after a minute and reconnect when you look
+again.
+
+### Who can watch
+
+- **Invite link only.** Live data (status, inventory, position, screenshot, the
+  map marker) needs the key from `nyannoying.de/#key=…`. The page remembers it
+  on that device and removes it from the address bar. Without it, the page says
+  it's private and makes no requests at all.
+- **At most 10 at once.** The 11th viewer sees "too many people are watching",
+  with a Try again button. Change `MAX_VIEWERS` in `worker/worker.js` and
+  `site/index.html` to adjust.
+- **Rotating** with `setup-view-key.ps1` disconnects everyone on the old link.
+
+What the key does **not** protect: the rendered map tiles under `/map` are
+static files in this public repo. Anyone who finds that URL sees the terrain
+around your last logout, just without the marker. Hiding those would need a
+private repo with Pages, which isn't free on GitHub.
 
 ### 2. The mod
 
@@ -188,11 +216,11 @@ python map/render.py --world "%APPDATA%\.minecraft\saves\My World" --center 120 
 Without `--center` it renders the whole world. That's fine locally, but can
 outgrow GitHub Pages' 1 GB limit on a big world.
 
-While you're online, the Worker feeds your live position into the map. Once
-you log out, it shows a "(last seen)" marker instead. BlueMap normally polls
-every second; `map/live-throttle.js` slows that to 15 s and pauses in hidden
-tabs. It relies on BlueMap internals, so check the marker after bumping
-`BLUEMAP_VERSION`.
+While you're online, the map shows your live position; once you log out, a
+"(last seen)" marker. BlueMap normally polls for markers every second.
+`map/live-feed.js` switches that off and feeds the marker from the same
+WebSocket as the page, using the invite key the page stored. It relies on
+BlueMap internals, so check the marker after bumping `BLUEMAP_VERSION`.
 
 ## Cursed mode
 

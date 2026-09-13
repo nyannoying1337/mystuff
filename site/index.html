@@ -242,8 +242,10 @@ button:active {
 
 <script>
 const API = "https://status-api.nyannoying.de";
-const POLL_MS = 15000;
 const STALE_MS = 90000;
+const MAX_VIEWERS = 10;          // must match the Worker
+const FALLBACK_POLL_MS = 60000;  // only if WebSockets keep failing
+const HIDDEN_GRACE_MS = 60000;   // a background tab gives its viewer slot back after this
 
 // Built at deploy time by site/build_assets.py from the Minecraft client jar.
 const ASSETS = "assets/mc";
@@ -578,21 +580,29 @@ function statRows(pairs) {
   return list;
 }
 
-function disconnectPanel(title, detail) {
+function noticePanel(title, detail, retry = true) {
   const panel = el("section", { class: "panel disconnect" }, [
     el("p", { text: title }),
     el("p", { text: detail }),
   ]);
-  const retry = el("button", { type: "button", text: "Try again" });
-  retry.addEventListener("click", () => refresh());
-  panel.append(retry);
+  if (retry) {
+    const button = el("button", { type: "button", text: "Try again" });
+    button.addEventListener("click", () => connect());
+    panel.append(button);
+  }
   return panel;
+}
+
+function showNotice(title, detail, retry = true) {
+  lastData = null;
+  document.getElementById("root").replaceChildren(noticePanel(title, detail, retry));
 }
 
 const dimensionName = (id) => (id || "").replace(/^minecraft:/, "").replace(/^the_/, "the ");
 const coords = (position) => (position ? position.map((n) => Math.round(n)).join("  ") : "hidden");
 
 function render(data) {
+  lastData = data;
   const root = document.getElementById("root");
   const frag = document.createDocumentFragment();
   const age = Date.now() - (data.received_at || data.generated_at || 0);
@@ -600,9 +610,10 @@ function render(data) {
   const system = data.system || {};
 
   if (age > STALE_MS && !data.last_seen && !hasInventory(player)) {
-    root.replaceChildren(disconnectPanel(
-      "Connection lost",
-      `Last heard from the machine ${Math.round(age / 60000)} min ago.`
+    root.replaceChildren(noticePanel(
+      "The machine went quiet",
+      `Last heard from it ${Math.round(age / 60000)} min ago. This updates by itself.`,
+      false,
     ));
     return;
   }
@@ -640,10 +651,13 @@ function render(data) {
     frag.append(el("section", { class: "panel" }, [el("h2", { text: "Logged out with" }), plainStats(player)]));
   }
 
-  if (data.screenshot_at) {
+  // The frame arrives over the socket as a blob; only the polling fallback fetches it.
+  const shotSrc = shotUrl || (pollTimer && data.screenshot_at && inviteKey
+    ? `${API}/shot?key=${encodeURIComponent(inviteKey)}&t=${data.screenshot_at}` : null);
+  if (data.screenshot_at && shotSrc) {
     const shot = el("section", { class: "panel" }, [el("h2", { text: "Last thing seen" })]);
-    const image = el("img", { class: "shot", alt: "The most recent frame of the world.", loading: "lazy" });
-    image.src = `${API}/shot?t=${data.screenshot_at}`;
+    const image = el("img", { class: "shot", alt: "The most recent frame of the world." });
+    image.src = shotSrc;
     shot.append(image);
     shot.append(el("div", { class: "caption", text: `captured ${timeAgo(data.screenshot_at)}` }));
     frag.append(shot);
@@ -710,37 +724,160 @@ fetch("map/mc-status.json", { cache: "no-store" })
   .then((response) => (response.ok ? response.json() : null))
   .then((info) => {
     mapInfo = info;
-    if (mapInfo) refresh();
+    if (mapInfo && lastData) render(lastData);
   })
   .catch(() => {});
 
-async function refresh() {
-  try {
-    await assetsReady;
-    const response = await fetch(`${API}/status`, { cache: "no-store" });
-    if (response.status === 404) {
-      document.getElementById("root").replaceChildren(
-        disconnectPanel("Nothing reported yet", "The agent has not pushed anything.")
-      );
+// ---- invite link ----------------------------------------------------------------
+
+// The key arrives as nyannoying.de/#key=… (a fragment never reaches GitHub),
+// is remembered on this device, and removed from the address bar.
+const KEY_STORAGE = "mc-status-invite";
+
+function readInviteKey() {
+  const match = location.hash.match(/(?:^#|&)key=([^&]+)/);
+  if (match) {
+    const key = decodeURIComponent(match[1]);
+    try { localStorage.setItem(KEY_STORAGE, key); } catch { /* private mode: works for this visit */ }
+    history.replaceState(null, "", location.pathname + location.search);
+    return key;
+  }
+  try { return localStorage.getItem(KEY_STORAGE); } catch { return null; }
+}
+
+function forgetInviteKey() {
+  inviteKey = null;
+  try { localStorage.removeItem(KEY_STORAGE); } catch { /* nothing stored */ }
+}
+
+// ---- live connection --------------------------------------------------------------
+
+// One WebSocket per viewer. The Worker pushes every status and frame as the
+// agent sends them, so an open tab costs one request instead of polling.
+let inviteKey = readInviteKey();
+let lastData = null;
+let shotUrl = null;
+let socket = null;
+let closingOnPurpose = false;
+let failures = 0;
+let retryTimer = null;
+let pollTimer = null;
+let hiddenTimer = null;
+
+function connect() {
+  clearTimeout(retryTimer);
+  if (!inviteKey) {
+    showNotice("This page is private", "Ask for an invite link to watch live.", false);
+    return;
+  }
+  if (socket || document.hidden) return;
+
+  closingOnPurpose = false;
+  const ws = new WebSocket(`${API.replace(/^http/, "ws")}/live?key=${encodeURIComponent(inviteKey)}`);
+  ws.binaryType = "blob";
+  socket = ws;
+
+  ws.addEventListener("open", () => {
+    failures = 0;
+    stopPolling();
+  });
+
+  ws.addEventListener("message", async (event) => {
+    if (typeof event.data !== "string") {
+      if (shotUrl) URL.revokeObjectURL(shotUrl);
+      shotUrl = URL.createObjectURL(event.data);
+      if (lastData) render(lastData);
       return;
     }
-    if (!response.ok) throw new Error(`http ${response.status}`);
+    const message = JSON.parse(event.data);
+    if (message.type === "status") {
+      await assetsReady;
+      render(message.status);
+    } else if (message.type === "empty") {
+      showNotice("Nothing reported yet", "The agent hasn't pushed anything. This updates by itself.", false);
+    }
+  });
+
+  ws.addEventListener("close", (event) => {
+    if (socket === ws) socket = null;
+    if (event.code === 4001) {
+      forgetInviteKey();
+      showNotice("This invite link no longer works", "Ask for a new one.", false);
+      return;
+    }
+    if (event.code === 4003) {
+      showNotice("Too many people are watching", `Only ${MAX_VIEWERS} can watch at once. Try again in a bit.`);
+      return;
+    }
+    if (closingOnPurpose) return;
+    failures += 1;
+    if (failures >= 3) startPolling();
+    else if (!lastData) showNotice("Can't reach the server", "Retrying by itself.", false);
+    retryTimer = setTimeout(connect, Math.min(300000, 2000 * 2 ** (failures - 1)));
+  });
+}
+
+function disconnect() {
+  closingOnPurpose = true;
+  clearTimeout(retryTimer);
+  if (socket) socket.close(1000, "tab hidden");
+  socket = null;
+  stopPolling();
+}
+
+// Fallback for networks that block WebSockets: a keyed poll once a minute.
+async function poll() {
+  if (document.hidden || !inviteKey) return;
+  try {
+    const response = await fetch(`${API}/status?key=${encodeURIComponent(inviteKey)}`, { cache: "no-store" });
+    if (response.status === 401) {
+      stopPolling();
+      forgetInviteKey();
+      showNotice("This invite link no longer works", "Ask for a new one.", false);
+      return;
+    }
+    if (response.status === 404) {
+      showNotice("Nothing reported yet", "The agent hasn't pushed anything.", false);
+      return;
+    }
+    await assetsReady;
     render(await response.json());
-  } catch (err) {
-    console.error(err);
-    document.getElementById("root").replaceChildren(
-      disconnectPanel("Can't reach the server", "Check back in a moment.")
-    );
+  } catch {
+    if (!lastData) showNotice("Can't reach the server", "Retrying by itself.", false);
   }
 }
 
-refresh();
-setInterval(() => {
-  if (!document.hidden) refresh();
-}, POLL_MS);
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(poll, FALLBACK_POLL_MS);
+  poll();
+}
+
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) refresh();
+  if (document.hidden) {
+    hiddenTimer = setTimeout(disconnect, HIDDEN_GRACE_MS);
+  } else {
+    clearTimeout(hiddenTimer);
+    connect();
+  }
 });
+
+// keep-alive, answered by Cloudflare without waking anything (and not billed)
+setInterval(() => {
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send("ping");
+}, 45000);
+
+// "3 min ago" labels age locally; no requests
+setInterval(() => {
+  if (lastData && !document.hidden) render(lastData);
+}, 30000);
+
+connect();
 </script>
 </body>
 </html>

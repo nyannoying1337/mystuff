@@ -101,7 +101,7 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         "default-to-flat-view: false\n"
         f"live-data-root: {q(live_root)}\n"
         "client-decompression: true\n"
-        'scripts: [ "js/live-throttle.js", "js/disclaimer.js" ]\n'
+        'scripts: [ "js/live-feed.js", "js/disclaimer.js" ]\n'
         "styles: []\n",
         encoding="utf-8",
     )
@@ -300,7 +300,7 @@ def main() -> int:
         # Only used with SQL storage; a static host would serve it as plain text.
         (WEBROOT / "sql.php").unlink(missing_ok=True)
         (WEBROOT / "js").mkdir(parents=True, exist_ok=True)
-        for script in ("live-throttle.js", "disclaimer.js"):
+        for script in ("live-feed.js", "disclaimer.js"):
             shutil.copy2(HERE / script, WEBROOT / "js" / script)
         # Tells the status page what this map shows.
         (WEBROOT / "mc-status.json").write_text(json.dumps({
