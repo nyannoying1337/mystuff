@@ -37,12 +37,16 @@ final class GpuReadback {
 			McStatusClient.LOG.debug("skipped readback: unexpected format {}", texture.getFormat());
 			return false;
 		}
-		long issued = System.nanoTime();
+		long started = System.nanoTime();
 		GpuDevice device = RenderSystem.getDevice();
 		GpuBuffer buffer = device.createBuffer(() -> "mc-status readback",
 			GpuBuffer.USAGE_MAP_READ | GpuBuffer.USAGE_COPY_DST, (long) width * height * bytesPerPixel);
+		long[] issuedNs = new long[1];
+		// Only the time spent here and in onReady blocks the render thread; the
+		// frames the GPU takes to finish the copy in between don't.
 		device.createCommandEncoder().copyTextureToBuffer(texture, buffer, 0L,
-			() -> onReady(buffer, width, height, System.nanoTime() - issued, done), 0);
+			() -> onReady(buffer, width, height, issuedNs[0], done), 0);
+		issuedNs[0] = System.nanoTime() - started;
 		return true;
 	}
 
