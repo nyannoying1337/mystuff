@@ -19,7 +19,24 @@ Push-Location (Join-Path $root "worker")
 try {
     # stdin, so the token never appears on the command line or in history
     $token | npx --yes wrangler@4 secret put PUSH_TOKEN | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "wrangler secret put failed" }
+    if ($LASTEXITCODE -ne 0) {
+        # Some terminals make wrangler treat piped input as "non-interactive"
+        # and ignore the browser login. Run it interactively instead and let
+        # the user paste the token from the clipboard into its hidden prompt.
+        Write-Host ""
+        Write-Host "Piping didn't work in this terminal. The token is now on your clipboard." -ForegroundColor Yellow
+        Write-Host "When wrangler asks for the secret value: press Ctrl+V, then Enter." -ForegroundColor Yellow
+        Write-Host "(If it asks you to log in first, allow it in the browser.)" -ForegroundColor Yellow
+        Write-Host ""
+        Set-Clipboard -Value $token
+        try {
+            npx --yes wrangler@4 secret put PUSH_TOKEN
+            if ($LASTEXITCODE -ne 0) { throw "wrangler secret put failed" }
+        } finally {
+            Set-Clipboard -Value " "  # don't leave the token lying around
+            Write-Host "Clipboard cleared."
+        }
+    }
 } finally {
     Pop-Location
 }
