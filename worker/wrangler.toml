@@ -1,0 +1,16 @@
+name = "mc-status"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Create the namespace first:
+#   npx wrangler kv namespace create STATUS
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "STATUS"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+# Set the shared secret (never commit it):
+#   npx wrangler secret put PUSH_TOKEN
+#
+# Route it at your own domain in the Cloudflare dashboard, e.g.
+#   status-api.yourdomain.tld/*

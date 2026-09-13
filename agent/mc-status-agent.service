@@ -1,0 +1,14 @@
+[Unit]
+Description=Minecraft + system status agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/mc-status/agent
+ExecStart=%h/mc-status/agent/.venv/bin/python agent.py --config config.toml
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

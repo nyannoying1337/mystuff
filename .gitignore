@@ -1,15 +1,5 @@
-# System files
-.DS_Store
-Thumbs.db
-
-# Editor directories and files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Dependencies
-node_modules/ 
-
-.env
-*.vars
+agent/config.toml
+agent/.venv/
+.wrangler/
+node_modules/
+__pycache__/

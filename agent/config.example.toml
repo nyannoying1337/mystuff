@@ -1,0 +1,26 @@
+[worker]
+# Where you routed the Cloudflare Worker.
+url = "https://status-api.yourdomain.tld"
+# Same value you set with: npx wrangler secret put PUSH_TOKEN
+token = "change-me"
+
+[agent]
+interval_seconds = 20
+
+[rcon]
+host = "127.0.0.1"
+port = 25575
+password = "your-rcon-password"
+# Exact in-game name. RCON only works on servers you control —
+# leave this out entirely to publish system stats only.
+player = "nyannoying"
+
+[screenshot]
+# Press F2 in game and the newest file here gets published.
+directory = "~/.minecraft/screenshots"
+max_width = 1280
+quality = 78
+
+[privacy]
+# Set true if anyone else has your server address.
+hide_coordinates = false
