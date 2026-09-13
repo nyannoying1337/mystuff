@@ -131,6 +131,8 @@ main { flex: 1; padding: 28px 0 40px; }
 .toast-dock .gui { margin: 0; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .5)); }
 .toast-dock .gui[data-enter="true"] { animation: toast-in .6s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes toast-in { from { transform: translateX(calc(100% + 16px)); } to { transform: none; } }
+/* on a phone the toast spans the frame and would cover the "Captured" chip */
+@media (max-width: 600px) { .scene:has(.toast-dock) .scene-chip { display: none; } }
 @media (prefers-reduced-motion: reduce) { .toast-dock .gui[data-enter="true"] { animation: none; } }
 
 /* play time per day */

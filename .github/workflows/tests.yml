@@ -3,7 +3,7 @@ name: Tests
 on:
   push:
     branches: [main]
-    paths-ignore: ['README.md']
+    paths-ignore: ['README.md', 'docs/**']
   pull_request:
 
 permissions:

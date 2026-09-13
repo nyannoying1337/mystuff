@@ -4,6 +4,7 @@ on:
   # `map` is force-pushed by map/render.py; a new render redeploys the site.
   push:
     branches: [main, map]
+    paths-ignore: ['README.md', 'docs/**']  # docs aren't part of the site
   workflow_dispatch:
 
 permissions:
