@@ -1,0 +1,53 @@
+06:19:09 INFO uploaded screenshot latest.png (39 kB)
+06:19:09 INFO pushed — player online, 0 items
+06:19:20 INFO pushed — player online, 0 items
+06:19:30 INFO pushed — player online, 0 items
+06:19:40 INFO pushed — player online, 0 items
+06:19:51 INFO uploaded screenshot latest.png (39 kB)
+06:19:51 INFO pushed — player online, 0 items
+06:20:01 INFO uploaded screenshot latest.png (39 kB)
+06:20:01 INFO pushed — player online, 0 items
+06:20:12 INFO pushed — player online, 0 items
+06:20:22 INFO pushed — player online, 0 items
+06:20:32 INFO pushed — player online, 0 items
+06:20:42 INFO pushed — player online, 0 items
+06:20:53 INFO pushed — player online, 0 items
+06:21:03 INFO uploaded screenshot latest.png (39 kB)
+06:21:03 INFO pushed — player online, 0 items
+06:21:14 INFO pushed — player online, 0 items
+06:21:24 INFO pushed — player online, 0 items
+06:21:34 INFO pushed — player online, 0 items
+06:21:49 INFO uploaded screenshot latest.png (39 kB)
+06:21:49 INFO pushed — player online, 0 items
+06:22:00 INFO uploaded screenshot latest.png (51 kB)
+06:22:00 INFO pushed — player online, 0 items
+06:22:10 INFO pushed — player online, 0 items
+06:22:21 INFO pushed — player online, 0 items
+06:22:31 INFO pushed — player online, 0 items
+06:22:41 INFO rendering map around [-21.7, 79.0, 63.2] in minecraft:overworld
+06:22:41 INFO render: downloading BlueMap 5.24 CLI
+06:22:41 INFO uploaded screenshot latest.png (45 kB)
+06:22:42 INFO pushed — player offline, 0 items
+06:22:43 INFO render: $ C:/Program Files/Eclipse Adoptium/jre-21.0.12.101-hotspot/bin/java.exe -jar C:\Users\Nick\Documents\Minecraft\mystuff\map\work\bluemap-5.24-cli.jar -c C:\Users\Nick\Documents\Minecraft\mystuff\map\work\config -r -g -s
+06:22:43 INFO render: Fehler: Beim Laden der Klasse de.bluecolored.bluemap.cli.BlueMapCLI ist ein LinkageError aufgetreten
+06:22:43 INFO render: 	java.lang.UnsupportedClassVersionError: de/bluecolored/bluemap/cli/BlueMapCLI has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0
+06:22:43 INFO render: Traceback (most recent call last):
+06:22:43 INFO render:   File "C:\Users\Nick\Documents\Minecraft\mystuff\map\render.py", line 294, in <module>
+06:22:43 INFO render:     sys.exit(main())
+06:22:43 INFO render:              ~~~~^^
+06:22:43 INFO render:   File "C:\Users\Nick\Documents\Minecraft\mystuff\map\render.py", line 272, in main
+06:22:43 INFO render:     run(command, cwd=WORK)
+06:22:43 INFO render:     ~~~^^^^^^^^^^^^^^^^^^^
+06:22:43 INFO render:   File "C:\Users\Nick\Documents\Minecraft\mystuff\map\render.py", line 193, in run
+06:22:43 INFO render:     subprocess.run(command, cwd=cwd, check=True)
+06:22:43 INFO render:     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+06:22:43 INFO render:   File "C:\Users\Nick\AppData\Local\Programs\Python\Python314\Lib\subprocess.py", line 578, in run
+06:22:43 INFO render:     raise CalledProcessError(retcode, process.args,
+06:22:43 INFO render:                              output=stdout, stderr=stderr)
+06:22:43 INFO render: subprocess.CalledProcessError: Command '['C:/Program Files/Eclipse Adoptium/jre-21.0.12.101-hotspot/bin/java.exe', '-jar', 'C:\\Users\\Nick\\Documents\\Minecraft\\mystuff\\map\\work\\bluemap-5.24-cli.jar', '-c', 'C:\\Users\\Nick\\Documents\\Minecraft\\mystuff\\map\\work\\config', '-r', '-g', '-s']' returned non-zero exit status 1.
+06:22:43 WARNING map render exited with 1
+06:22:52 INFO pushed — player offline, 0 items
+06:23:02 INFO pushed — player offline, 0 items
+06:23:12 INFO pushed — player offline, 0 items
+06:23:23 INFO pushed — player offline, 0 items
+06:23:33 INFO pushed — player offline, 0 items

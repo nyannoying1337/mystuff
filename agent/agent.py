@@ -450,6 +450,16 @@ def track_presence(config: dict, state: dict, player: dict, raw: dict | None) ->
     if state.get("was_online"):
         state["was_online"] = False
         start_logout_render(config, state)
+    elif raw and "last_seen" not in state and isinstance(raw.get("position"), list):
+        # Agent started while the player is away (restart, reboot): the mod's
+        # last state still says where and when they left.
+        state["last_seen"] = {
+            "position": raw["position"],
+            "dimension": raw.get("dimension"),
+            "at": raw.get("written_at") or int(time.time() * 1000),
+        }
+        if raw.get("world_path"):
+            state["world_path"] = raw["world_path"]
 
 
 def last_seen_payload(config: dict, state: dict) -> dict | None:

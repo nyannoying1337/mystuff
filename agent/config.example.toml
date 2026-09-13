@@ -32,14 +32,15 @@ quality = 78
 
 [map]
 # When you log out, render the area around where you were and publish it to
-# the repo's `map` branch (see map/render.py). Needs Java 21+ and git push access.
+# the repo's `map` branch (see map/render.py). Needs Java 25+ and git push access.
 render_on_logout = false
 radius_chunks = 8
 # BlueMap downloads textures from the Minecraft client jar. Setting this means
 # you own the game and accept Mojang's EULA (https://www.minecraft.net/eula).
 accept_mojang_eula = false
 publish = true
-# java = "C:/Program Files/Eclipse Adoptium/jre-21/bin/java.exe"
+# Found automatically (JAVA_HOME, PATH, or the Minecraft launcher's own Java).
+# java = "C:/path/to/java.exe"
 # For a server (rcon source), point at its world folder:
 # world = "/srv/minecraft/world"
 

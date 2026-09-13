@@ -158,8 +158,8 @@ radius_chunks = 8
 accept_mojang_eula = true   # BlueMap downloads textures from the client jar
 ```
 
-- **Java 21+:** `winget install EclipseAdoptium.Temurin.21.JRE`, or set `java =`
-  to any Java 21+ executable.
+- **Java 25+:** nothing to install. The Minecraft launcher already ships Java 25
+  for 26.2, and `render.py` finds it. Set `java =` to use a different one.
 - **Git push access:** the clone the agent runs from needs it. Git Credential
   Manager handles this after one normal `git push`.
 

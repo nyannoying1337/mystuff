@@ -139,8 +139,24 @@ def write_config(world: Path, live_root: str, accept_download: bool, threads: in
         )
 
 
+MIN_JAVA = 25  # BlueMap 5.24 is compiled for Java 25 (class file version 69)
+
+
+def java_major(executable: str) -> int | None:
+    try:
+        output = subprocess.run([executable, "-version"], capture_output=True, text=True, timeout=20).stderr
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = re.search(r'version "(\d+)(?:\.(\d+))?', output)
+    if not match:
+        return None
+    major = int(match.group(1))
+    return int(match.group(2)) if major == 1 and match.group(2) else major  # "1.8" style
+
+
 def find_java(explicit: str | None) -> str | None:
-    """--java, then JAVA_HOME, then PATH, then the Minecraft launcher's own runtime."""
+    """--java, then JAVA_HOME, then PATH, then the Minecraft launcher's own runtime
+    (which is new enough for the game, and so for BlueMap). Too-old ones are skipped."""
     exe = "java.exe" if os.name == "nt" else "java"
     candidates = []
     if explicit:
@@ -158,8 +174,12 @@ def find_java(explicit: str | None) -> str | None:
         # newest runtime component names sort last (alpha, beta, gamma, delta…)
         candidates += sorted(glob.glob(pattern), reverse=True)
     for candidate in candidates:
-        if candidate and Path(candidate).is_file():
+        if not candidate or not Path(candidate).is_file():
+            continue
+        major = java_major(candidate)
+        if major is not None and major >= MIN_JAVA:
             return candidate
+        print(f"skipping {candidate}: Java {major or '?'} is older than {MIN_JAVA}")
     return None
 
 
@@ -252,7 +272,7 @@ def main() -> int:
             parser.error("pass --live-url, or fill in worker.url in agent/config.toml")
         java = find_java(args.java)
         if not java:
-            raise SystemExit("java not found — BlueMap needs Java 21 or newer (pass --java)")
+            raise SystemExit("java not found — BlueMap needs Java 25 or newer (pass --java)")
 
         jar = fetch_bluemap()
         if args.center:
