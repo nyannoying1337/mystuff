@@ -166,12 +166,17 @@ final class Progress {
 		Map<String, int[]> tabs = new TreeMap<>();
 		List<Done> finished = new ArrayList<>();
 		List<Partial> partial = new ArrayList<>();
+		List<Partial> checklists = new ArrayList<>();
 
 		for (AdvancementHolder holder : server.getAdvancements().getAllAdvancements()) {
 			DisplayInfo display = holder.value().display().orElse(null);
 			if (display == null) continue; // recipe unlocks and other invisible ones
 			AdvancementProgress progress = player.getAdvancements().getOrStartProgress(holder);
 			total++;
+			// hidden ones only once started: their names would be spoilers
+			if (isChecklist(holder) && (!display.isHidden() || progress.hasProgress())) {
+				checklists.add(new Partial(holder, display, progress));
+			}
 			int[] tab = tabs.computeIfAbsent(tabOf(holder.id()), key -> new int[2]);
 			tab[1]++;
 			if (progress.isDone()) {
@@ -214,6 +219,39 @@ final class Progress {
 			going.add(json);
 		}
 		out.add("in_progress", going);
+
+		// unfinished first, closest to done on top; finished ones last
+		checklists.sort(Comparator.comparing((Partial item) -> item.progress.isDone())
+			.thenComparing(Comparator.comparingDouble((Partial item) -> item.progress.getPercent()).reversed()));
+		JsonArray lists = new JsonArray();
+		for (Partial item : checklists) {
+			JsonObject json = describe(item.holder, item.display);
+			json.add("done", names(item.progress.getCompletedCriteria()));
+			json.add("missing", names(item.progress.getRemainingCriteria()));
+			lists.add(json);
+		}
+		out.add("checklists", lists);
+		return out;
+	}
+
+	/**
+	 * "Do all of these" advancements, like Adventuring Time (every biome) or
+	 * A Balanced Diet (every food): each requirement is exactly one criterion.
+	 * Detected from the data, so datapack checklists show up too.
+	 */
+	private static boolean isChecklist(AdvancementHolder holder) {
+		List<List<String>> groups = holder.value().requirements().requirements();
+		if (groups.size() < 2) return false;
+		for (List<String> group : groups) if (group.size() != 1) return false;
+		return true;
+	}
+
+	private static JsonArray names(Iterable<String> criteria) {
+		List<String> sorted = new ArrayList<>();
+		criteria.forEach(sorted::add);
+		sorted.sort(null);
+		JsonArray out = new JsonArray();
+		sorted.forEach(out::add);
 		return out;
 	}
 

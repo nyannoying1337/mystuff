@@ -301,3 +301,13 @@ assert media.sync_panorama(dict(config, source={"type": "rcon"}), {}, logout) is
 assert media.sync_panorama(config, {}, logout) is None
 
 print("PANORAMA TESTS PASSED")
+
+# ============================================================ advancement checklists (mod 1.0.5)
+checklist = {"id": "minecraft:adventure/adventuring_time", "title": "Adventuring Time", "type": "challenge",
+             "icon": "minecraft:diamond_boots", "done": ["minecraft:plains"], "missing": ["minecraft:desert"]}
+adv = {"done": 1, "total": 125, "recent": [], "in_progress": [], "checklists": [checklist]}
+write_state(mode="singleplayer", advancements=adv)
+assert collect.collect_player(config, collect.read_mod_state(config))["advancements"]["checklists"] == [checklist]
+write_state(mode="multiplayer", world_path=None, advancements=adv)
+assert "advancements" not in collect.collect_player(config, collect.read_mod_state(config))
+print("CHECKLIST TESTS PASSED")

@@ -141,6 +141,77 @@ function advancementRow(adv, { progress = null, after = null } = {}) {
   ]);
 }
 
+// ---- checklists: advancements that are "do all of these" -----------------------
+
+// What each vanilla checklist's criteria are, so they get a proper name and icon.
+// Anything else (datapacks, future versions) still shows, as plain text.
+const CHECKLIST_KINDS = {
+  "minecraft:adventure/adventuring_time": "biome",
+  "minecraft:nether/explore_nether": "biome",
+  "minecraft:adventure/kill_all_mobs": "mob",
+  "minecraft:husbandry/bred_all_animals": "mob",
+  "minecraft:husbandry/balanced_diet": "food",
+  "minecraft:adventure/trim_with_all_exclusive_armor_patterns": "trim",
+  "minecraft:husbandry/complete_catalogue": "variant",
+  "minecraft:husbandry/whole_pack": "variant",
+  "minecraft:husbandry/leash_all_frog_variants": "variant",
+};
+const KIND_UNITS = { biome: "biomes", mob: "mobs", food: "foods", trim: "trims", variant: "variants" };
+
+// kept across updates, so an open list doesn't snap shut when new data arrives
+const openChecklists = new Set();
+
+function checklistChip(kind, key, done) {
+  let icon = null;
+  let label = titleCase(key.replace(/^[a-z0-9_.-]+:/, ""));  // any namespace, not just minecraft:
+  if (kind === "biome") {
+    label = biomeName(key);
+  } else if (kind === "mob") {
+    icon = `${shortId(key)}_spawn_egg`;
+    label = entityName(key);
+  } else if (kind === "food") {
+    icon = shortId(key);
+    label = itemName({ id: key });
+  } else if (kind === "trim") {
+    const template = key.match(/([a-z_]+_armor_trim_smithing_template)/)?.[1];
+    if (template) {
+      icon = template;
+      label = titleCase(template.replace(/_armor_trim_smithing_template$/, ""));
+    }
+  }
+  const chipNode = el("span", { class: "check-chip", title: label }, [
+    icon ? el("img", { src: itemUrl(icon), alt: "" }) : null,
+    el("span", { text: label }),
+  ]);
+  chipNode.dataset.done = String(done);
+  const img = chipNode.querySelector("img");
+  img?.addEventListener("error", () => img.remove(), { once: true });
+  return chipNode;
+}
+
+function checklistRow(list) {
+  const kind = CHECKLIST_KINDS[list.id];
+  const done = list.done || [];
+  const missing = list.missing || [];
+  const total = done.length + missing.length;
+  const unit = KIND_UNITS[kind] || "";
+  const details = el("details", { class: "checklist" }, [
+    el("summary", {}, [
+      advancementRow(list, { progress: total ? done.length / total : 0, after: `${done.length} / ${total}${unit ? ` ${unit}` : ""}` }),
+    ]),
+    missing.length ? el("h4", { class: "check-head", text: `Still to do · ${missing.length}` }) : null,
+    missing.length ? el("div", { class: "check-grid" }, missing.map((key) => checklistChip(kind, key, false))) : null,
+    done.length ? el("h4", { class: "check-head", text: `Done · ${done.length}` }) : null,
+    done.length ? el("div", { class: "check-grid" }, done.map((key) => checklistChip(kind, key, true))) : null,
+  ]);
+  if (openChecklists.has(list.id)) details.open = true;
+  details.addEventListener("toggle", () => {
+    if (details.open) openChecklists.add(list.id);
+    else openChecklists.delete(list.id);
+  });
+  return details;
+}
+
 export function advancementsPanel(adv) {
   const tabs = Object.entries(adv.tabs || {}).sort(([a], [b]) => tabOrder(a) - tabOrder(b));
   return panel("Advancements", [
@@ -161,6 +232,8 @@ export function advancementsPanel(adv) {
     adv.in_progress?.length ? el("h3", { class: "subhead", text: "Almost there" }) : null,
     adv.in_progress?.length ? el("div", { class: "adv-list" }, adv.in_progress.map((item) =>
       advancementRow(item, { progress: item.percent, after: item.progress || null }))) : null,
+    adv.checklists?.length ? el("h3", { class: "subhead", text: "Checklists" }) : null,
+    adv.checklists?.length ? el("div", { class: "adv-list" }, adv.checklists.map(checklistRow)) : null,
   ]);
 }
 

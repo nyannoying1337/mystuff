@@ -162,7 +162,7 @@ main { flex: 1; padding: 28px 0 40px; }
 
 /* ---- dashboard grid ---- */
 .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
-.col { display: grid; gap: 20px; }
+.col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 @media (max-width: 860px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
   .scene { aspect-ratio: 16 / 10; min-height: 0; }
@@ -310,3 +310,26 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
   padding: 8px 12px 10px; border-radius: var(--radius); background: rgba(14, 14, 15, .78); }
 .scene-status strong { font-size: 18px; font-weight: 800; line-height: 1.2; }
 .scene-status span { font-size: 12px; color: var(--text-2); }
+
+/* checklists: every biome, mob, food… for "do all of these" advancements */
+.checklist { min-width: 0; border: 2px solid var(--edge); border-radius: var(--radius); background: var(--deep); }
+.checklist > summary { list-style: none; cursor: pointer; padding: 6px 10px 6px 6px; border-radius: var(--radius); }
+.checklist > summary::-webkit-details-marker { display: none; }
+.checklist > summary:hover { background: #1b1b1c; }
+.checklist > summary .adv::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-left: 4px;
+  border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3); transform: rotate(45deg) translateY(-3px);
+}
+.checklist[open] > summary .adv::after { transform: rotate(225deg) translateY(-2px); }
+.checklist[open] > summary { border-bottom: 2px solid var(--edge); border-radius: var(--radius) var(--radius) 0 0; }
+.check-head { margin: 12px 12px 8px; font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--text-3); }
+.check-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+.check-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 2px 8px 3px; border: 2px solid var(--edge); border-radius: var(--radius);
+  background: var(--panel-raised); font-size: 12px; color: var(--text-2);
+}
+.check-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.check-chip img { width: calc(16 * var(--t1, 1.25px)); height: calc(16 * var(--t1, 1.25px)); flex: none; }
+.check-chip[data-done="true"] { color: var(--text); border-color: #2d5f1f; box-shadow: inset 0 -2px 0 var(--green-lip); background: #2f4a27; }
+.check-chip[data-done="false"] img { filter: grayscale(1) brightness(.8); opacity: .75; }
