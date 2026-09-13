@@ -7,3 +7,4 @@ site/.cache/
 node_modules/
 __pycache__/
 agent/agent.log*
+tests/worker-under-test.mjs
