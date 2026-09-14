@@ -135,6 +135,7 @@ Written in the game's `config` folder on first start. Restart the game after cha
 | `capture_width` | `1920` | 160–1920 | width the frame is scaled to on the GPU |
 | `state_interval_ticks` | `20` | 5–200 | how often `state.json` is checked for changes (20 ticks = 1 s) |
 | `share_item_names` | `false` | | publish custom item names, which can contain anything |
+| `share_mods` | `true` | | publish the list of installed mods and their versions |
 
 ## The server tool
 

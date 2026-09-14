@@ -17,7 +17,7 @@ from common import PLAYER_NAME, apply_privacy, log, mod_dir, source_type
 PUBLISHED_PLAYER_KEYS = (
     "online", "name", "health", "foodlevel", "xplevel", "xpp",
     "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand", "mode",
-    "world", "stats", "advancements", "game", "joined_at", "last_death",
+    "world", "stats", "advancements", "game", "joined_at", "last_death", "mods",
 )
 # Only known for your own worlds; the mod doesn't write them for servers, and
 # they're dropped here too in case an older or newer mod does.

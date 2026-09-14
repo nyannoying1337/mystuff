@@ -46,6 +46,13 @@ assert "world_path" not in player and "secret_future_field" not in player, playe
 assert player["armor"]["head"]["max_damage"] == 165 and player["offhand"]["id"] == "minecraft:shield"
 assert len(player["inventory"]) == 1
 
+# --- the mod list rides along when the mod sends one, and is absent when it doesn't
+write_state(mods=[{"id": "sodium", "name": "Sodium", "version": "0.6.13"}])
+p_mods = collect.collect_player(config, collect.read_mod_state(config))
+assert p_mods["mods"] == [{"id": "sodium", "name": "Sodium", "version": "0.6.13"}], p_mods.get("mods")
+write_state()
+assert "mods" not in collect.collect_player(config, collect.read_mod_state(config))
+
 # --- stale state => offline
 write_state(written_at=int((time.time() - 120) * 1000))
 assert collect.collect_player(config, collect.read_mod_state(config))["online"] is False

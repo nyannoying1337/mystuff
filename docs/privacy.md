@@ -24,6 +24,7 @@ On someone else's server, the mod doesn't collect coordinates, world facts, stat
 - chat, and the addresses of servers you join;
 - F2 screenshots (the mod's HUD-free frame is used instead);
 - custom item names, unless `share_item_names` is on;
+- your mod list, if you turn `share_mods` off;
 - any field that isn't on the allowlist.
 
 ## Your choices
@@ -35,6 +36,7 @@ On someone else's server, the mod doesn't collect coordinates, world facts, stat
 | The logout panorama | on, after singleplayer sessions only | no switch yet; the agent never uploads it after multiplayer |
 | World name, biome, statistics, hardware names | shown, your own worlds only | edit `site/js/cards.js` |
 | Custom item names | hidden | `share_item_names` in the mod's settings |
+| Installed mods | shown | `share_mods` in the mod's settings |
 
 ## Who can watch
 

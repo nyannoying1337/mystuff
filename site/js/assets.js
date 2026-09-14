@@ -1,6 +1,6 @@
 // Game textures and English names, built at deploy time by site/build_assets.py
 // from Minecraft's client jar. Nothing from the game is committed to the repo.
-import { shortId, titleCase } from "./util.js";
+import { isVanilla, shortId, titleCase } from "./util.js";
 
 export const ASSETS = "assets/mc";
 
@@ -17,7 +17,10 @@ export const assetsReady = Promise.all([
   if (loadedNames) names = { ...names, ...loadedNames };
 });
 
-export const itemUrl = (id) => `${ASSETS}/item/${shortId(id)}.png`;
+// Only vanilla textures are built into assets/mc, and a modded id can collide
+// with a vanilla path ("create:copper_block"), which would show a confidently
+// wrong icon. Modded items get the barrier placeholder and keep their real name.
+export const itemUrl = (id) => `${ASSETS}/item/${isVanilla(id) ? shortId(id) : "barrier"}.png`;
 export const spriteUrl = (name) => `${ASSETS}/hud/${name}.png`;
 
 export function itemName(item) {

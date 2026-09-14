@@ -12,6 +12,7 @@ final class ModConfig {
 	int captureWidth = 1920;
 	int stateIntervalTicks = 20;
 	boolean shareItemNames = false;
+	boolean shareMods = true;
 
 	static ModConfig load(Path path) {
 		Properties props = new Properties();
@@ -20,6 +21,7 @@ final class ModConfig {
 		props.setProperty("capture_width", String.valueOf(config.captureWidth));
 		props.setProperty("state_interval_ticks", String.valueOf(config.stateIntervalTicks));
 		props.setProperty("share_item_names", String.valueOf(config.shareItemNames));
+		props.setProperty("share_mods", String.valueOf(config.shareMods));
 
 		if (Files.isRegularFile(path)) {
 			try (InputStream in = Files.newInputStream(path)) {
@@ -39,6 +41,7 @@ final class ModConfig {
 		config.captureWidth = Math.clamp(integer(props, "capture_width", 1920), 160, 1920);
 		config.stateIntervalTicks = Math.clamp(integer(props, "state_interval_ticks", 20), 5, 200);
 		config.shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
+		config.shareMods = Boolean.parseBoolean(props.getProperty("share_mods", "true").trim());
 		return config;
 	}
 

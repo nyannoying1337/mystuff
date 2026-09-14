@@ -46,20 +46,25 @@ function tile(icon, label, value, sub) {
   ]);
 }
 
-function bar(fraction, { thin = false, heat = false } = {}) {
+function bar(fraction, { thin = false, heat = false, invert = false } = {}) {
   const pct = Math.max(0, Math.min(1, fraction || 0)) * 100;
   const node = el("div", { class: `bar${thin ? " bar-thin" : ""}`, role: "presentation" });
-  if (heat) node.dataset.level = pct >= 85 ? "hot" : pct >= 65 ? "warm" : "ok";
+  // invert is for numbers where a full bar is the good outcome, like FPS
+  if (heat) {
+    node.dataset.level = invert
+      ? (pct <= 25 ? "hot" : pct <= 50 ? "warm" : "ok")
+      : (pct >= 85 ? "hot" : pct >= 65 ? "warm" : "ok");
+  }
   const level = el("i");
   level.style.width = `${pct}%`;
   node.append(level);
   return node;
 }
 
-function meter(label, valueText, fraction, note) {
+function meter(label, valueText, fraction, note, { invert = false } = {}) {
   return el("div", { class: "meter" }, [
     el("div", { class: "meter-head" }, [el("span", { text: label }), el("b", { text: valueText })]),
-    bar(fraction, { heat: true }),
+    bar(fraction, { heat: true, invert }),
     note ? el("span", { class: "meter-note", text: note }) : null,
   ]);
 }
@@ -83,35 +88,49 @@ export function worldPanel(world) {
   ], "", world.name || "");
 }
 
-export function machinePanel(system, game, online) {
+export function gamePanel(game, system = {}, online = false) {
+  const live = online && game ? game : null;
   const meters = [];
-  if (typeof system.cpu_percent === "number") {
-    meters.push(meter("CPU", `${Math.round(system.cpu_percent)}%`, system.cpu_percent / 100,
-      [system.cpu, system.cpu_cores ? `${system.cpu_cores} threads` : null].filter(Boolean).join(" · ")));
+  if (live && typeof live.fps === "number") {
+    // 60 is the reference, and more is better, so the heat scale runs backwards
+    meters.push(meter("FPS", String(live.fps), live.fps / 60, null, { invert: true }));
   }
-  if (typeof system.gpu_percent === "number") {
-    meters.push(meter("GPU", `${Math.round(system.gpu_percent)}%`, system.gpu_percent / 100, system.gpu));
+  if (live && typeof live.mspt === "number") {
+    // a tick has 50 ms to finish in; past that the world falls behind
+    meters.push(meter("Tick time", `${live.mspt} ms`, live.mspt / 50,
+      typeof live.tps === "number" ? `${live.tps} TPS` : null));
   }
-  if (system.mem_used && system.mem_total) {
-    meters.push(meter("Memory", `${gib(system.mem_used)} / ${gib(system.mem_total)}`, system.mem_used / system.mem_total));
-  }
-  if (system.vram_used && system.vram_total) {
-    meters.push(meter("Video memory", `${gib(system.vram_used)} / ${gib(system.vram_total)}`, system.vram_used / system.vram_total));
+  if (live && live.mem_max_mb) {
+    meters.push(meter("Game memory",
+      `${plainNumber(live.mem_used_mb)} / ${plainNumber(live.mem_max_mb)} MB`,
+      live.mem_used_mb / live.mem_max_mb));
   }
   const rows = [
-    ["FPS", online && game?.fps ? String(game.fps) : null],
-    ["Tick time", online && typeof game?.mspt === "number" ? `${game.mspt} ms` : null],
-    ["Game memory", online && game?.mem_max_mb ? `${plainNumber(game.mem_used_mb)} / ${plainNumber(game.mem_max_mb)} MB` : null],
-    ["CPU temp", system.cpu_temp ? `${Math.round(system.cpu_temp)} °C` : null],
-    ["GPU temp", system.gpu_temp ? `${Math.round(system.gpu_temp)} °C` : null],
+    ["Entities", typeof live?.entities === "number" ? count(live.entities) : null],
+    ["Chunks", typeof live?.chunks === "number" ? count(live.chunks) : null],
+    ["Render distance", live?.render_distance ? `${live.render_distance} chunks` : null],
+    // the machine is the footnote now, not the headline
+    ["CPU", typeof system.cpu_percent === "number" ? `${Math.round(system.cpu_percent)}%` : system.cpu],
+    ["GPU", typeof system.gpu_percent === "number" ? `${Math.round(system.gpu_percent)}%` : system.gpu],
     ["OS", system.os],
     ["Up for", system.uptime_seconds ? duration(system.uptime_seconds) : null],
   ];
-  // without live numbers, still name the hardware
-  if (!meters.length) rows.unshift(["CPU", system.cpu], ["GPU", system.gpu]);
   const list = statRows(rows);
   if (meters.length) list.classList.add("machine-rows");
-  return panel("The machine", [...meters, list]);
+  return panel("The game", [...meters, list]);
+}
+
+// Names and versions come from the mods themselves, so they're arbitrary text —
+// el() sets them as textContent, never as markup.
+export function modsPanel(mods) {
+  const list = el("ul", { class: "mod-list" });
+  for (const mod of mods) {
+    list.append(el("li", {}, [
+      el("span", { class: "mod-name", text: mod.name || mod.id || "unknown" }),
+      mod.version ? el("span", { class: "mod-version", text: mod.version }) : null,
+    ]));
+  }
+  return panel("Mods", [list], "", `${mods.length} installed`);
 }
 
 const ADV_TABS = {

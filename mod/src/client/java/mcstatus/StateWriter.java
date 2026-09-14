@@ -4,11 +4,18 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import mcstatus.common.Snapshots;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -23,6 +30,8 @@ import net.minecraft.world.level.storage.LevelResource;
 final class StateWriter {
 	private static final Gson GSON = new Gson();
 	private static final long HEARTBEAT_MS = 5000;
+	/** The loaded mods can't change while the game runs, so they're read once. */
+	private static JsonArray modList;
 
 	private final Path file;
 	private final ModConfig config;
@@ -129,6 +138,8 @@ final class StateWriter {
 			if (advancements != null) state.add("advancements", advancements);
 		}
 
+		if (config.shareMods) state.add("mods", mods());
+
 		Snapshots.addInventory(state, player, config.shareItemNames);
 		return state;
 	}
@@ -155,7 +166,42 @@ final class StateWriter {
 		Runtime runtime = Runtime.getRuntime();
 		game.addProperty("mem_used_mb", (runtime.totalMemory() - runtime.freeMemory()) >> 20);
 		game.addProperty("mem_max_mb", runtime.maxMemory() >> 20);
-		if (server != null) game.addProperty("mspt", Math.round(server.getAverageTickTimeNanos() / 1e5) / 10.0);
+		if (server != null) {
+			double mspt = server.getAverageTickTimeNanos() / 1e6;
+			game.addProperty("mspt", Math.round(mspt * 10) / 10.0);
+			// A tick is 50 ms, so 20 per second is the ceiling: only ticks that
+			// overrun bring it down. Below 20 the world itself is running slow.
+			game.addProperty("tps", Math.round(1000.0 / Math.max(mspt, 50.0) * 10) / 10.0);
+		}
+		if (client.level != null) {
+			game.addProperty("entities", client.level.getEntityCount());
+			game.addProperty("chunks", client.level.getChunkSource().getLoadedChunksCount());
+		}
+		game.addProperty("render_distance", client.options.renderDistance().get());
 		return game;
+	}
+
+	/**
+	 * Installed mods, as id, name and version. Fabric's builtin containers (java,
+	 * minecraft, the loader) and nested ones are skipped, so the list is the mods
+	 * that were actually installed rather than every library submodule inside them.
+	 */
+	private static JsonArray mods() {
+		if (modList != null) return modList;
+		List<JsonObject> found = new ArrayList<>();
+		for (ModContainer container : FabricLoader.getInstance().getAllMods()) {
+			ModMetadata meta = container.getMetadata();
+			if ("builtin".equals(meta.getType()) || container.getContainingMod().isPresent()) continue;
+			JsonObject mod = new JsonObject();
+			mod.addProperty("id", meta.getId());
+			mod.addProperty("name", meta.getName());
+			mod.addProperty("version", meta.getVersion().getFriendlyString());
+			found.add(mod);
+		}
+		found.sort(Comparator.comparing((JsonObject mod) -> mod.get("name").getAsString().toLowerCase(Locale.ROOT)));
+		JsonArray mods = new JsonArray();
+		found.forEach(mods::add);
+		modList = mods;
+		return mods;
 	}
 }
