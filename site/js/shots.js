@@ -22,6 +22,9 @@ export async function loadShots() {
 // name — so read it from the path rather than recomputing it in UTC.
 const dayOf = (frame) => String(frame.file || "").slice(0, 10);
 
+// Published frames are paths under shots/; demo mode passes data: URLs straight through.
+const src = (path) => (/^(?:data:|https?:)/.test(path) ? path : `${SHOTS}/${path}`);
+
 function caption(frame) {
   const when = new Date(frame.at);
   const date = when.toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -48,7 +51,7 @@ export function shotsView({ frames, panoramas }) {
 
   const thumbs = frames.map((frame, at) => {
     const thumb = el("img", {
-      class: "shot-thumb", src: `${SHOTS}/${frame.thumb || frame.file}`, alt: "",
+      class: "shot-thumb", src: src(frame.thumb || frame.file), alt: "",
       loading: "lazy", "data-at": String(at),
     });
     thumb.addEventListener("click", () => show(at));
@@ -65,7 +68,7 @@ export function shotsView({ frames, panoramas }) {
   let pending = 0;
   function showImage(frame) {
     clearTimeout(pending);
-    pending = setTimeout(() => { image.src = `${SHOTS}/${frame.file}`; }, 120);
+    pending = setTimeout(() => { image.src = src(frame.file); }, 120);
   }
 
   function show(at) {
@@ -79,14 +82,14 @@ export function shotsView({ frames, panoramas }) {
 
     const panorama = panoramas[dayOf(frame)];
     panoLink.hidden = !panorama;
-    if (panorama) panoLink.href = `${SHOTS}/${panorama}`;
+    if (panorama) panoLink.href = src(panorama);
   }
 
   slider.addEventListener("input", () => show(Number(slider.value)));
   // and immediately once the drag ends, so releasing never leaves it waiting
   slider.addEventListener("change", () => {
     clearTimeout(pending);
-    image.src = `${SHOTS}/${frames[current].file}`;
+    image.src = src(frames[current].file);
   });
   image.addEventListener("click", () => window.open(image.src, "_blank", "noopener"));
 

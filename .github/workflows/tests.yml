@@ -29,6 +29,7 @@ jobs:
           python tests/test_curses.py
           python tests/test_events.py
           python tests/test_archive.py
+          python tests/test_render.py
       - name: Worker
         run: |
           node tests/test_worker.mjs
