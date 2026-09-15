@@ -100,6 +100,31 @@ def build_jar(path: Path):
             {"from": [12, 0, 12], "to": [16, 16, 16], "faces": cube_faces()},
         ]})
 
+        # --- a post skewered through a slab. They interpenetrate, so NO ordering of
+        #     whole faces is right: the post is in front of the slab above it and
+        #     behind the slab below it, and one painter's-algorithm pass must get
+        #     one of those wrong.
+        item("skewer", {"model": {"type": "minecraft:model", "model": "minecraft:block/skewer"}})
+        model("block/skewer", {"textures": {"slab": "block/north", "post": "block/east"},
+                               "elements": [
+                                   {"from": [0, 6, 0], "to": [16, 10, 16], "faces": cube_faces("#slab")},
+                                   {"from": [6, 0, 6], "to": [10, 16, 10], "faces": cube_faces("#post")},
+                               ]})
+
+        # --- two crossed planes, the shape vanilla uses for plants. Their centroids
+        #     are identical, so the sort is arbitrary and one plane wins outright.
+        #     22.5 deg, not 45: at 45 one plane is exactly edge-on to the 30/225 view
+        #     and invisible for honest reasons, which would prove nothing.
+        item("crossed", {"model": {"type": "minecraft:model", "model": "minecraft:block/crossed"}})
+        model("block/crossed", {"textures": {"a": "block/north", "b": "block/east"}, "elements": [
+            {"from": [0.8, 0, 8], "to": [15.2, 16, 8], "shade": False,
+             "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 22.5},
+             "faces": {"north": {"texture": "#a"}, "south": {"texture": "#a"}}},
+            {"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
+             "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 22.5},
+             "faces": {"west": {"texture": "#b"}, "east": {"texture": "#b"}}},
+        ]})
+
         # --- a special type nothing supports (banners, beds, signs all land here)
         item("mystery", {"model": {"type": "minecraft:special", "base": "minecraft:item/mystery",
                                    "model": {"type": "minecraft:banner"}}})
@@ -206,5 +231,51 @@ assert render("hopeless") is None, "with no texture at all there is nothing to d
 two = render("two_part")
 assert two is not None
 assert len(colours(two)) >= 2, "both elements should contribute pixels"
+
+# --- depth is per pixel, not per face.
+#     Sorting faces by centroid and painting back to front cannot express "this face
+#     is in front over here and behind over there", so interpenetrating elements come
+#     out wrong. Setting DEPTH_EPS to infinity accepts every pixel, which is exactly
+#     the old painter-only renderer — so each check below runs both ways and asserts
+#     the artefact is there without the depth test and gone with it. That keeps the
+#     fixtures honest: if a future change made them stop exercising the bug, the
+#     "before" assertion fails rather than the test quietly proving nothing.
+MIDDLE = ba.ICON // 2
+
+
+def colour_at(icon, x, y):
+    r, g, b, a = icon.convert("RGBA").load()[x, y]
+    if a < 200:
+        return None
+    return nearest((r, g, b), [GREEN, YELLOW, WHITE])
+
+
+def with_depth_test(enabled, item):
+    ba.DEPTH_EPS, previous = (1e-6 if enabled else float("inf")), ba.DEPTH_EPS
+    try:
+        return render(item)
+    finally:
+        ba.DEPTH_EPS = previous
+
+
+# the slab (green) must hide the length of post (yellow) buried behind it
+buried = lambda icon: colour_at(icon, MIDDLE, MIDDLE)
+assert buried(with_depth_test(False, "skewer")) == YELLOW, \
+    "fixture no longer exercises the bug: centroid sorting already hides the post"
+assert buried(with_depth_test(True, "skewer")) == GREEN, \
+    "the slab is in front of the post at the icon's centre and must occlude it"
+
+# ...but the post above the slab is genuinely in front, and must survive. Without
+# this a depth test with its comparison the wrong way round would still pass above.
+standing = lambda icon: colour_at(icon, MIDDLE, 12)
+assert standing(with_depth_test(True, "skewer")) == YELLOW, \
+    "the post above the slab is nearest the viewer; the depth test must keep it"
+
+# crossed planes: each is in front over part of the overlap, so both must show
+row = lambda icon: {colour_at(icon, x, MIDDLE) for x in range(ba.ICON)} - {None}
+assert row(with_depth_test(False, "crossed")) == {YELLOW}, \
+    "fixture no longer exercises the bug: one plane should win outright without depth"
+assert row(with_depth_test(True, "crossed")) == {GREEN, YELLOW}, \
+    f"both planes are in front somewhere along the middle row, got {row(with_depth_test(True, 'crossed'))}"
 
 print("ALL ICON TESTS PASSED")
