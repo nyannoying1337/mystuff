@@ -25,7 +25,10 @@ config["cursed"]["enabled"] = True
 config["source"] = {"type": "rcon"}  # this test covers the server path
 config["rcon"]["player"] = "nyannoying"
 import tempfile
-config.setdefault("agent", {})["playtime_file"] = str(Path(tempfile.mkdtemp()) / "playtime.json")
+scratch = Path(tempfile.mkdtemp())
+config.setdefault("agent", {})["playtime_file"] = str(scratch / "playtime.json")
+# run_once records the timeline too; keep it out of the repo
+config["agent"]["events_file"] = str(scratch / "events.json")
 
 hot = {"cpu_temp": 70.0, "gpu_temp": 83.2, "mem_used": 15e9, "mem_total": 16e9, "uptime_seconds": 13 * 3600}
 sysinfo.collect_safely = lambda: hot

@@ -5,6 +5,8 @@ Run them with the agent's Python (`agent/.venv`) after `pip install -r agent/req
 
 ```bash
 python tests/test_curses.py      # curse rules over RCON
+python tests/test_events.py      # the day's timeline: sessions, milestones, restarts
+python tests/test_archive.py     # frame archive: thinning, privacy, pruning, staging
 python tests/test_agent_mod.py   # mod source, logout render, panorama, play time, checklists, privacy
 node tests/test_worker.mjs       # Worker routes, broadcasts, panorama, map markers
 node tests/test_server_worker.mjs  # server tool: keys, per-viewer filtering, write throttling

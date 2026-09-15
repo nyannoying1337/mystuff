@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import upload
-from common import expand, log, mod_dir, source_type
+from common import expand, log, mod_dir, share_server_world, source_type
 
 # A panorama is only "where you logged out" if it was taken shortly before
 # (the mod takes one when the pause menu opens, and Save & Quit goes through it).
@@ -30,8 +30,13 @@ def screenshot_path(config: dict) -> Path | None:
     return None
 
 
-def sync_screenshot(config: dict, state: dict) -> int | None:
+def sync_screenshot(config: dict, state: dict, mode: str | None = None) -> int | None:
     """Upload the frame if it changed; return its time for the status, in ms."""
+    # The mod already refuses to capture on a server unless its own switch is on.
+    # This is the second lock on the same door: a frame from someone else's world
+    # can hold their builds and their nametags.
+    if mode == "multiplayer" and not share_server_world(config):
+        return None
     path = screenshot_path(config)
     if not path:
         return None
@@ -51,6 +56,9 @@ def sync_screenshot(config: dict, state: dict) -> int | None:
 def sync_panorama(config: dict, state: dict, last_seen: dict | None) -> int | None:
     """After a singleplayer logout, upload the panorama taken just before it.
     Returns the panorama's time once it's on the Worker, for the status."""
+    # Singleplayer only, and not because of a privacy switch: PanoramaCapture
+    # never takes one on a server, so the only thing a looser test could publish
+    # is an earlier singleplayer panorama labelled as a server logout.
     if source_type(config) != "mod" or not last_seen or last_seen.get("mode") != "singleplayer":
         return None
     folder = mod_dir(config)
