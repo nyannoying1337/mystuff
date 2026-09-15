@@ -174,12 +174,14 @@ function render(data) {
   used = new Set();
 
   // ---- hero ----
+  // Both images normally come from the Worker behind the invite key. Demo mode has
+  // neither, so it supplies its own URLs — the only place the page reads them.
   const shotSrc = data.screenshot_at
-    ? live.frameUrl() || (live.isPolling() ? live.keyedUrl("/shot", data.screenshot_at) : null)
+    ? (isDemo ? data.demo_shot : live.frameUrl() || (live.isPolling() ? live.keyedUrl("/shot", data.screenshot_at) : null))
     : null;
   const panoramaUrl = !online && seen.mode === "singleplayer" && data.panorama_at
     && Math.abs((seen.at || 0) - data.panorama_at) <= PANORAMA_WINDOW_MS
-    ? live.keyedUrl("/pano", data.panorama_at) : null;
+    ? (isDemo ? data.demo_panorama : live.keyedUrl("/pano", data.panorama_at)) : null;
   const panorama = panoramaUrl ? section(`panorama:${panoramaUrl}`, {}, () => panoramaView(panoramaUrl)) : null;
   const fresh = player.advancements?.recent?.[0];
   const toast = glyphWidths && online && !multiplayer && fresh?.at && Date.now() - fresh.at < TOAST_MS ? fresh : null;

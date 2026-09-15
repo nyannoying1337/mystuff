@@ -12,18 +12,16 @@ export async function loadShots() {
     if (!response.ok) return null;
     const data = await response.json();
     const frames = Array.isArray(data.frames) ? data.frames.filter((frame) => frame && frame.file) : [];
-    return frames.length ? { frames, panoramas: data.panoramas || {} } : null;
+    return frames.length ? { frames, panoramas: data.panoramas || {}, base: SHOTS } : null;
   } catch {
     return null;
   }
 }
 
-// archive.py names day folders by local date, and the file path carries that
-// name — so read it from the path rather than recomputing it in UTC.
-const dayOf = (frame) => String(frame.file || "").slice(0, 10);
-
-// Published frames are paths under shots/; demo mode passes data: URLs straight through.
-const src = (path) => (/^(?:data:|https?:)/.test(path) ? path : `${SHOTS}/${path}`);
+// archive.py names day folders by local date and the file path carries that name, so
+// read it from the path rather than recomputing it in UTC. A frame may also say so
+// outright, which is how demo frames — whose paths aren't dated — get a day.
+const dayOf = (frame) => frame.day || String(frame.file || "").slice(0, 10);
 
 function caption(frame) {
   const when = new Date(frame.at);
@@ -37,8 +35,10 @@ function caption(frame) {
   return parts.join(" · ");
 }
 
-export function shotsView({ frames, panoramas }) {
+export function shotsView({ frames, panoramas, base = SHOTS }) {
   let current = frames.length - 1;
+  // Published frames sit under shots/; demo mode serves its own from elsewhere.
+  const src = (path) => (/^(?:data:|https?:)/.test(path) ? path : `${base}/${path}`);
 
   const image = el("img", { class: "shot-image", alt: "", loading: "lazy" });
   const text = el("p", { class: "shot-caption" });
