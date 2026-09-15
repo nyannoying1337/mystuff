@@ -8,6 +8,7 @@
     python setup.py worker-config   write worker/wrangler.generated.toml (used by CI)
     python setup.py autostart       start the agent when you log in
     python setup.py restart         restart the agent after pulling changes
+    python setup.py demo-assets     fill site/demo/ from your frame archive, for ?demo
     python setup.py server          optional server tool: keys, and the server mod's config file
 
 Secrets are generated here and handed straight to wrangler (and to GitHub if
@@ -127,6 +128,12 @@ def set_config_value(section: str, key: str, value: str) -> None:
 
 def placeholder(value: str | None) -> bool:
     return not value or "change-me" in value or "your-" in value or "example" in value
+
+
+def configured(config: dict) -> bool:
+    """Has setup finished here before? Then its secrets are live and replacing one costs something."""
+    worker = config.get("worker", {})
+    return not placeholder(worker.get("url")) and not placeholder(worker.get("token"))
 
 
 # ---------------------------------------------------------------- GitHub
@@ -331,8 +338,22 @@ def build_demo_assets() -> None:
     try:
         from PIL import Image
     except ImportError:
-        say("Pillow isn't installed. Run this with the agent's Python:")
-        say(f"  {AGENT / '.venv'}/bin/python setup.py demo-assets")
+        # Pillow lives in the agent's venv, not necessarily in whatever python you
+        # typed. Re-run there rather than making you work out the path — which is
+        # Scripts\python.exe on Windows and bin/python everywhere else.
+        python = agent_python()
+        # sys.prefix, not the executable path: a venv's python is usually a symlink to
+        # the system one, so comparing resolved paths would say we are already inside
+        # it and skip the re-run. sys.prefix is the venv directory when we really are.
+        inside = Path(sys.prefix).resolve() == (AGENT / ".venv").resolve()
+        if python.is_file() and not inside:
+            say(f"Pillow isn't in this Python; re-running with {python}")
+            arguments = [str(python), __file__, "demo-assets"]
+            if DRY_RUN:
+                arguments.append("--dry-run")
+            raise SystemExit(subprocess.run(arguments, cwd=ROOT).returncode)
+        say("Pillow isn't installed, and agent/.venv can't supply it.")
+        say("Run `python setup.py` and say yes at step 5, which installs the agent's packages.")
         return
 
     config = load_config()
@@ -523,6 +544,19 @@ def guided(args) -> None:
         raise SystemExit("Python 3.11 or newer is needed")
     config = load_config()
     slug = repo_slug()
+    # Decide this before step 1 writes anything: from here on the config looks configured
+    # whether or not it did when you started.
+    returning = configured(config)
+    if returning:
+        say("\nThis is the full setup and it re-runs all seven steps. For one thing on its own:")
+        for command, what in (
+                ("invite", "a new invite link — replaces the one you've shared"),
+                ("token", "a new push token for the agent"),
+                ("deploy", "redeploy the Worker from this machine"),
+                ("restart", "restart the agent so it picks up pulled changes"),
+                ("demo-assets", "fill site/demo/ from your frame archive, for ?demo"),
+                ("server", "keys for the optional server tool")):
+            say(f"  python setup.py {command:<12} {what}")
 
     step("1/7  Your site")
     owner, _, repo = (slug or "your-name/mc-status").partition("/")
@@ -530,8 +564,12 @@ def guided(args) -> None:
     if placeholder(default_site):
         default_site = f"https://{owner.lower()}.github.io/{repo}/"
     site_url = args.site_url or ask("Status page URL (GitHub Pages address, or your own domain)", default_site)
-    site_name = args.site_name or ask("Name shown on the page", owner)
+    # Default to the name already in use. It used to default to the repo owner, so
+    # running setup again and pressing Enter quietly renamed the page.
+    site_name = args.site_name or ask("Name shown on the page",
+                                      config.get("site", {}).get("name") or owner)
     set_config_value("site", "url", site_url)
+    set_config_value("site", "name", site_name)
 
     step("2/7  The Worker")
     api_url = config.get("worker", {}).get("url", "")
@@ -557,7 +595,11 @@ def guided(args) -> None:
         new_token(api_url)
     elif api_url:
         say("The push token in agent/config.toml already works; keeping it (use --rotate to replace it).")
-    invite_needed = api_url and (args.rotate or confirm("Create an invite key and link now?"))
+    # Saying yes here throws away the key every existing link uses. On a first run
+    # there is nothing to lose; on a re-run the safe answer is the default one.
+    invite_needed = api_url and (args.rotate or confirm(
+        "Replace the invite key? Every link you have already shared stops working"
+        if returning else "Create an invite key and link now?", default=not returning))
 
     step("4/7  GitHub")
     if slug:

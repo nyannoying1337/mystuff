@@ -5,6 +5,9 @@
 [site]
 # Where your status page lives. Only used to print invite links.
 url = "https://your-name.github.io/mc-status/"
+# The name shown on the page. setup.py pushes it to the MCS_SITE_NAME repository
+# variable, and remembers it here so running setup again doesn't rename the page.
+name = "My Minecraft"
 
 [worker]
 # Where the Cloudflare Worker runs: https://mc-status.<you>.workers.dev or your own domain.
