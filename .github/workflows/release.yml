@@ -1,8 +1,11 @@
 name: Release mod
 
-# Push a tag like v1.0.4 and the mod jar is built and attached to a GitHub
-# Release, where setup.py (and anyone else) can download it. Workflow artifacts
-# expire and need a GitHub login; release assets don't.
+# Builds the mod jar and attaches it to a GitHub Release, where setup.py (and
+# anyone else) can download it. Workflow artifacts expire and need a GitHub login;
+# release assets don't.
+#
+# Either push a tag like v1.0.4, or use Run workflow and it tags the version in
+# mod/gradle.properties for you.
 
 on:
   push:
@@ -26,13 +29,19 @@ jobs:
           java-version: '25'
           distribution: 'microsoft'
       - run: chmod +x ./gradlew && ./gradlew build
+      - id: version
+        run: echo "value=$(sed -n 's/^version=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
       - name: Check the tag matches the mod version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          version=$(sed -n 's/^version=//p' gradle.properties)
-          [ "v$version" = "${GITHUB_REF_NAME}" ] || { echo "::error::tag ${GITHUB_REF_NAME} but gradle.properties says $version"; exit 1; }
+          [ "v${{ steps.version.outputs.value }}" = "${GITHUB_REF_NAME}" ] \
+            || { echo "::error::tag ${GITHUB_REF_NAME} but gradle.properties says ${{ steps.version.outputs.value }}"; exit 1; }
+      # tag_name comes from gradle.properties rather than the ref, so Run workflow
+      # creates the tag it releases. Without it the action has nothing to attach to
+      # off a branch, and the run fails after a successful build.
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.value }}
           files: mod/build/libs/mc-status-*.jar
           fail_on_unmatched_files: true
           generate_release_notes: true

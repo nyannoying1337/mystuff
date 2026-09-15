@@ -40,7 +40,9 @@ had in them. You want your own, not someone else's; the tools below fill them in
 
 ### 2. Build the mod once
 
-In your fork on GitHub: **Actions → Release mod → Run workflow**. This attaches the jar to a release, where the wizard can download it.
+In your fork on GitHub: **Actions → Release mod → Run workflow**. It builds the jar,
+tags the version in `mod/gradle.properties`, and attaches the jar to a release where the
+wizard can download it. Pushing a tag like `v1.4.0` does the same thing.
 
 For a proper versioned release, push a tag matching `version` in `mod/gradle.properties`:
 
@@ -160,6 +162,7 @@ Take the jar from your fork's Releases, or build it with `cd mod && ./gradlew bu
 
 | Symptom | Cause and fix |
 | --- | --- |
+| The mod jar isn't on your Releases page | Syncing a fork doesn't publish one, and **Build mod** only makes an expiring workflow artifact. Publish with **Actions → Release mod → Run workflow**, or push a tag matching `version=` in `mod/gradle.properties`. |
 | Deploy site fails with "Set the MCS_API_URL repository variable" | Add the repository variable (step 4). It must be a *repository* variable, not an environment variable. |
 | Deploy site fails in seconds having run **no steps**, after a push to `map`, `shots` or `demo` | That branch isn't in the github-pages environment's Deployment branches, so the deployment is refused before the job starts. Add it (step 5) and re-run; nothing needs pushing again. |
 | The page says "Nothing reported yet" | The agent hasn't pushed. Run `python agent/agent.py --once` and read the error. |
