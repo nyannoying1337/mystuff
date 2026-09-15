@@ -16,6 +16,9 @@ export const isDemo = params.has("demo");
 export const isLoggedOutDemo = params.get("demo") === "offline";
 
 const DEMO = "demo";  // injected at deploy from the `demo` branch; absent on a fork
+// Kept in step with mod/gradle.properties by hand: the fixture is what the page is
+// meant to look like, so a stale version here quietly advertises an old jar.
+const MOD_VERSION = "1.4.0";
 
 // Whether that injection happened. The imagery is the maintainer's own world, so it
 // is deliberately not in the repo — a fork has none, and drawing eight broken images
@@ -61,7 +64,7 @@ export function demoData(have = { frames: true, panorama: true }) {
       online: !loggedOut, name: "nyannoying", mode: "singleplayer",
       health: 18, foodlevel: 17, xplevel: 34, xpp: 0.42,
       dimension: "minecraft:overworld", position: [128.4, 71, -338.9], rotation: [117.5, 8.2],
-      mod_version: "1.3.0",
+      mod_version: MOD_VERSION,
       game: {
         fps: 142, mspt: 4.2, tps: 20, mem_used_mb: 1288, mem_max_mb: 4096,
         entities: 1843, chunks: 729, render_distance: 16,
@@ -102,7 +105,7 @@ export function demoData(have = { frames: true, panorama: true }) {
         { id: "iris", name: "Iris Shaders", version: "1.8.8" },
         { id: "create", name: "Create", version: "6.0.4" },
         { id: "byg", name: "Oh The Biomes You'll Go", version: "3.0.1" },
-        { id: "mc-status", name: "mc-status", version: "1.3.0" },
+        { id: "mc-status", name: "mc-status", version: MOD_VERSION },
       ],
       stats: {
         play_time: 20 * 3600 * 20, deaths: 7, time_since_death: 4 * 3600 * 20,
