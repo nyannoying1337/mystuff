@@ -91,13 +91,14 @@ Push to `main`, or re-run **Actions → Deploy site**. Then open the invite link
 
 | Command | What it does |
 | --- | --- |
-| `python setup.py` | The guided setup again; keeps what already works |
+| `python setup.py` | The guided setup again. It keeps your invite key and page name unless you say otherwise, but it does re-run all seven steps — for one job, use a command below |
 | `python setup.py invite` | New invite link; everyone on the old one is disconnected |
 | `python setup.py token` | New push token for the agent |
 | `python setup.py deploy` | Deploy Worker changes from your PC |
 | `python setup.py server` | Keys and config file for the [server tool](server-tool.md) |
 | `python setup.py autostart` | Reinstall the agent's autostart |
 | `python setup.py restart` | Restart the agent so it picks up pulled changes |
+| `python setup.py demo-assets` | Fill `site/demo/` from your frame archive, so `?demo` shows your own world |
 | `python setup.py worker-config` | Only write `worker/wrangler.generated.toml` |
 | `python agent/agent.py --dry-run` | Print exactly what would be published, and which curses would fire |
 | `python agent/agent.py --once` | Collect and push once |
