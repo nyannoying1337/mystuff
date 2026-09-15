@@ -6,6 +6,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Loading by file path will happily reuse a stale .pyc from an earlier edit,
+# which makes a fixed module look broken. Don't leave one behind.
+sys.dont_write_bytecode = True
+
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("render", HERE.parent / "map" / "render.py")
 render = importlib.util.module_from_spec(spec)

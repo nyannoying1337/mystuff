@@ -9,24 +9,30 @@
 //
 // Nothing here is real. It never touches the network.
 
-export const isDemo = new URLSearchParams(location.search).has("demo");
+const params = new URLSearchParams(location.search);
+export const isDemo = params.has("demo");
+// The hero frame and the panorama are mutually exclusive on the real page — the
+// panorama only appears once you've logged out. ?demo=offline shows that half.
+export const isLoggedOutDemo = params.get("demo") === "offline";
+
+const DEMO = "demo";  // committed alongside the page, unlike the generated assets
 
 const ago = (minutes) => Date.now() - minutes * 60000;
-
-// A small flat-coloured JPEG stands in for a frame, so the scrubber has
-// something to show without shipping screenshots in the repo.
-const swatch = (hue) =>
-  `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">` +
-    `<rect width="320" height="180" fill="hsl(${hue} 30% 32%)"/>` +
-    `<rect x="40" y="96" width="150" height="70" fill="hsl(${hue} 30% 22%)"/>` +
-    `<circle cx="250" cy="48" r="26" fill="hsl(48 60% 80%)"/></svg>`)}`;
 
 const item = (id, count, slot, extra = {}) => ({ id: `minecraft:${id}`, count, slot, ...extra });
 
 export function demoData() {
+  const loggedOut = isLoggedOutDemo;
   return {
     generated_at: Date.now(),
+    screenshot_at: ago(2),
+    demo_shot: `${DEMO}/frame-7.webp`,
+    demo_panorama: `${DEMO}/panorama.webp`,
+    ...(loggedOut ? {
+      panorama_at: ago(9),
+      last_seen: { mode: "singleplayer", at: ago(9), dimension: "minecraft:overworld",
+                   position: [128.4, 71, -338.9] },
+    } : {}),
     system: {
       cpu: "13th Gen Intel Core i5-13600K", cpu_cores: 20, cpu_percent: 9,
       gpu: "Intel Arc B580 Graphics", gpu_percent: 67,
@@ -35,7 +41,7 @@ export function demoData() {
       os: "Windows 11", uptime_seconds: 20880, cpu_temp: 54, gpu_temp: 71,
     },
     player: {
-      online: true, name: "nyannoying", mode: "singleplayer",
+      online: !loggedOut, name: "nyannoying", mode: "singleplayer",
       health: 18, foodlevel: 17, xplevel: 34, xpp: 0.42,
       dimension: "minecraft:overworld", position: [128.4, 71, -338.9], rotation: [117.5, 8.2],
       mod_version: "1.3.0",
@@ -134,13 +140,17 @@ export function demoData() {
   };
 }
 
+const today = () => new Date().toLocaleDateString("en-CA");  // the YYYY-MM-DD archive.py uses
+
 export function demoShots() {
+  const day = today();
   const frames = [0, 1, 2, 3, 4, 5, 6, 7].map((index) => ({
     at: ago((8 - index) * 45),
-    file: swatch(90 + index * 22),
-    thumb: swatch(90 + index * 22),
+    day,
+    file: `frame-${index}.webp`,
+    thumb: `frame-${index}.t.webp`,
     dimension: index === 3 || index === 4 ? "minecraft:the_nether" : "minecraft:overworld",
     position: [128 + index * 40, 71, -338 - index * 17],
   }));
-  return { frames, panoramas: {} };
+  return { frames, panoramas: { [day]: "panorama.webp" }, base: DEMO };
 }

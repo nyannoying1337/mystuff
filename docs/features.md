@@ -178,6 +178,17 @@ guessing at which of three things is behind: the mod jar, the agent's checkout,
 or the deploy. If a card shows up under `?demo` and not on your real page, the
 page is fine and something upstream isn't sending it.
 
+**Two variants,** because the hero frame and the panorama never appear together:
+
+| URL | Shows |
+| --- | --- |
+| `?demo` | In game: the latest frame as the hero, live vitals, the game panel |
+| `?demo=offline` | Logged out: the draggable 360° panorama and a "last seen" note |
+
+The frames, thumbnails and panorama behind both live in `site/demo/` and are
+committed, so a fresh clone shows the same thing this page does — nothing is
+generated at deploy time and nothing is fetched.
+
 ## Play time
 
 <img src="images/playtime.webp" alt="Play time per day" width="480">

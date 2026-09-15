@@ -65,6 +65,8 @@ HUD_SPRITES = {
 }
 INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
+# Level.getShade(): flat per direction, not per screen position.
+SHADE = {"up": 1.0, "down": 0.5, "north": 0.8, "south": 0.8, "west": 0.6, "east": 0.6}
 
 
 # ---------------------------------------------------------------- jar access
@@ -266,7 +268,7 @@ FACE_CORNERS = {  # top-left, top-right, bottom-right, bottom-left, as UVs lay o
 }
 DEFAULT_UV = {
     "up": lambda f, t: [f[0], f[2], t[0], t[2]],
-    "down": lambda f, t: [f[0], f[2], t[0], t[2]],
+    "down": lambda f, t: [f[0], 16 - t[2], t[0], 16 - f[2]],
     "north": lambda f, t: [16 - t[0], 16 - t[1], 16 - f[0], 16 - f[1]],
     "south": lambda f, t: [f[0], 16 - t[1], t[0], 16 - f[1]],
     "west": lambda f, t: [f[2], 16 - t[1], t[2], 16 - f[1]],
@@ -331,17 +333,7 @@ def render_block(assets: Assets, model: dict, tints: list) -> Image.Image | None
         turns = int(face.get("rotation", 0)) // 90 % 4
         uv = uv[turns:] + uv[:turns]
 
-        brightness = 1.0
-        if shade:
-            normal_y = {"up": 1, "down": -1}.get(name, 0)
-            if normal_y > 0:
-                brightness = 1.0
-            elif normal_y < 0:
-                brightness = 0.5
-            else:
-                # left-facing sides get more light than right-facing ones, like the GUI lighting
-                mid_x = sum(p[0] for p in screen) / 4
-                brightness = 0.8 if mid_x < ICON / 2 else 0.6
+        brightness = SHADE[name] if shade else 1.0
         color = (255, 255, 255)
         if "tintindex" in face and face["tintindex"] < len(tints):
             color = tint_color(assets, tints[face["tintindex"]]) or color
@@ -462,7 +454,9 @@ def render_item(assets: Assets, item: str) -> Image.Image | None:
         rebuilt = special_model(assets, model, picked[2])
         if rebuilt:
             return render_block(assets, rebuilt, [])
-        return None  # banners, shields, pots…: the page shows its fallback swatch
+        # Nothing rebuilds banners, beds, signs, shields… but their base model is a
+        # normal flat item, so fall through rather than giving up and leaving the
+        # page to draw a coloured swatch.
     if any(parent in GENERATED for parent in model["parents"]) or strip(ref) in GENERATED:
         return render_flat(assets, model, tints)
     if model["elements"]:

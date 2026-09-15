@@ -76,6 +76,7 @@ function glint(gui, url, x, y) {
   const node = gui.add(el("div", { class: "glint" }), x, y, 16, 16);
   node.style.maskImage = `url("${url}")`;
   node.style.webkitMaskImage = `url("${url}")`;
+  return node;  // the caller drops it if the icon it masks never loads
 }
 
 export function textWidth(text) {
@@ -117,21 +118,22 @@ function colorFor(id) {
 // One item at slot position (x, y), drawn like the game: icon, glint, count,
 // durability bar, plus an invisible button that shows the tooltip.
 function drawItem(gui, item, x, y, key) {
-  const url = item.id.startsWith("minecraft:") ? itemUrl(item.id) : null;
+  // itemUrl already sends a modded id to the barrier placeholder, so the same item
+  // can't show a barrier in a stats tile and a colour swatch here.
+  const url = itemUrl(item.id);
   const swatch = () => {
     const node = el("div", { class: "swatch" });
     node.style.background = colorFor(item.id);
     return gui.add(node, x + 2, y + 2, 12, 12);
   };
 
-  if (url) {
-    const icon = gui.add(el("img", { src: url, alt: "" }), x, y, 16, 16);
-    // banners, shields, modded items…: no rendered icon, show a colour swatch
-    icon.addEventListener("error", () => icon.replaceWith(swatch()), { once: true });
-    if (item.enchanted) glint(gui, url, x, y);
-  } else {
-    swatch();
-  }
+  const icon = gui.add(el("img", { src: url, alt: "" }), x, y, 16, 16);
+  // an item with no rendered icon (a bed, a banner…) falls back to a colour swatch
+  const sheen = item.enchanted ? glint(gui, url, x, y) : null;
+  icon.addEventListener("error", () => {
+    icon.replaceWith(swatch());
+    sheen?.remove();  // or it hangs over the swatch with nothing beneath it
+  }, { once: true });
 
   if (item.count > 1) {
     const text = String(item.count);
@@ -309,8 +311,9 @@ export function toastNode(adv) {
   }
   sprite(gui, "toast_advancement", 0, 0, 160, 32);
   const url = itemUrl(adv.icon);
-  gui.add(el("img", { src: url, alt: "" }), 8, 8, 16, 16);
-  if (adv.glint) glint(gui, url, 8, 8);
+  const icon = gui.add(el("img", { src: url, alt: "" }), 8, 8, 16, 16);
+  const sheen = adv.glint ? glint(gui, url, 8, 8) : null;
+  icon.addEventListener("error", () => { icon.remove(); sheen?.remove(); }, { once: true });
   drawText(gui, heading, 30, 7, color);
   drawText(gui, fitText(adv.title || "", 125), 30, 18, "white");
   return gui.node;
