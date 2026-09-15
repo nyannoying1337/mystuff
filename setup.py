@@ -678,7 +678,11 @@ def guided(args) -> None:
             say(f"  {name} = {value or '(the Worker URL, once deployed)'}")
     say(f"Then, in {pages}:")
     say("  Pages -> Source: GitHub Actions")
-    say("  Environments -> github-pages -> Deployment branches: add `map` (for logout maps)")
+    # Every branch that publishes content into the site deploys from itself, and the
+    # environment refuses a deployment from a branch that isn't on this list. Leaving
+    # one off fails the run before a single step, which reads like a broken workflow.
+    say("  Environments -> github-pages -> Deployment branches: add `map`, `shots` and `demo`")
+    say("    (logout maps, the frame archive, and the ?demo imagery)")
     say("Optional, to deploy the Worker from GitHub: add the secrets CLOUDFLARE_API_TOKEN")
     say("(template \"Edit Cloudflare Workers\") and CLOUDFLARE_ACCOUNT_ID.")
 

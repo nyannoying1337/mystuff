@@ -76,7 +76,10 @@ The Deploy site workflow writes them into `site/js/config.js`, and stops with an
 ### 5. Turn on Pages
 
 1. **Settings → Pages → Source:** GitHub Actions.
-2. **Settings → Environments → github-pages → Deployment branches:** add `map`, so logout maps can deploy.
+2. **Settings → Environments → github-pages → Deployment branches:** add `map`, `shots`
+   and `demo` — logout maps, the frame archive and the `?demo` imagery each publish to a
+   branch of their own and deploy from it. A branch that isn't listed here fails the run
+   before its first step, which looks like a broken workflow rather than a missing setting.
 
 ### 6. Push and open your invite link
 
@@ -153,6 +156,7 @@ Take the jar from your fork's Releases, or build it with `cd mod && ./gradlew bu
 | Symptom | Cause and fix |
 | --- | --- |
 | Deploy site fails with "Set the MCS_API_URL repository variable" | Add the repository variable (step 4). It must be a *repository* variable, not an environment variable. |
+| Deploy site fails in seconds having run **no steps**, after a push to `map`, `shots` or `demo` | That branch isn't in the github-pages environment's Deployment branches, so the deployment is refused before the job starts. Add it (step 5) and re-run; nothing needs pushing again. |
 | The page says "Nothing reported yet" | The agent hasn't pushed. Run `python agent/agent.py --once` and read the error. |
 | The agent's pushes are refused (HTTP 401 in `agent/agent.log`) | The push token in `agent/config.toml` doesn't match the Worker's. Run `python setup.py token`. |
 | "That key didn't work" | The invite key was replaced with `setup.py invite`. Use the new link. |
