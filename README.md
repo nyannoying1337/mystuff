@@ -92,8 +92,8 @@ Every card also works on a phone. **[Full tour of the page →](docs/features.md
 About 15 minutes, all on free plans. You need a GitHub account, a Cloudflare account, Python 3.11+, Node.js 20+, and Minecraft Java with Fabric.
 
 ```bash
-# 1. fork this repo on GitHub, then:
-git clone https://github.com/<you>/<your-fork>.git
+# 1. fork this repo on GitHub, then clone just main:
+git clone --single-branch https://github.com/<you>/<your-fork>.git
 cd <your-fork>
 
 # 2. the wizard deploys the Worker, creates the keys, installs the agent and prints your invite link
