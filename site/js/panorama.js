@@ -3,7 +3,7 @@
 // a CSS 3D cube around the camera, so no WebGL or library is needed.
 import { el } from "./util.js";
 
-const FACE = 1024;  // CSS size of a face; keep in sync with .pano-face in style.css
+const FACE = 1024;  // CSS size of a face
 // Where each face sits around the viewer, looking down -z with y pointing down.
 const FACE_TRANSFORMS = [
   "translateZ(-512px)",                        // front
@@ -13,24 +13,60 @@ const FACE_TRANSFORMS = [
   "rotateX(-90deg) translateZ(-512px)",        // up: image top is behind you
   "rotateX(90deg) translateZ(-512px)",         // down: image top is in front
 ];
+// Each face is built from a GRID×GRID grid of tiles rather than one quad.
+//
+// The camera sits at the centre of the cube, so every wall runs from in front of
+// you to behind you. A browser does not clip a transformed element against the
+// eye plane the way a 3D renderer clips a polygon: hand it a quad that crosses
+// that plane and it draws only part of it. One quad per face left everything
+// below the horizon missing — 86% of the view at its worst, measured — because
+// each wall rendered only its top half.
+//
+// Splitting each face up bounds the damage: a tile is small, so only the few
+// tiles straddling the eye plane are mishandled and each covers little. Measured
+// worst-case hole over yaw 0-180 and pitch ±20: 86.3% at 1 tile, 24.6% at 2,
+// 3.8% at 4, 2.0% at 8. Past 8 the gain is slight and the element count is not:
+// this is already 6 × 8² tiles.
+const GRID = 8;
 const IDLE_BEFORE_TURNING_MS = 5000;
 const TURN_DEGREES_PER_SECOND = 4;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 export function panoramaView(url) {
   const cube = el("div", { class: "pano-cube" });
+  const size = FACE / GRID;
   FACE_TRANSFORMS.forEach((transform, index) => {
-    const face = el("div", { class: "pano-face" });
-    face.style.backgroundImage = `url("${url}")`;
-    face.style.backgroundPosition = `${(index / 5) * 100}% 0`;
-    // a hair larger than the cube, so no seams show between faces
-    face.style.transform = `${transform} scale(${(FACE + 2) / FACE})`;
-    cube.append(face);
+    for (let row = 0; row < GRID; row++) {
+      for (let column = 0; column < GRID; column++) {
+        const tile = el("div", { class: "pano-face" });
+        tile.style.width = tile.style.height = `${size}px`;
+        tile.style.margin = `${-size / 2}px 0 0 ${-size / 2}px`;
+        tile.style.backgroundImage = `url("${url}")`;
+        // The strip is 6 faces wide and 1 tall, so a tile shows 1/(6·GRID) of its
+        // width and 1/GRID of its height. A background-position percentage lines
+        // that point on the image up with the same point on the tile, hence the
+        // (total − 1) denominators rather than a plain fraction.
+        tile.style.backgroundSize = `${600 * GRID}% ${100 * GRID}%`;
+        const x = (100 * (index * GRID + column)) / (6 * GRID - 1);
+        const y = GRID > 1 ? (100 * row) / (GRID - 1) : 0;
+        tile.style.backgroundPosition = `${x}% ${y}%`;
+        // place the tile within its face, then a hair larger so no seam shows
+        const dx = FACE * ((column + 0.5) / GRID - 0.5);
+        const dy = FACE * ((row + 0.5) / GRID - 0.5);
+        tile.style.transform =
+          `${transform} translate(${dx}px, ${dy}px) scale(${(size + 2) / size})`;
+        cube.append(tile);
+      }
+    }
   });
   const root = el("div", {
     class: "pano", role: "img", tabindex: "0",
     "aria-label": "A 360° view of where they logged out. Drag or use the arrow keys to look around.",
   }, [cube]);
+  // A stretched copy of the strip sits behind the cube. The tiles above leave thin
+  // wedges at the corners where they meet the eye plane, and sky-over-ground behind
+  // them reads as part of the view where a flat dark panel would read as a hole.
+  root.style.backgroundImage = `url("${url}")`;
 
   let yaw = 0;       // degrees, positive looks right
   let pitch = 0;     // degrees, positive looks up

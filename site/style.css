@@ -328,13 +328,14 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 
 
 /* ---- the 360° view of where you logged out (js/panorama.js) ---- */
-.pano { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; background: var(--deep); }
+.pano {
+  position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none;
+  background: var(--deep) center / cover no-repeat;  /* the strip, set in panorama.js */
+}
 .pano:active { cursor: grabbing; }
 .pano-cube { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
-.pano-face {
-  position: absolute; width: 1024px; height: 1024px; margin: -512px 0 0 -512px;
-  background-size: 600% 100%; background-repeat: no-repeat; backface-visibility: hidden;
-}
+/* size, margin, background-size and -position are set per tile in panorama.js */
+.pano-face { position: absolute; background-repeat: no-repeat; backface-visibility: hidden; }
 .scene[data-panorama] .vitals-dock { filter: grayscale(.8) brightness(.85); }
 .scene-hint {
   position: absolute; top: 14px; right: 14px; z-index: 1; pointer-events: none;
