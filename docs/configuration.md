@@ -103,6 +103,7 @@ python map/render.py --world "path/to/saves/My World" --center 120 -40 --accept-
 | `--radius-chunks` | with `--center`: chunks in each direction (default 8) |
 | `--dimension` | with `--center`: which dimension (default overworld) |
 | `--force` | re-render everything, not just changed chunks |
+| `--fresh` | drop the rendered tiles and the render cache first, as if this world had never been rendered |
 | `--publish` | push the result to the `map` branch |
 | `--publish-only` | skip rendering; push the last render with any changed map scripts |
 | `--java`, `--threads`, `--remote`, `--live-url` | Java executable, render threads, git remote, Worker base URL for live markers |

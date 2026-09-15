@@ -433,3 +433,12 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 /* statistics inside a column (player pages): no extra gap, two tiles per row */
 .col .stats-panel { margin-top: 0; }
 .col .stats-panel .tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+
+/* demo mode (?demo): made-up data, so say so without covering anything */
+.demo-badge {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+  padding: 6px 14px; border-radius: 999px; pointer-events: none;
+  background: rgba(20, 20, 22, 0.92); border: 1px solid var(--divider);
+  color: var(--text-2); font-size: 12px; font-weight: 700; white-space: nowrap;
+}

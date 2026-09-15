@@ -40,6 +40,8 @@ WEB_STYLES = ("ore-ui.css",)
 WORK = HERE / "work"
 CONFIG = WORK / "config"
 WEBROOT = WORK / "web"
+# Which world the render cache and the webroot currently hold.
+WORLD_MARKER = WORK / "rendered-world.json"
 
 # Map ids double as URL segments; the Worker uses the same table to decide
 # which map your marker shows up on.
@@ -48,6 +50,36 @@ MAPS = {
     "nether": ("minecraft:the_nether", "Nether", "#290000", "#150000", 0.6, -10000, True),
     "end": ("minecraft:the_end", "The End", "#080010", "#080010", 0.6, -10000, False),
 }
+
+
+def start_fresh(reason: str) -> None:
+    """Throw away the rendered tiles and BlueMap's own render cache.
+
+    Map ids come from the dimension, not the world, so a second world renders
+    into the same `overworld` map as the first: its tiles land on top of the old
+    ones, and BlueMap consults a cache describing chunks that no longer exist.
+    Whatever the new world doesn't cover stays visible from the old one.
+    """
+    print(f"starting a fresh render: {reason}")
+    shutil.rmtree(WEBROOT / "maps", ignore_errors=True)
+    shutil.rmtree(WORK / "data", ignore_errors=True)
+
+
+def world_changed(world: Path) -> bool:
+    """True when the last render was of a different world."""
+    try:
+        previous = json.loads(WORLD_MARKER.read_text(encoding="utf-8")).get("world")
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return False
+    return bool(previous) and previous != str(world)
+
+
+def remember_world(world: Path) -> None:
+    try:
+        WORK.mkdir(parents=True, exist_ok=True)
+        WORLD_MARKER.write_text(json.dumps({"world": str(world)}), encoding="utf-8")
+    except OSError as err:
+        print(f"could not record which world was rendered: {err}")
 
 
 def q(value: str) -> str:
@@ -277,6 +309,8 @@ def main() -> int:
     parser.add_argument("--threads", type=int, default=-1,
                         help="render threads; negative means all cores minus that many (default -1)")
     parser.add_argument("--force", action="store_true", help="re-render everything, not just changed chunks")
+    parser.add_argument("--fresh", action="store_true",
+                        help="drop the rendered tiles and the render cache first, as if this world had never been rendered")
     parser.add_argument("--center", type=int, nargs=2, metavar=("X", "Z"),
                         help="only render around this block position, replacing the previous render")
     parser.add_argument("--radius-chunks", type=int, default=8, help="with --center: chunks in each direction (default 8)")
@@ -304,16 +338,22 @@ def main() -> int:
             raise SystemExit("java not found — BlueMap needs Java 25 or newer (pass --java)")
 
         jar = fetch_bluemap()
+        world = args.world.resolve()
+        if args.fresh:
+            start_fresh("--fresh")
+        elif world_changed(world):
+            start_fresh("this is a different world from the last render")
         if args.center:
             map_id, spec = map_for_dimension(args.dimension)
             maps = {map_id: spec}
             area = area_mask(tuple(args.center), max(1, args.radius_chunks))
             # a fresh webroot each time: the published map is only ever this one area
             shutil.rmtree(WEBROOT / "maps", ignore_errors=True)
-            write_config(args.world.resolve(), live_root, args.accept_mojang_eula, args.threads,
+            write_config(world, live_root, args.accept_mojang_eula, args.threads,
                          maps, area, tuple(args.center))
         else:
-            write_config(args.world.resolve(), live_root, args.accept_mojang_eula, args.threads)
+            write_config(world, live_root, args.accept_mojang_eula, args.threads)
+        remember_world(world)
 
         command = [java, "-jar", str(jar), "-c", str(CONFIG), "-r", "-g", "-s"]
         if args.force:

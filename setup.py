@@ -7,6 +7,7 @@
     python setup.py deploy          deploy the Worker from this machine
     python setup.py worker-config   write worker/wrangler.generated.toml (used by CI)
     python setup.py autostart       start the agent when you log in
+    python setup.py restart         restart the agent after pulling changes
     python setup.py server          optional server tool: keys, and the server mod's config file
 
 Secrets are generated here and handed straight to wrangler (and to GitHub if
@@ -297,6 +298,41 @@ WantedBy=default.target
     say(f"Installed {unit}")
 
 
+WINDOWS_TASK = "mc-status agent"
+LAUNCHD_LABEL = "io.github.mc-status.agent"
+SYSTEMD_UNIT = "mc-status-agent.service"
+
+
+def restart_agent() -> None:
+    """Restart the agent, however this machine starts it.
+
+    A running agent keeps executing the code it started with, so pulling changes
+    does nothing until it is restarted — which is its own quiet class of bug: the
+    page looks broken while every file on disk is correct.
+    """
+    try:
+        if sys.platform == "win32":
+            run(["schtasks", "/End", "/TN", WINDOWS_TASK], capture=True)  # not running is fine
+            done = run(["schtasks", "/Run", "/TN", WINDOWS_TASK], capture=True)
+        elif sys.platform == "darwin":
+            done = run(["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/{LAUNCHD_LABEL}"], capture=True)
+        else:
+            done = run(["systemctl", "--user", "restart", SYSTEMD_UNIT], capture=True)
+    except FileNotFoundError as err:
+        say(f"Couldn't restart the agent: {err} isn't on PATH. Stop and start it by hand.")
+        return
+    if DRY_RUN:
+        return
+    if done.returncode == 0:
+        say("Restarted the agent. It's now running the code that's on disk.")
+        say(f"Check {AGENT / 'agent.log'} if a card still looks wrong — an out-of-date mod jar is logged there.")
+    else:
+        say("Couldn't restart the agent — it may not be set to start automatically.")
+        say("Run `python setup.py autostart` to set that up, or start agent.py by hand.")
+        if (done.stderr or done.stdout or "").strip():
+            say((done.stderr or done.stdout).strip().splitlines()[0])
+
+
 def default_mods_dir() -> Path:
     sys.path.insert(0, str(AGENT))
     from common import default_game_dir, expand  # the agent's own idea of where the game is
@@ -477,7 +513,7 @@ def main() -> int:
     global DRY_RUN, ASSUME_YES
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", nargs="?", default="guided",
-                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart", "server"])
+                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart", "restart", "server"])
     parser.add_argument("--site-url")
     parser.add_argument("--site-name")
     parser.add_argument("--server-name", help="for `server`: the name shown on the admin page")
@@ -502,6 +538,8 @@ def main() -> int:
         new_invite(args.site_url or load_config().get("site", {}).get("url", ""))
     elif args.command == "autostart":
         install_autostart()
+    elif args.command == "restart":
+        restart_agent()
     elif args.command == "server":
         new_server(api_url, args.site_url or load_config().get("site", {}).get("url", ""), args.server_name)
     return 0

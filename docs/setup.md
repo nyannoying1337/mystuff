@@ -97,6 +97,7 @@ Push to `main`, or re-run **Actions → Deploy site**. Then open the invite link
 | `python setup.py deploy` | Deploy Worker changes from your PC |
 | `python setup.py server` | Keys and config file for the [server tool](server-tool.md) |
 | `python setup.py autostart` | Reinstall the agent's autostart |
+| `python setup.py restart` | Restart the agent so it picks up pulled changes |
 | `python setup.py worker-config` | Only write `worker/wrangler.generated.toml` |
 | `python agent/agent.py --dry-run` | Print exactly what would be published, and which curses would fire |
 | `python agent/agent.py --once` | Collect and push once |
@@ -141,7 +142,9 @@ Take the jar from your fork's Releases, or build it with `cd mod && ./gradlew bu
   old one while the game is closed.
   The agent logs a warning when the jar it can see is older than the checkout, so
   check `agent/agent.log` if a card is missing rows you expected.
-- **The agent:** restart it (log out and in, or re-run `python setup.py autostart`).
+- **The agent:** `python setup.py restart`. A running agent keeps executing the code it
+  started with, so pulling changes does nothing until it's restarted — which looks exactly
+  like a broken page while every file on disk is correct.
 - **A new Minecraft version:** see [Development](development.md#updating-to-a-new-minecraft-version).
 
 ## Troubleshooting

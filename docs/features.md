@@ -13,6 +13,7 @@ A tour of the status page, card by card. Screenshots show made-up demo data.
 - [Mods](#mods)
 - [Today](#today)
 - [Looking back](#looking-back)
+- [Demo mode](#demo-mode)
 - [Play time](#play-time)
 - [After you log out](#after-you-log-out)
 - [The 3D map](#the-3d-map)
@@ -164,6 +165,18 @@ undo, which is why it keeps longer than the page shows.
 
 Frames from servers are off unless you turn on `share_server_world` in both the
 mod and the agent; see [privacy](privacy.md).
+
+## Demo mode
+
+Open the page with **`?demo`** and every card renders from a fixture instead of
+the live connection — no agent, no Worker, no mod, no game. It makes no network
+requests at all, and says so on screen.
+
+It's there to split one question into two. When a card is missing it's either the
+page's fault or the data never arrived, and telling those apart otherwise means
+guessing at which of three things is behind: the mod jar, the agent's checkout,
+or the deploy. If a card shows up under `?demo` and not on your real page, the
+page is fine and something upstream isn't sending it.
 
 ## Play time
 

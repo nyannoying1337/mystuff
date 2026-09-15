@@ -13,6 +13,7 @@ import { fitPixels, inventoryNode, reattachTooltip, toastNode, tooltipIsPinned, 
 import * as live from "./live.js";
 import { panoramaView } from "./panorama.js";
 import { loadShots, shotsView } from "./shots.js";
+import { demoData, demoShots, isDemo } from "./demo.js";
 import { dimensionName, duration, el, timeAgo } from "./util.js";
 
 const DEFAULT_STALE_MS = 90000;           // the Worker sends its own value with each status
@@ -317,7 +318,7 @@ fetch("map/mc-status.json", { cache: "no-store" })
   .catch(() => {});
 
 // The frame archive is published separately and may not exist yet.
-loadShots().then((archive) => {
+if (!isDemo) loadShots().then((archive) => {
   if (!archive) return;
   shots = { ...shotsView(archive), count: archive.frames.length };
   if (lastData) render(lastData);
@@ -328,6 +329,15 @@ setInterval(() => {
   if (lastData && !document.hidden && !tooltipIsPinned()) render(lastData);
 }, 30000);
 
+if (isDemo) {
+  // Everything below this point would otherwise be driven by the Worker. In demo
+  // mode the page is the only moving part, so a card that renders here and not on
+  // the real page means the data never arrived — not that the page is broken.
+  document.body.classList.add("is-demo");
+  document.body.append(el("div", { class: "demo-badge", text: "Demo data — nothing here is real" }));
+  shots = { ...shotsView(demoShots()), count: demoShots().frames.length };
+  assetsReady.then(() => render(demoData()));
+} else {
 live.start({
   async status(data, stale) {
     if (stale) staleMs = stale;
@@ -345,4 +355,5 @@ live.start({
   },
   unreachable() { if (!lastData) showScreen("redstone_torch", "Can't reach the server", "Retrying by itself."); },
 });
+}
 fitPixels();
