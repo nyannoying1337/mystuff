@@ -149,7 +149,10 @@ export function demoShots() {
     day,
     file: `frame-${index}.webp`,
     thumb: `frame-${index}.t.webp`,
-    dimension: index === 3 || index === 4 ? "minecraft:the_nether" : "minecraft:overworld",
+    // Matches the committed captures, which are all Overworld. The caption sits under
+    // the picture, so a dimension that disagrees with it is visible; keep the two in
+    // step if you replace site/demo/ with frames from somewhere else.
+    dimension: "minecraft:overworld",
     position: [128 + index * 40, 71, -338 - index * 17],
   }));
   return { frames, panoramas: { [day]: "panorama.webp" }, base: DEMO };
