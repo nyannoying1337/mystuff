@@ -29,9 +29,14 @@ About 15 minutes, all on free plans.
 Fork this repository on GitHub, then clone your fork onto the PC you play on:
 
 ```bash
-git clone https://github.com/<you>/<your-fork>.git
+git clone --single-branch https://github.com/<you>/<your-fork>.git
 cd <your-fork>
 ```
+
+`--single-branch` takes `main` only. The other branches hold published content
+rather than code — `map` the rendered world, `shots` the frame archive, `demo` the
+`?demo` imagery — and a fork inherits whatever the repository it was forked from
+had in them. You want your own, not someone else's; the tools below fill them in.
 
 ### 2. Build the mod once
 
