@@ -88,36 +88,33 @@ export function worldPanel(world) {
   ], "", world.name || "");
 }
 
-export function gamePanel(game, system = {}, online = false) {
-  const live = online && game ? game : null;
+export function gamePanel(game) {
   const meters = [];
-  if (live && typeof live.fps === "number") {
+  if (typeof game.fps === "number") {
     // 60 is the reference, and more is better, so the heat scale runs backwards
-    meters.push(meter("FPS", String(live.fps), live.fps / 60, null, { invert: true }));
+    meters.push(meter("FPS", String(game.fps), game.fps / 60, null, { invert: true }));
   }
-  if (live && typeof live.mspt === "number") {
+  if (typeof game.mspt === "number") {
     // a tick has 50 ms to finish in; past that the world falls behind
-    meters.push(meter("Tick time", `${live.mspt} ms`, live.mspt / 50,
-      typeof live.tps === "number" ? `${live.tps} TPS` : null));
+    meters.push(meter("Tick time", `${game.mspt} ms`, game.mspt / 50,
+      typeof game.tps === "number" ? `${game.tps} TPS` : null));
   }
-  if (live && live.mem_max_mb) {
+  if (game.mem_max_mb) {
     meters.push(meter("Game memory",
-      `${plainNumber(live.mem_used_mb)} / ${plainNumber(live.mem_max_mb)} MB`,
-      live.mem_used_mb / live.mem_max_mb));
+      `${plainNumber(game.mem_used_mb)} / ${plainNumber(game.mem_max_mb)} MB`,
+      game.mem_used_mb / game.mem_max_mb));
   }
-  const rows = [
-    ["Entities", typeof live?.entities === "number" ? count(live.entities) : null],
-    ["Chunks", typeof live?.chunks === "number" ? count(live.chunks) : null],
-    ["Render distance", live?.render_distance ? `${live.render_distance} chunks` : null],
-    // the machine is the footnote now, not the headline
-    ["CPU", typeof system.cpu_percent === "number" ? `${Math.round(system.cpu_percent)}%` : system.cpu],
-    ["GPU", typeof system.gpu_percent === "number" ? `${Math.round(system.gpu_percent)}%` : system.gpu],
-    ["OS", system.os],
-    ["Up for", system.uptime_seconds ? duration(system.uptime_seconds) : null],
-  ];
-  const list = statRows(rows);
+  // Entity and chunk counts need mod 1.3.0+; an older one simply sends neither,
+  // and statRows drops the empty rows rather than printing blanks.
+  const list = statRows([
+    ["Entities", typeof game.entities === "number" ? count(game.entities) : null],
+    ["Chunks", typeof game.chunks === "number" ? count(game.chunks) : null],
+    ["Render distance", game.render_distance ? `${game.render_distance} chunks` : null],
+  ]);
   if (meters.length) list.classList.add("machine-rows");
-  return panel("The game", [...meters, list]);
+  // An older mod sends none of those three, leaving an empty list that would
+  // still take its margin under the meters.
+  return panel("The game", list.children.length ? [...meters, list] : meters);
 }
 
 // Names and versions come from the mods themselves, so they're arbitrary text —

@@ -74,7 +74,7 @@ The **Build mod** workflow builds every change under `mod/`.
 2. Commit and push.
 3. Tag and push the tag:
    ```bash
-   git tag v1.1.0
+   git tag v1.3.0
    git push --tags
    ```
 

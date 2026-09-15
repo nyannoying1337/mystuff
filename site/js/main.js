@@ -155,7 +155,6 @@ function render(data) {
   forgetButton.hidden = false;
   const age = Date.now() - (data.received_at || data.generated_at || 0);
   const player = data.player || {};
-  const system = data.system || {};
 
   if (age > staleMs && !data.last_seen && !hasInventory(player)) {
     showScreen("clock", "The machine went quiet", `Last heard from it ${Math.round(age / 60000)} min ago. This page updates by itself.`);
@@ -278,8 +277,7 @@ function render(data) {
   mapButton.hidden = !mapInfo;
   setChildren(right, [
     online && !multiplayer && player.world ? section("world", player.world, () => worldPanel(player.world)) : null,
-    (online && player.game) || Object.keys(system).length
-      ? section("game", [system, online && player.game], () => gamePanel(player.game, system, online)) : null,
+    online && player.game ? section("game", player.game, () => gamePanel(player.game)) : null,
     events ? section("events", events, () => eventsPanel(events)) : null,
     shots ? section("shots", shots.count, () => shotsPanel(shots.node, shots.count)) : null,
     playtime ? section("playtime", playtime, () => playtimePanel(playtime)) : null,

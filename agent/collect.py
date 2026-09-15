@@ -17,7 +17,7 @@ from common import PLAYER_NAME, apply_privacy, log, mod_dir, share_server_world,
 PUBLISHED_PLAYER_KEYS = (
     "online", "name", "health", "foodlevel", "xplevel", "xpp",
     "dimension", "position", "rotation", "hotbar", "inventory", "armor", "offhand", "mode",
-    "world", "stats", "advancements", "game", "joined_at", "last_death", "mods",
+    "world", "stats", "advancements", "game", "joined_at", "last_death", "mods", "mod_version",
 )
 # Only known for your own worlds; the mod doesn't write them for servers, and
 # they're dropped here too in case an older or newer mod does.
@@ -68,6 +68,41 @@ def session_mode(raw: dict | None) -> str | None:
     return "singleplayer" if raw.get("mode") == "singleplayer" else "multiplayer"
 
 
+# The mod jar is installed by hand and the repo is updated with git, so the two
+# drift apart silently: an old jar simply stops sending newer fields, and the page
+# hides what it never receives. Say so once per run instead.
+EXPECTED_MOD_VERSION = Path(__file__).resolve().parent.parent / "mod" / "gradle.properties"
+_warned_about_version = False
+
+
+def expected_mod_version() -> str | None:
+    try:
+        for line in EXPECTED_MOD_VERSION.read_text(encoding="utf-8").splitlines():
+            if line.startswith("version="):
+                return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def check_mod_version(raw: dict | None) -> None:
+    global _warned_about_version
+    if _warned_about_version or not raw:
+        return
+    expected = expected_mod_version()
+    running = raw.get("mod_version")
+    if not expected:
+        return
+    if running is None:
+        _warned_about_version = True
+        log.warning("the installed mc-status mod predates %s: the newer fields it doesn't send "
+                    "(entity and chunk counts, the mod list) stay hidden on the page", expected)
+    elif running != expected:
+        _warned_about_version = True
+        log.warning("the installed mc-status mod is %s but this checkout is %s — "
+                    "replace the jar in mods/ with the one from Releases", running, expected)
+
+
 def collect_player_mod(config: dict, raw: dict | None) -> dict:
     """The player as the mod last wrote it, reduced to publishable fields."""
     if not raw:
@@ -81,6 +116,7 @@ def collect_player_mod(config: dict, raw: dict | None) -> dict:
         not isinstance(written_at, (int, float)) or time.time() - written_at / 1000 > MOD_STALE_SECONDS
     ):
         player["online"] = False  # game closed or crashed without saying goodbye
+    check_mod_version(raw)
     player["mode"] = session_mode(raw)
     if player["mode"] == "multiplayer":
         # where you are on someone's server, and that server's world, aren't yours to publish
