@@ -114,6 +114,34 @@ Nothing appears twice, and the first run seeds quietly rather than opening with
 every milestone you passed years ago. Ten days are kept in `agent/events.json`;
 the last day is published. Sessions shorter than a minute are dropped.
 
+## Looking back
+
+A scrubber over the frames of the last few days: drag it, or click a thumbnail,
+and the picture and its caption follow. Clicking the picture opens it full size.
+
+The mod overwrites a single `latest.png` and the Worker keeps one frame, so
+nothing used to remember yesterday. Turning on `[shots] keep` starts an archive
+on your own machine: one frame at most every five minutes, written at two sizes —
+a 320 px thumbnail so the whole strip loads at once, and a 1280 px frame fetched
+only when you open one.
+
+One panorama a day is kept too: the last logout of that day, which is where you
+actually left off.
+
+`[shots] publish` pushes a ten-day window to the repo's `shots` branch, the same
+way `map/render.py` publishes tiles — force-pushed as a single commit, so
+re-publishing never piles image history into the repo. It happens once when you
+log out, in the background, not on every frame: a push to that branch redeploys
+the site.
+
+**Thirty days are kept locally and ten are published, and that difference
+matters.** Replacing the branch is a real delete — a frame that rolls out of the
+published window is in no commit and no history. The local archive is the only
+undo, which is why it keeps longer than the page shows.
+
+Frames from servers are off unless you turn on `share_server_world` in both the
+mod and the agent; see [privacy](privacy.md).
+
 ## Play time
 
 <img src="images/playtime.webp" alt="Play time per day" width="480">

@@ -44,8 +44,9 @@ final class FrameCapture {
 	void onLevelRendered(Minecraft client) {
 		long now = System.currentTimeMillis();
 		if (inFlight || PanoramaCapture.isRendering() || client.level == null || client.player == null) return;
-		// no frames from servers: other people's builds and names aren't ours to publish
-		if (client.getSingleplayerServer() == null) return;
+		// No frames from servers unless you've said so: other people's builds and
+		// nametags are in the shot, and they aren't ours to publish by default.
+		if (client.getSingleplayerServer() == null && !config.shareServerWorld) return;
 		if (!requested && now < nextCaptureAt) return;
 		requested = false;
 		nextCaptureAt = now + config.captureIntervalSeconds * 1000L;

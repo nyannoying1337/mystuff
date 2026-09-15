@@ -187,6 +187,18 @@ dl { margin: 0; }
 .event-text { min-width: 0; overflow-wrap: anywhere; }
 /* the bookends of a session are context, not news */
 .event-session .event-text { color: var(--text-3); }
+
+/* frame archive: one image, a scrubber, and the day's strip under it */
+.shots { display: flex; flex-direction: column; gap: 10px; }
+.shot-image { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; border-radius: 4px; cursor: zoom-in; }
+.shot-caption { margin: 0; color: var(--text-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.shot-slider { width: 100%; margin: 0; accent-color: var(--green); }
+.shot-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.shot-thumb { flex: 0 0 auto; width: 64px; height: 36px; object-fit: cover; border-radius: 3px; opacity: 0.5; cursor: pointer; transition: opacity 0.15s, outline-color 0.15s; outline: 2px solid transparent; }
+.shot-thumb:hover { opacity: 0.85; }
+.shot-thumb.is-current { opacity: 1; outline-color: var(--green); }
+.shot-pano { align-self: flex-start; }
+@media (prefers-reduced-motion: reduce) { .shot-thumb { transition: none; } }
 .row dt { color: var(--text-3); }
 .row dd { margin: 0; text-align: right; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; word-break: break-word; }
 

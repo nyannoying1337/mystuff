@@ -160,6 +160,18 @@ def join_thread(state):
 
 # --- multiplayer: mode published, coordinates stripped, no world path kept
 state = {}
+# --- privacy.share_server_world opts coordinates back in on a server
+shared = dict(config, privacy={"share_server_world": True})
+write_state(mode="multiplayer", world_path=None, position=[999.0, 70.0, -999.0])
+opted = collect.collect_player(shared, collect.read_mod_state(shared))
+assert opted["position"] == [999.0, 70.0, -999.0], opted.get("position")
+# ...but never the server's world or progress, which aren't ours and aren't readable
+for key in ("world", "stats", "advancements"):
+    assert key not in opted, key
+# and hide_coordinates still wins over it
+both = dict(shared, privacy={"share_server_world": True, "hide_coordinates": True})
+assert collect.collect_player(both, collect.read_mod_state(both))["position"] is None
+
 player, raw = session(state, mode="multiplayer", world_path=None, position=[999.0, 70.0, -999.0])
 assert player["mode"] == "multiplayer"
 assert "position" not in player and "rotation" not in player, player

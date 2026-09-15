@@ -317,6 +317,10 @@ export function mapPanel(info, playerName) {
   ], "map-card");
 }
 
+export function shotsPanel(view, count) {
+  return panel("Looking back", [view], "shots-card", `${count} frame${count === 1 ? "" : "s"}`);
+}
+
 const CURSE_UNITS = { cpu_temp: " °C", gpu_temp: " °C", cpu_percent: "%", gpu_percent: "%", mem_percent: "%", uptime_hours: " h" };
 
 export function cursesPanel(curses) {

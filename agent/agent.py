@@ -23,6 +23,7 @@ from pathlib import Path
 
 import requests
 
+import archive
 import collect
 import cursed
 import events
@@ -47,10 +48,14 @@ def run_once(config: dict, state: dict) -> bool:
     player = payload["player"]
     online = bool(player.get("online"))
 
+    was_online = state.get("was_online", False)
     presence.track(config, state, player, raw, mode)
+    if was_online and not online:
+        state["archive_due"] = True
     payload["playtime"] = playtime.track(config, state, online, now)
     payload["events"] = events.track(config, state, player, mode, now)
 
+    archive.track(config, state, player, mode, now)
     if online:
         if cursed.allowed(config, raw):
             due = cursed.due(config, cursed.metrics(payload["system"], player), state, now)
@@ -62,9 +67,12 @@ def run_once(config: dict, state: dict) -> bool:
             payload["last_seen"] = seen
             if (panorama_at := media.sync_panorama(config, state, seen)):
                 payload["panorama_at"] = panorama_at
+            archive.keep_panorama(config, state)
+        if state.pop("archive_due", False):
+            archive.publish_later(config, state)
     if state.get("curse_log"):
         payload["curses"] = state["curse_log"]
-    if (shot_at := media.sync_screenshot(config, state)):
+    if (shot_at := media.sync_screenshot(config, state, mode)):
         payload["screenshot_at"] = shot_at
 
     upload.push_status(config, payload)

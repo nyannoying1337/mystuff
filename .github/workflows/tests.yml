@@ -28,6 +28,7 @@ jobs:
           python tests/test_agent_mod.py
           python tests/test_curses.py
           python tests/test_events.py
+          python tests/test_archive.py
       - name: Worker
         run: |
           node tests/test_worker.mjs

@@ -9,7 +9,7 @@ from pathlib import Path
 import nbtlib
 from mcrcon import MCRcon
 
-from common import PLAYER_NAME, apply_privacy, log, mod_dir, source_type
+from common import PLAYER_NAME, apply_privacy, log, mod_dir, share_server_world, source_type
 
 # What the mod's state.json may contribute to the published payload. Anything
 # else in that file (like the local world path) stays on this machine, and a
@@ -22,6 +22,12 @@ PUBLISHED_PLAYER_KEYS = (
 # Only known for your own worlds; the mod doesn't write them for servers, and
 # they're dropped here too in case an older or newer mod does.
 SINGLEPLAYER_ONLY_KEYS = ("position", "rotation", "world", "stats", "advancements", "last_death")
+# Of those, the ones that are yours to publish if you decide to: where you are
+# and where you died. privacy.share_server_world opts into them, and the mod has
+# its own matching switch — both have to be on. The rest stay off the table:
+# a server's world data isn't yours, and statistics and advancements aren't even
+# readable client-side on a server (see Progress.java).
+SERVER_SHAREABLE_KEYS = ("position", "rotation", "last_death")
 # Only meaningful while the game is running.
 LIVE_ONLY_KEYS = ("game", "joined_at")
 # The mod rewrites state.json at least every 5 s; much older means the game is gone.
@@ -78,8 +84,10 @@ def collect_player_mod(config: dict, raw: dict | None) -> dict:
     player["mode"] = session_mode(raw)
     if player["mode"] == "multiplayer":
         # where you are on someone's server, and that server's world, aren't yours to publish
+        shared = SERVER_SHAREABLE_KEYS if share_server_world(config) else ()
         for key in SINGLEPLAYER_ONLY_KEYS:
-            player.pop(key, None)
+            if key not in shared:
+                player.pop(key, None)
     if not player.get("online"):
         for key in LIVE_ONLY_KEYS:
             player.pop(key, None)
