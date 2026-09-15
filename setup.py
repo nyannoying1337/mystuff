@@ -317,6 +317,20 @@ def _demo_days(root: Path) -> list[Path]:
                   if d.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", d.name))
 
 
+def _blank(path: Path) -> bool:
+    """A frame with almost no variation: a loading screen, or a capture taken in the dark."""
+    from PIL import Image
+    try:
+        with Image.open(path) as image:
+            # draft() lets the JPEG decoder skip most of its work; this only needs to
+            # know whether the picture is flat, and the archive can hold hundreds.
+            image.draft("L", (32, 32))
+            low, high = image.convert("L").getextrema()
+    except OSError:
+        return True  # unreadable is no more use than blank
+    return high - low < 8
+
+
 def _spread(items: list, count: int) -> list:
     """`count` items spread evenly across the list, ends included.
 
@@ -364,10 +378,16 @@ def build_demo_assets() -> None:
         say("Set [shots] keep = true in agent/config.toml, restart the agent, and play a while.")
         return
 
-    frames = sorted(path for day in _demo_days(root)
-                    for path in day.glob("*.jpg") if not path.name.endswith(".t.jpg"))
+    found = sorted(path for day in _demo_days(root)
+                   for path in day.glob("*.jpg") if not path.name.endswith(".t.jpg"))
+    # The first capture of a session is often taken before the world has drawn, so it
+    # is solid black — and being the oldest, it lands at the head of the strip where
+    # it is the first thing anyone sees.
+    frames = [path for path in found if not _blank(path)]
+    if len(found) - len(frames):
+        say(f"Skipped {len(found) - len(frames)} blank frame(s) — captured before the world drew.")
     if len(frames) < DEMO_FRAMES:
-        say(f"Only {len(frames)} frame(s) in {root}; the demo scrubber wants {DEMO_FRAMES}.")
+        say(f"Only {len(frames)} usable frame(s) in {root}; the demo scrubber wants {DEMO_FRAMES}.")
         say("[shots] every_seconds defaults to 300, so ten minutes is two frames. Set it to")
         say("60, run `python setup.py restart`, and play for ten minutes.")
         return
