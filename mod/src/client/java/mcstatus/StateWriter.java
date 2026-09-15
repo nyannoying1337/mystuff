@@ -143,6 +143,7 @@ final class StateWriter {
 			if (advancements != null) state.add("advancements", advancements);
 		}
 
+		state.addProperty("mod_version", version());
 		if (config.shareMods) state.add("mods", mods());
 
 		Snapshots.addInventory(state, player, config.shareItemNames);
@@ -184,6 +185,17 @@ final class StateWriter {
 		}
 		game.addProperty("render_distance", client.options.renderDistance().get());
 		return game;
+	}
+
+	/**
+	 * This mod's own version, so the agent can say when the installed jar is
+	 * behind the rest of the checkout. Written even when share_mods is off: it
+	 * names this mod only, and a silent version mismatch is its own problem.
+	 */
+	private static String version() {
+		return FabricLoader.getInstance().getModContainer("mc-status")
+			.map(container -> container.getMetadata().getVersion().getFriendlyString())
+			.orElse("unknown");
 	}
 
 	/**

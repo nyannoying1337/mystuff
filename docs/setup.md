@@ -40,7 +40,7 @@ In your fork on GitHub: **Actions → Release mod → Run workflow**. This attac
 For a proper versioned release, push a tag matching `version` in `mod/gradle.properties`:
 
 ```bash
-git tag v1.1.0
+git tag v1.3.0
 git push --tags
 ```
 
@@ -134,7 +134,13 @@ Take the jar from your fork's Releases, or build it with `cd mod && ./gradlew bu
 ## Updating
 
 - **Pulling changes into your fork:** sync the fork on GitHub, `git pull`, then `python setup.py deploy` if `worker/` changed. The page redeploys by itself on push.
-- **The mod:** download the new jar from Releases, and replace the old one while the game is closed.
+- **The mod:** your fork's Releases page only changes when *you* publish to it — syncing the
+  fork does not do it. After pulling mod changes, bump `version=` in
+  `mod/gradle.properties`, then push a matching tag (`git tag v1.3.0 && git push origin v1.3.0`)
+  or run **Actions → Release mod → Run workflow**. Then download the new jar and replace the
+  old one while the game is closed.
+  The agent logs a warning when the jar it can see is older than the checkout, so
+  check `agent/agent.log` if a card is missing rows you expected.
 - **The agent:** restart it (log out and in, or re-run `python setup.py autostart`).
 - **A new Minecraft version:** see [Development](development.md#updating-to-a-new-minecraft-version).
 

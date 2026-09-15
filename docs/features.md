@@ -91,19 +91,20 @@ World name, day count and time, weather, biome, difficulty (or hardcore) and gam
 
 <img src="images/machine.webp" alt="The game card" width="480">
 
-How the game is actually running, with the machine as a footnote.
+How the game itself is running.
 
 - **FPS**, **tick time** and the **game's memory** as meters, while you play. Tick
   time is measured against the 50 ms a tick has to finish in; past that the world
   is falling behind, and the bar goes red. FPS reads the other way round — a full
   bar is the good outcome.
-- **TPS**, under the tick time. Your own worlds only: on a server the tick rate
-  is the server's to report, not the client's.
-- **Entities** and **chunks** loaded, and your **render distance**.
-- **The machine:** CPU and GPU load, OS and uptime, as plain rows.
+- **Tick time** and **TPS** are your own worlds only: on a server the tick rate is
+  the server's to report, not the client's.
+- **Entities** and **chunks** loaded, and your **render distance** — these work on
+  servers too, since they're what your client has loaded, not the server's business.
 
-CPU and GPU temperatures are still collected — [cursed mode](#cursed-mode) runs on
-them — but they're no longer on the card. They need
+The machine's own numbers are no longer on this card at all. They're still
+collected — [cursed mode](#cursed-mode) runs on CPU and GPU load, temperatures,
+memory and uptime — they just aren't the headline any more. Temperatures need
 [fastfetch](https://github.com/fastfetch-cli/fastfetch) installed, and are checked
 every 5 minutes. GPU load on Windows comes from the system's performance counters,
 so it works for any vendor.
@@ -251,8 +252,9 @@ More in [Privacy and security](privacy.md).
 | Inventory | ✓ | ✓ | what you logged out with |
 | World | ✓ | | |
 | Advancements, checklists, statistics | ✓ | | as of your last own-world session |
-| The game, play time | ✓ | ✓ | ✓ |
-| TPS | ✓ | | |
+| The game | ✓ | ✓ | |
+| Tick time and TPS | ✓ | | |
+| Play time | ✓ | ✓ | ✓ |
 | Mods | ✓ | ✓ | ✓ |
 | Today: sessions | ✓ | ✓ | ✓ |
 | Today: advancements, deaths, milestones | ✓ | | |

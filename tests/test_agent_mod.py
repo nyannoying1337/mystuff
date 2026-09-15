@@ -46,6 +46,32 @@ assert "world_path" not in player and "secret_future_field" not in player, playe
 assert player["armor"]["head"]["max_damage"] == 165 and player["offhand"]["id"] == "minecraft:shield"
 assert len(player["inventory"]) == 1
 
+# --- an old jar is called out once, because the page just hides what it never receives
+import logging  # noqa: E402
+
+class Caught(logging.Handler):
+    def __init__(self): super().__init__(); self.lines = []
+    def emit(self, record): self.lines.append(record.getMessage())
+
+caught = Caught()
+collect.log.addHandler(caught)
+collect._warned_about_version = False
+collect.check_mod_version({"mod_version": "0.0.1"})
+collect.check_mod_version({"mod_version": "0.0.1"})   # only once
+assert len(caught.lines) == 1 and "0.0.1" in caught.lines[0], caught.lines
+
+collect._warned_about_version = False
+caught.lines.clear()
+collect.check_mod_version({"name": "nyannoying"})       # a real old state: populated, no version field
+assert len(caught.lines) == 1 and "predates" in caught.lines[0], caught.lines
+
+collect._warned_about_version = False
+caught.lines.clear()
+collect.check_mod_version({"mod_version": collect.expected_mod_version()})
+assert caught.lines == [], caught.lines                # a matching jar says nothing
+collect.log.removeHandler(caught)
+collect._warned_about_version = False
+
 # --- the mod list rides along when the mod sends one, and is absent when it doesn't
 write_state(mods=[{"id": "sodium", "name": "Sodium", "version": "0.6.13"}])
 p_mods = collect.collect_player(config, collect.read_mod_state(config))
