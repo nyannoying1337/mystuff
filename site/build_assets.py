@@ -65,6 +65,10 @@ HUD_SPRITES = {
 }
 INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
+# Tints that come from the stack rather than the world. A grass or foliage tint is a
+# property of where the block is, so it bakes into the icon; these two are a property
+# of the item a player is holding, so the page needs to apply them per stack.
+STACK_TINTS = {"dye", "potion"}
 # Level.getShade(): flat per direction, not per screen position.
 SHADE = {"up": 1.0, "down": 0.5, "north": 0.8, "south": 0.8, "west": 0.6, "east": 0.6}
 # Depth-test tolerance. Faces this close are coplanar as far as a 48px icon is
@@ -249,6 +253,39 @@ def render_flat(assets: Assets, model: dict, tints: list) -> Image.Image | None:
         icon.alpha_composite(texture.resize((16, 16), Image.NEAREST))
         drawn = True
     return icon.resize((ICON, ICON), Image.NEAREST) if drawn else None
+
+
+def render_tint_mask(assets: Assets, item: str) -> Image.Image | None:
+    """Just the layers a stack's own colour applies to, drawn untinted.
+
+    Every potion shares one item id, so one icon cannot show a healing potion red and
+    night vision blue. The icon keeps the model's default tint — which is what vanilla
+    draws for a potion with no contents, and what a viewer sees when nothing sends a
+    colour — and the page lays the real colour over this shape when it has one.
+    """
+    definition = assets.json(f"items/{item}.json")
+    picked = pick_model(definition.get("model") if definition else None)
+    if not picked:
+        return None
+    ref, tints = picked[0], picked[1]
+    if not any(strip(tint.get("type", "")) in STACK_TINTS for tint in tints):
+        return None
+
+    model = flatten(assets, ref)
+    mask = Image.new("RGBA", (16, 16))
+    drawn = False
+    for index in range(8):
+        layer = resolve_texture(model["textures"], f"layer{index}")
+        if layer is None:
+            break
+        if index >= len(tints) or strip(tints[index].get("type", "")) not in STACK_TINTS:
+            continue  # an untinted layer — the bottle glass, the armour's trim
+        texture = assets.texture(layer)
+        if texture is None:
+            continue
+        mask.alpha_composite(texture.resize((16, 16), Image.NEAREST))
+        drawn = True
+    return mask.resize((ICON, ICON), Image.NEAREST) if drawn else None
 
 
 def rotate(vector, rx, ry, rz):
@@ -595,7 +632,7 @@ def main() -> int:
     if not args.only:
         shutil.rmtree(OUT / "item", ignore_errors=True)  # no stale icons from an older version
     (OUT / "item").mkdir(parents=True, exist_ok=True)
-    missing = []
+    missing, tinted = [], []
     for item in items:
         try:
             icon = render_item(assets, item)
@@ -606,8 +643,18 @@ def main() -> int:
             missing.append(item)
             continue
         icon.save(OUT / "item" / f"{item}.png", optimize=True)
+        try:
+            mask = render_tint_mask(assets, item)
+        except Exception as err:
+            print(f"  {item} tint mask: {err}", file=sys.stderr)
+            mask = None
+        if mask is not None:
+            mask.save(OUT / "item" / f"{item}.tint.png", optimize=True)
+            tinted.append(item)
 
     print(f"{len(items) - len(missing)} item icons, {len(missing)} without one")
+    print(f"{len(tinted)} of them take a colour from the stack"
+          + (f": {', '.join(tinted[:8])}" + (" …" if len(tinted) > 8 else "") if tinted else ""))
     if missing:
         print("  no icon:", ", ".join(missing[:20]) + (" …" if len(missing) > 20 else ""))
     return 0

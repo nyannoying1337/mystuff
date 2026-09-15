@@ -304,6 +304,9 @@ dl { margin: 0; }
 .slot-hit:hover { background: rgba(255, 255, 255, .45); }
 .slot-hit:focus-visible { outline: 2px solid #fff; outline-offset: 0; }
 .swatch { outline: 1px solid rgba(0, 0, 0, .35); outline-offset: -1px; }
+/* the stack's own colour, cut to the layer that takes it (js/gui.js) */
+.tint { mask-size: 100% 100%; -webkit-mask-size: 100% 100%; pointer-events: none; }
+
 .glint {
   mask-size: 100% 100%; -webkit-mask-size: 100% 100%;
   background-image: url("assets/mc/glint.png"); background-size: 400% 400%;

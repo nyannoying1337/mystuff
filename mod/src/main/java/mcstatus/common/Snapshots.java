@@ -32,6 +32,8 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
@@ -90,6 +92,12 @@ public final class Snapshots {
 			item.addProperty("max_damage", stack.getMaxDamage());
 		}
 		if (stack.hasFoil()) item.addProperty("enchanted", true);
+		// Every potion shares one item id, so the page cannot tell a healing potion from
+		// night vision by id alone — and one icon per id cannot show both. The colour
+		// travels with the stack instead, and the page tints the icon with it.
+		PotionContents potion = stack.get(DataComponents.POTION_CONTENTS);
+		if (potion != null) item.addProperty("color", potion.getColor());
+		else if (stack.has(DataComponents.DYED_COLOR)) item.addProperty("color", DyedItemColor.getOrDefault(stack, 0));
 		JsonArray enchantments = new JsonArray();
 		addEnchantments(enchantments, stack.getEnchantments());
 		addEnchantments(enchantments, stack.get(DataComponents.STORED_ENCHANTMENTS));
