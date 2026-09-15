@@ -13,7 +13,7 @@ import { fitPixels, inventoryNode, reattachTooltip, toastNode, tooltipIsPinned, 
 import * as live from "./live.js";
 import { panoramaView } from "./panorama.js";
 import { loadShots, shotsView } from "./shots.js";
-import { demoData, demoShots, isDemo } from "./demo.js";
+import { demoAssets, demoData, demoShots, isDemo } from "./demo.js";
 import { dimensionName, duration, el, timeAgo } from "./util.js";
 
 const DEFAULT_STALE_MS = 90000;           // the Worker sends its own value with each status
@@ -334,11 +334,14 @@ if (isDemo) {
   document.body.classList.add("is-demo");
   document.querySelector(".top-actions")
     ?.prepend(el("span", { class: "pill pill-demo", text: "Demo data" }));
-  // same guard the live path gets from loadShots(): an empty archive means no card,
-  // not a view built over an empty list
-  const archive = demoShots();
-  if (archive.frames.length) shots = { ...shotsView(archive), count: archive.frames.length };
-  assetsReady.then(() => render(demoData()));
+  // The imagery is injected at deploy and a fork has none, so ask before drawing it.
+  // Same guard the live path gets from loadShots(): an empty archive means no card,
+  // not a view built over an empty list.
+  Promise.all([assetsReady, demoAssets()]).then(([, have]) => {
+    const archive = have.frames ? demoShots() : { frames: [] };
+    if (archive.frames.length) shots = { ...shotsView(archive), count: archive.frames.length };
+    render(demoData(have));
+  });
 } else {
 live.start({
   async status(data, stale) {

@@ -98,7 +98,7 @@ Push to `main`, or re-run **Actions → Deploy site**. Then open the invite link
 | `python setup.py server` | Keys and config file for the [server tool](server-tool.md) |
 | `python setup.py autostart` | Reinstall the agent's autostart |
 | `python setup.py restart` | Restart the agent so it picks up pulled changes |
-| `python setup.py demo-assets` | Fill `site/demo/` from your frame archive, so `?demo` shows your own world |
+| `python setup.py demo-assets` | Fill `?demo` from your frame archive; force-pushes the `demo` branch, nothing to commit |
 | `python setup.py worker-config` | Only write `worker/wrangler.generated.toml` |
 | `python agent/agent.py --dry-run` | Print exactly what would be published, and which curses would fire |
 | `python agent/agent.py --once` | Collect and push once |

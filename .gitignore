@@ -14,6 +14,8 @@ worker/wrangler.generated.toml
 agent/playtime.json
 agent/events.json
 agent/shots/
+# ?demo imagery: pictures of your own world, published to the `demo` branch
+site/demo/
 agent/*.json.tmp
 site/_preview/
 /server/
