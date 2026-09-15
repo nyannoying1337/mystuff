@@ -1,11 +1,18 @@
 name: Deploy site
 
 on:
-  # `map` is force-pushed by map/render.py and `shots` by agent/archive.py;
-  # a new render or a new batch of frames redeploys the site.
+  # `map` is force-pushed by map/render.py, `shots` by agent/archive.py and `demo`
+  # by setup.py; a new render, batch of frames or set of demo imagery redeploys.
+  #
+  # No paths filter. There used to be a paths-ignore for README and docs, which
+  # only ever matched pushes to main — but each of those publishers force-pushes
+  # unrelated history, and a push GitHub cannot diff, or whose tree is identical
+  # to the last one, can be skipped by a paths filter with no run and no trace.
+  # That happened: a map render reached the branch and never deployed. Redeploying
+  # on a docs edit costs about 35 seconds; a render that silently never goes live
+  # costs a lot more to notice.
   push:
     branches: [main, map, shots, demo]
-    paths-ignore: ['README.md', 'docs/**']  # docs aren't part of the site
   workflow_dispatch:
 
 permissions:
