@@ -17,7 +17,13 @@ const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maxi
 export const plainNumber = (n) => numberFormat.format(n ?? 0);
 export const count = (n) => (n >= 100000 ? compactFormat.format(n) : numberFormat.format(n ?? 0));
 export const gib = (bytes) => `${(bytes / 2 ** 30).toFixed(bytes >= 10 * 2 ** 30 ? 0 : 1)} GB`;
-export const shortId = (id) => (id || "").replace(/^minecraft:/, "");
+// Ids are "namespace:path". Vanilla lives in "minecraft"; any other namespace
+// came from a mod, and is worth naming rather than dropping into the label.
+export const namespaceOf = (id) => /^([a-z0-9_.-]+):/.exec(id || "")?.[1] || "minecraft";
+export const isVanilla = (id) => namespaceOf(id) === "minecraft";
+// The path alone, whatever the namespace: "byg:red_rock_valley" reads as
+// "Red Rock Valley" instead of "Byg:red Rock Valley".
+export const shortId = (id) => (id || "").replace(/^[a-z0-9_.-]+:/, "");
 export const titleCase = (text) => text.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export function duration(seconds) {

@@ -9,7 +9,10 @@ A tour of the status page, card by card. Screenshots show made-up demo data.
 - [Advancements and checklists](#advancements-and-checklists)
 - [Statistics](#statistics)
 - [World](#world)
-- [The machine](#the-machine)
+- [The game](#the-game)
+- [Mods](#mods)
+- [Today](#today)
+- [Looking back](#looking-back)
 - [Play time](#play-time)
 - [After you log out](#after-you-log-out)
 - [The 3D map](#the-3d-map)
@@ -84,16 +87,35 @@ Read from your world's statistics on the integrated server's thread every 10 sec
 
 World name, day count and time, weather, biome, difficulty (or hardcore) and game mode. Only while you're in one of your own worlds.
 
-## The machine
+## The game
 
-<img src="images/machine.webp" alt="The machine card" width="480">
+<img src="images/machine.webp" alt="The game card" width="480">
 
-- **Load:** CPU, GPU, memory and video memory, with the CPU and GPU names.
-- **Game:** FPS, tick time and the game's memory, while you play.
-- **Temperatures:** CPU and GPU, if [fastfetch](https://github.com/fastfetch-cli/fastfetch) is installed and can read them (checked every 5 minutes).
-- **System:** OS and uptime.
+How the game is actually running, with the machine as a footnote.
 
-GPU load on Windows comes from the system's performance counters, so it works for any vendor.
+- **FPS**, **tick time** and the **game's memory** as meters, while you play. Tick
+  time is measured against the 50 ms a tick has to finish in; past that the world
+  is falling behind, and the bar goes red. FPS reads the other way round — a full
+  bar is the good outcome.
+- **TPS**, under the tick time. Your own worlds only: on a server the tick rate
+  is the server's to report, not the client's.
+- **Entities** and **chunks** loaded, and your **render distance**.
+- **The machine:** CPU and GPU load, OS and uptime, as plain rows.
+
+CPU and GPU temperatures are still collected — [cursed mode](#cursed-mode) runs on
+them — but they're no longer on the card. They need
+[fastfetch](https://github.com/fastfetch-cli/fastfetch) installed, and are checked
+every 5 minutes. GPU load on Windows comes from the system's performance counters,
+so it works for any vendor.
+
+## Mods
+
+Every mod you have installed, with its version. Fabric's builtin entries (Java,
+Minecraft, the loader) and mods nested inside other mods are left out, so the list
+is what you actually installed rather than every library submodule inside Fabric
+API.
+
+Turn it off with `share_mods` in the mod's settings.
 
 ## Today
 
@@ -229,7 +251,12 @@ More in [Privacy and security](privacy.md).
 | Inventory | ✓ | ✓ | what you logged out with |
 | World | ✓ | | |
 | Advancements, checklists, statistics | ✓ | | as of your last own-world session |
-| The machine, play time | ✓ | ✓ | ✓ |
+| The game, play time | ✓ | ✓ | ✓ |
+| TPS | ✓ | | |
+| Mods | ✓ | ✓ | ✓ |
+| Today: sessions | ✓ | ✓ | ✓ |
+| Today: advancements, deaths, milestones | ✓ | | |
+| Looking back | ✓ | with `share_server_world` | ✓ |
 | Curses | ✓ | | recent ones |
 
 If the agent stops pushing for 90 seconds (PC off, agent closed), the page says so and keeps showing the last state.

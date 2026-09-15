@@ -57,11 +57,11 @@ The newest HUD-free frame of your world, with your vitals where the game draws t
 <table>
   <tr>
     <td width="50%"><img src="docs/images/checklist.webp" alt="Adventuring Time expanded: 21 biomes still to do, 34 done"></td>
-    <td width="50%"><img src="docs/images/machine.webp" alt="The machine: CPU, GPU, memory and video memory load, FPS, tick time, temperatures"></td>
+    <td width="50%"><img src="docs/images/machine.webp" alt="The game: FPS, tick time and game memory, with entities, chunks and machine load"></td>
   </tr>
   <tr>
     <td><b>Advancement checklists.</b> Adventuring Time, Monsters Hunted, A Balanced Diet, Two by Two and every other "collect them all" advancement, split into done and still to do. Works for datapack advancements too.</td>
-    <td><b>The machine.</b> CPU, GPU, memory and video memory load, the game's FPS and tick time, and temperatures.</td>
+    <td><b>The game.</b> FPS, tick time and the game's memory as live meters, plus entities, loaded chunks, render distance — and the machine's load underneath.</td>
   </tr>
 </table>
 

@@ -6,7 +6,7 @@
 // from redoing layout and images for the whole page on every push.
 import { assetsReady, glyphWidths } from "./assets.js";
 import {
-  advancementsPanel, chip, cursesPanel, eventsPanel, itemIcon, machinePanel, mapPanel, panel, playtimePanel, shotsPanel, statRows, statsPanel, worldPanel,
+  advancementsPanel, chip, cursesPanel, eventsPanel, gamePanel, itemIcon, mapPanel, modsPanel, panel, playtimePanel, shotsPanel, statRows, statsPanel, worldPanel,
 } from "./cards.js";
 import { SITE_NAME } from "./config.js";
 import { fitPixels, inventoryNode, reattachTooltip, toastNode, tooltipIsPinned, vitalsNode, TOAST_MS } from "./gui.js";
@@ -273,16 +273,19 @@ function render(data) {
   // ---- right column ----
   const curses = Array.isArray(data.curses) && data.curses.length ? data.curses : null;
   const events = Array.isArray(data.events) && data.events.length ? data.events : null;
+  const mods = Array.isArray(player.mods) && player.mods.length ? player.mods : null;
   const playtime = Array.isArray(data.playtime) && data.playtime.some((day) => day.seconds >= 60) ? data.playtime : null;
   mapButton.hidden = !mapInfo;
   setChildren(right, [
     online && !multiplayer && player.world ? section("world", player.world, () => worldPanel(player.world)) : null,
-    Object.keys(system).length ? section("machine", [system, online && player.game], () => machinePanel(system, player.game, online)) : null,
+    (online && player.game) || Object.keys(system).length
+      ? section("game", [system, online && player.game], () => gamePanel(player.game, system, online)) : null,
     events ? section("events", events, () => eventsPanel(events)) : null,
     shots ? section("shots", shots.count, () => shotsPanel(shots.node, shots.count)) : null,
     playtime ? section("playtime", playtime, () => playtimePanel(playtime)) : null,
     mapInfo ? section("map", [mapInfo, player.name, timeAgo(mapInfo.rendered_at)], () => mapPanel(mapInfo, player.name)) : null,
     curses ? section("curses", [curses, curses.map((curse) => timeAgo(curse.at))], () => cursesPanel(curses)) : null,
+    mods ? section("mods", mods, () => modsPanel(mods)) : null,
   ]);
   grid.style.gridTemplateColumns = right.childElementCount ? "" : "minmax(0, 1fr)";
   if (!right.childElementCount) right.remove();

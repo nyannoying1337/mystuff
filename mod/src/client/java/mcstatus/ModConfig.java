@@ -12,6 +12,7 @@ final class ModConfig {
 	int captureWidth = 1920;
 	int stateIntervalTicks = 20;
 	boolean shareItemNames = false;
+	boolean shareMods = true;
 	boolean shareServerWorld = false;
 
 	static ModConfig load(Path path) {
@@ -21,6 +22,7 @@ final class ModConfig {
 		props.setProperty("capture_width", String.valueOf(config.captureWidth));
 		props.setProperty("state_interval_ticks", String.valueOf(config.stateIntervalTicks));
 		props.setProperty("share_item_names", String.valueOf(config.shareItemNames));
+		props.setProperty("share_mods", String.valueOf(config.shareMods));
 		props.setProperty("share_server_world", String.valueOf(config.shareServerWorld));
 
 		if (Files.isRegularFile(path)) {
@@ -42,6 +44,7 @@ final class ModConfig {
 		config.captureWidth = Math.clamp(integer(props, "capture_width", 1920), 160, 1920);
 		config.stateIntervalTicks = Math.clamp(integer(props, "state_interval_ticks", 20), 5, 200);
 		config.shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
+		config.shareMods = Boolean.parseBoolean(props.getProperty("share_mods", "true").trim());
 		config.shareServerWorld = Boolean.parseBoolean(props.getProperty("share_server_world", "false").trim());
 		return config;
 	}
