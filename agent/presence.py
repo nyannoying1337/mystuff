@@ -12,6 +12,10 @@ from common import hide_coordinates, log, worker_endpoint
 
 RENDER_SCRIPT = Path(__file__).resolve().parent.parent / "map" / "render.py"
 
+# Said once per run, not once per logout: someone who does not want maps should not
+# read about it every time they quit.
+_said_render_is_off = False
+
 
 def track(config: dict, state: dict, player: dict, raw: dict | None, mode: str | None) -> None:
     """Remember where the player was; when they leave a singleplayer world,
@@ -67,8 +71,15 @@ def last_seen_payload(config: dict, state: dict) -> dict | None:
 
 
 def start_logout_render(config: dict, state: dict) -> None:
+    global _said_render_is_off
     map_config = config.get("map", {})
     if not map_config.get("render_on_logout", False):
+        # Every other reason to skip logs one line. This one used to return in
+        # silence, which made the likeliest cause — the switch is simply off — the
+        # only one the log could not tell you about.
+        if not _said_render_is_off:
+            _said_render_is_off = True
+            log.info("no map on logout: [map] render_on_logout is off in agent/config.toml")
         return
     world = map_config.get("world") or state.get("world_path")
     seen = state.get("last_seen") or {}
