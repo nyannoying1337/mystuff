@@ -338,8 +338,22 @@ def build_demo_assets() -> None:
     try:
         from PIL import Image
     except ImportError:
-        say("Pillow isn't installed. Run this with the agent's Python:")
-        say(f"  {AGENT / '.venv'}/bin/python setup.py demo-assets")
+        # Pillow lives in the agent's venv, not necessarily in whatever python you
+        # typed. Re-run there rather than making you work out the path — which is
+        # Scripts\python.exe on Windows and bin/python everywhere else.
+        python = agent_python()
+        # sys.prefix, not the executable path: a venv's python is usually a symlink to
+        # the system one, so comparing resolved paths would say we are already inside
+        # it and skip the re-run. sys.prefix is the venv directory when we really are.
+        inside = Path(sys.prefix).resolve() == (AGENT / ".venv").resolve()
+        if python.is_file() and not inside:
+            say(f"Pillow isn't in this Python; re-running with {python}")
+            arguments = [str(python), __file__, "demo-assets"]
+            if DRY_RUN:
+                arguments.append("--dry-run")
+            raise SystemExit(subprocess.run(arguments, cwd=ROOT).returncode)
+        say("Pillow isn't installed, and agent/.venv can't supply it.")
+        say("Run `python setup.py` and say yes at step 5, which installs the agent's packages.")
         return
 
     config = load_config()
