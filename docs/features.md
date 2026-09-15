@@ -185,23 +185,28 @@ page is fine and something upstream isn't sending it.
 | `?demo` | In game: the latest frame as the hero, live vitals, the game panel |
 | `?demo=offline` | Logged out: the draggable 360° panorama and a "last seen" note |
 
-The frames, thumbnails and panorama behind both live in `site/demo/` and are
-committed, so a fresh clone shows the same thing this page does — nothing is
-generated at deploy time and nothing is fetched.
+**Its imagery is your own world, and it is not in the repository.** `site/demo/`
+is gitignored; the pictures live on the **`demo` branch** and are copied in at
+deploy, the same way `map` and `shots` already work. A fork gets a clean
+checkout, and `pages.yml` skips the branch entirely when the repository is a
+fork — otherwise someone running their own page would be serving your world as
+if it were theirs. Without the branch `?demo` simply shows no hero, no panorama
+and no archive card; every other card still renders from the fixture.
 
-**Filling it with your own world.** The shipped imagery is a placeholder. To swap
-in real captures, point the archive at a world you don't mind showing:
+**Filling it in.** Point the archive at a world you don't mind showing:
 
 1. `[shots] keep = true` in `agent/config.toml`, and `every_seconds = 60` — the
    default of 300 means ten minutes of play is two frames, and the scrubber wants
    eight. Then `python setup.py restart`.
 2. Play a throwaway singleplayer world for ten minutes, moving around so the
    frames differ, then **Save & Quit** — the pause menu is what writes a panorama.
-3. `python setup.py demo-assets`, then commit `site/demo/`.
+3. `python setup.py demo-assets`. It writes the files and force-pushes the branch;
+   there is nothing to commit.
 
 It takes eight frames spread across the archive rather than the eight newest, so
-the scrubber shows the day going by instead of eight near-identical minutes, and
-re-encodes everything to WebP at the sizes the page uses.
+the scrubber shows the day going by instead of eight near-identical minutes,
+skips frames captured before the world drew, and re-encodes to WebP at the sizes
+the page uses.
 
 **It copies images only.** The archive's `day.json` — the file that holds
 coordinates — is never read, and the demo page keeps its own invented positions

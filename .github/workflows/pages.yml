@@ -4,7 +4,7 @@ on:
   # `map` is force-pushed by map/render.py and `shots` by agent/archive.py;
   # a new render or a new batch of frames redeploys the site.
   push:
-    branches: [main, map, shots]
+    branches: [main, map, shots, demo]
     paths-ignore: ['README.md', 'docs/**']  # docs aren't part of the site
   workflow_dispatch:
 
@@ -60,6 +60,22 @@ jobs:
             echo "map: $(find site/map -type f | wc -l) files"
           else
             echo "no map branch yet — deploying without /map"
+          fi
+
+      # The ?demo imagery is pictures of the maintainer's own world, so it lives on a
+      # branch rather than in the tree. Forks skip it: a fork that inherited the branch
+      # would otherwise serve someone else's world as if it were its own.
+      - name: Add the demo imagery, unless this is a fork
+        if: github.event.repository.fork != true
+        run: |
+          if git ls-remote --exit-code --heads origin demo > /dev/null; then
+            git fetch --depth 1 origin demo
+            mkdir -p site/demo
+            git archive FETCH_HEAD | tar -x -C site/demo
+            rm -rf site/demo/.github
+            echo "demo: $(find site/demo -name '*.webp' | wc -l) images"
+          else
+            echo "no demo branch — ?demo will fall back to no imagery"
           fi
 
       - name: Add the archived frames, if there are any

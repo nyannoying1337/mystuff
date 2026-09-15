@@ -309,7 +309,8 @@ DEMO_DIR = ROOT / "site" / "demo"
 DEMO_FRAMES = 8
 DEMO_FULL_WIDTH, DEMO_THUMB_WIDTH = 640, 320
 DEMO_PANORAMA_WIDTH = 1536  # a 6:1 strip; panorama.js slices it into six faces
-DEMO_BUDGET = 400 * 1024  # docs/images is already half the tracked repo; keep this modest
+DEMO_BUDGET = 400 * 1024  # keep the branch small; it is force-pushed whole every time
+DEMO_BRANCH = "demo"
 
 
 def _demo_days(root: Path) -> list[Path]:
@@ -424,9 +425,52 @@ def build_demo_assets() -> None:
     say(f"Wrote {len(chosen) * 2 + len(panoramas[-1:])} files to "
         f"{DEMO_DIR.relative_to(ROOT)} ({total // 1024} KB).")
     if total > DEMO_BUDGET:
-        say(f"That's over the {DEMO_BUDGET // 1024} KB this is meant to stay under. They're")
-        say("committed to the repo, so trim them before pushing.")
-    say("Check them with ?demo and ?demo=offline, then commit site/demo/.")
+        say(f"That's over the {DEMO_BUDGET // 1024} KB this is meant to stay under.")
+        say("The branch is force-pushed whole each time, so trim them first.")
+    publish_demo_assets()
+
+
+def publish_demo_assets(remote: str = "origin") -> None:
+    """Force-push site/demo/ to the `demo` branch, the way archive.py publishes frames.
+
+    These are pictures of your world. Keeping them off main means someone who forks
+    this to run their own page gets a clean checkout instead of your screenshots, and
+    pages.yml skips the branch entirely on a fork so their site never serves them.
+    """
+    try:
+        url = subprocess.run(["git", "remote", "get-url", remote], cwd=ROOT,
+                             capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as err:
+        say(f"No git remote to publish to ({err}); site/demo/ is written but not pushed.")
+        return
+    if DRY_RUN:
+        say(f"  (dry run) would force-push site/demo/ to the {DEMO_BRANCH} branch")
+        return
+
+    work = DEMO_DIR.parent / ".demo-publish"
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        shutil.copytree(DEMO_DIR, work)
+        (work / ".nojekyll").touch()
+        # GitHub only runs workflows that exist in the branch that was pushed, so the
+        # branch carries a copy of the deploy — same reason the shots branch does.
+        workflow = ROOT / ".github" / "workflows" / "pages.yml"
+        if workflow.is_file():
+            (work / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
+            shutil.copy2(workflow, work / ".github" / "workflows" / "pages.yml")
+        for command in (
+                ["git", "init", "-q", "-b", DEMO_BRANCH, "."],
+                ["git", "add", "-A"],
+                ["git", "-c", "user.name=mc-status", "-c", "user.email=mc-status@localhost",
+                 "commit", "-q", "-m", "demo imagery"],
+                ["git", "push", "--force", url, f"{DEMO_BRANCH}:{DEMO_BRANCH}"]):
+            subprocess.run(command, cwd=work, check=True, capture_output=True, text=True)
+    except (OSError, subprocess.SubprocessError, shutil.Error) as err:
+        say(f"Couldn't push the {DEMO_BRANCH} branch: {err}")
+        return
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    say(f"Pushed them to the {DEMO_BRANCH} branch. The deploy picks them up; nothing to commit.")
 
 
 WINDOWS_TASK = "mc-status agent"

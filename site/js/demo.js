@@ -15,23 +15,40 @@ export const isDemo = params.has("demo");
 // panorama only appears once you've logged out. ?demo=offline shows that half.
 export const isLoggedOutDemo = params.get("demo") === "offline";
 
-const DEMO = "demo";  // committed alongside the page, unlike the generated assets
+const DEMO = "demo";  // injected at deploy from the `demo` branch; absent on a fork
+
+// Whether that injection happened. The imagery is the maintainer's own world, so it
+// is deliberately not in the repo — a fork has none, and drawing eight broken images
+// is a worse demo than drawing no archive at all.
+const probe = (path) => new Promise((resolve) => {
+  const image = new Image();
+  image.onload = () => resolve(true);
+  image.onerror = () => resolve(false);
+  image.src = path;
+});
+
+export async function demoAssets() {
+  const [frames, panorama] = await Promise.all([
+    probe(`${DEMO}/frame-0.webp`), probe(`${DEMO}/panorama.webp`)]);
+  return { frames, panorama };
+}
 
 const ago = (minutes) => Date.now() - minutes * 60000;
 
 const item = (id, count, slot, extra = {}) => ({ id: `minecraft:${id}`, count, slot, ...extra });
 
-export function demoData() {
+export function demoData(have = { frames: true, panorama: true }) {
   const loggedOut = isLoggedOutDemo;
+  const seen = ago(9);
   return {
     generated_at: Date.now(),
-    screenshot_at: ago(2),
-    demo_shot: `${DEMO}/frame-7.webp`,
-    demo_panorama: `${DEMO}/panorama.webp`,
+    ...(have.frames ? { screenshot_at: ago(2), demo_shot: `${DEMO}/frame-7.webp` } : {}),
     ...(loggedOut ? {
-      panorama_at: ago(9),
-      last_seen: { mode: "singleplayer", at: ago(9), dimension: "minecraft:overworld",
+      // one timestamp for both: main.js only shows the panorama when the logout and
+      // the panorama are within PANORAMA_WINDOW_MS of each other
+      last_seen: { mode: "singleplayer", at: seen, dimension: "minecraft:overworld",
                    position: [128.4, 71, -338.9] },
+      ...(have.panorama ? { panorama_at: seen, demo_panorama: `${DEMO}/panorama.webp` } : {}),
     } : {}),
     system: {
       cpu: "13th Gen Intel Core i5-13600K", cpu_cores: 20, cpu_percent: 9,
