@@ -163,10 +163,13 @@ main { flex: 1; padding: 28px 0 40px; }
 .chip b { color: var(--text); font-weight: 700; }
 
 /* ---- dashboard grid ---- */
-.grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
-.col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+/* Two balanced columns rather than two hand-filled ones: the browser evens the
+   heights itself, so a card appearing or disappearing can't strand one side. */
+.grid { columns: 2; column-gap: 20px; margin-top: 20px; }
+/* column-gap is horizontal only — the rhythm down a column comes from margin */
+.grid > * { break-inside: avoid; margin: 0 0 20px; }
 @media (max-width: 860px) {
-  .grid { grid-template-columns: minmax(0, 1fr); }
+  .grid { columns: 1; }
   .scene { aspect-ratio: 16 / 10; min-height: 0; }
 }
 
@@ -431,8 +434,6 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-cont
 .log-row[data-status="failed"] .log-status { background: #5a2420; color: #ffd6d2; }
 .log-output { margin-top: 4px; color: var(--text-2); font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* statistics inside a column (player pages): no extra gap, two tiles per row */
-.col .stats-panel { margin-top: 0; }
-.col .stats-panel .tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
 
 /* demo mode (?demo): made-up data, so say so without covering anything */
 .demo-badge {

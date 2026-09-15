@@ -38,6 +38,10 @@ HUD_SPRITES = {
     "heart_container": "gui/sprites/hud/heart/container.png",
     "heart_full": "gui/sprites/hud/heart/full.png",
     "heart_half": "gui/sprites/hud/heart/half.png",
+    # hardcore draws its own darker, cracked heart
+    "heart_container_hardcore": "gui/sprites/hud/heart/container_hardcore.png",
+    "heart_hardcore_full": "gui/sprites/hud/heart/hardcore_full.png",
+    "heart_hardcore_half": "gui/sprites/hud/heart/hardcore_half.png",
     "food_empty": "gui/sprites/hud/food_empty.png",
     "food_full": "gui/sprites/hud/food_full.png",
     "food_half": "gui/sprites/hud/food_half.png",

@@ -243,12 +243,15 @@ export function vitalsNode(player) {
   const food = player.foodlevel ?? 0;
   const level = player.xplevel ?? 0;
   const armor = player.world?.armor ?? 0;
+  // The game draws a darker, cracked heart in hardcore. On a server there is no
+  // world object at all, so this is undefined and the normal heart is right.
+  const hardcore = Boolean(player.world?.hardcore);
   const top = armor > 0 ? 10 : 0;
   // about as big relative to the frame as the game draws it at GUI scale 3
   const gui = makeGui(182, top + 15, "vitals", { fill: 0.3, min: 280, max: 3 });
   gui.node.setAttribute("role", "img");
   gui.node.setAttribute("aria-label", [
-    `${health / 2} of 10 hearts`, `hunger ${food / 2} of 10`, `level ${level}`,
+    `${health / 2} of 10 hearts${hardcore ? " (hardcore)" : ""}`, `hunger ${food / 2} of 10`, `level ${level}`,
     armor > 0 ? `armor ${armor / 2} of 10` : null,
   ].filter(Boolean).join(", "));
 
@@ -261,7 +264,10 @@ export function vitalsNode(player) {
     }
   };
   if (armor > 0) row(0, armor, "armor_empty", "armor_half", "armor_full", false);
-  row(top, health, "heart_container", "heart_half", "heart_full", false);
+  row(top, health,
+      hardcore ? "heart_container_hardcore" : "heart_container",
+      hardcore ? "heart_hardcore_half" : "heart_half",
+      hardcore ? "heart_hardcore_full" : "heart_full", false);
   row(top, food, "food_empty", "food_half", "food_full", true);
 
   sprite(gui, "xp_background", 0, top + 10, 182, 5);

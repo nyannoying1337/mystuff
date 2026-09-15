@@ -61,9 +61,7 @@ let layout = null;  // the live view's fixed frame; null while a notice screen i
 
 function liveLayout() {
   if (!layout) {
-    const left = el("div", { class: "col" });
-    const right = el("div", { class: "col" });
-    layout = { hero: el("section", { class: "panel hero" }), left, right, grid: el("div", { class: "grid" }, [left, right]) };
+    layout = { hero: el("section", { class: "panel hero" }), grid: el("div", { class: "grid" }) };
     sections.clear();
   }
   return layout;
@@ -172,7 +170,7 @@ function render(data) {
   else if (age > staleMs) setPill("quiet", "Quiet");
   else setPill("offline", "Offline");
 
-  const { hero, left, right, grid } = liveLayout();
+  const { hero, grid } = liveLayout();
   used = new Set();
 
   // ---- hero ----
@@ -186,7 +184,8 @@ function render(data) {
   const fresh = player.advancements?.recent?.[0];
   const toast = glyphWidths && online && !multiplayer && fresh?.at && Date.now() - fresh.at < TOAST_MS ? fresh : null;
   const vitals = glyphWidths && typeof player.health === "number"
-    ? [player.health, player.foodlevel, player.xplevel, player.xpp, player.world?.armor] : null;
+    ? [player.health, player.foodlevel, player.xplevel, player.xpp,
+       player.world?.armor, player.world?.hardcore] : null;
 
   const scene = section("scene", {
     shotSrc: panorama ? null : shotSrc, panoramaUrl, online, multiplayer, vitals, toast: toast?.id,
@@ -248,7 +247,7 @@ function render(data) {
 
   setChildren(hero, [scene, identity]);
 
-  // ---- left column ----
+  // ---- the cards ----
   const inventoryInputs = [online, player.name, player.hotbar, player.inventory, player.armor, player.offhand, Boolean(glyphWidths)];
   const inventory = section("inventory", inventoryInputs, () => {
     if (!hasInventory(player)) return panel("Inventory", [el("p", { class: "empty", text: "Nothing in the inventory." })]);
@@ -265,18 +264,18 @@ function render(data) {
   const inventoryRebuilt = sections.get("inventory").rebuilt;
   // your own worlds only: the agent never sends these for servers
   const adv = player.advancements;
-  setChildren(left, [
-    inventory,
-    adv?.total ? section("advancements", [adv, (adv.recent || []).map((item) => item.at && timeAgo(item.at))], () => advancementsPanel(adv)) : null,
-  ]);
 
-  // ---- right column ----
   const curses = Array.isArray(data.curses) && data.curses.length ? data.curses : null;
   const events = Array.isArray(data.events) && data.events.length ? data.events : null;
   const mods = Array.isArray(player.mods) && player.mods.length ? player.mods : null;
   const playtime = Array.isArray(data.playtime) && data.playtime.some((day) => day.seconds >= 60) ? data.playtime : null;
   mapButton.hidden = !mapInfo;
-  setChildren(right, [
+  // One flow, not two hand-filled columns: the browser balances the column heights
+  // itself, so adding or dropping a card can't leave one side stranded. The order
+  // below is the reading order — a column fills top to bottom before the next starts.
+  setChildren(grid, [
+    inventory,
+    adv?.total ? section("advancements", [adv, (adv.recent || []).map((item) => item.at && timeAgo(item.at))], () => advancementsPanel(adv)) : null,
     online && !multiplayer && player.world ? section("world", player.world, () => worldPanel(player.world)) : null,
     online && player.game ? section("game", player.game, () => gamePanel(player.game)) : null,
     events ? section("events", events, () => eventsPanel(events)) : null,
@@ -286,9 +285,6 @@ function render(data) {
     curses ? section("curses", [curses, curses.map((curse) => timeAgo(curse.at))], () => cursesPanel(curses)) : null,
     mods ? section("mods", mods, () => modsPanel(mods)) : null,
   ]);
-  grid.style.gridTemplateColumns = right.childElementCount ? "" : "minmax(0, 1fr)";
-  if (!right.childElementCount) right.remove();
-  else if (right.parentNode !== grid) grid.append(right);
 
   const stats = player.stats && !multiplayer ? section("stats", [player.stats, online], () => statsPanel(player.stats, online)) : null;
   setChildren(root, [hero, grid, stats]);
@@ -334,8 +330,12 @@ if (isDemo) {
   // mode the page is the only moving part, so a card that renders here and not on
   // the real page means the data never arrived — not that the page is broken.
   document.body.classList.add("is-demo");
-  document.body.append(el("div", { class: "demo-badge", text: "Demo data — nothing here is real" }));
-  shots = { ...shotsView(demoShots()), count: demoShots().frames.length };
+  document.querySelector(".top-actions")
+    ?.prepend(el("span", { class: "pill pill-demo", text: "Demo data" }));
+  // same guard the live path gets from loadShots(): an empty archive means no card,
+  // not a view built over an empty list
+  const archive = demoShots();
+  if (archive.frames.length) shots = { ...shotsView(archive), count: archive.frames.length };
   assetsReady.then(() => render(demoData()));
 } else {
 live.start({
