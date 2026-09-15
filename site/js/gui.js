@@ -1,6 +1,6 @@
 // Game GUIs drawn from the game's own sprites: the vitals, the advancement
 // toast and the inventory screen, plus the item tooltip.
-import { ASSETS, enchantmentName, glyphWidths, itemName, itemUrl, spriteUrl } from "./assets.js";
+import { ASSETS, enchantmentName, glyphWidths, itemName, itemTintUrl, itemUrl, spriteUrl } from "./assets.js";
 import { el } from "./util.js";
 
 // ---- pixel-exact scaling -------------------------------------------------------
@@ -79,6 +79,25 @@ function glint(gui, url, x, y) {
   return node;  // the caller drops it if the icon it masks never loads
 }
 
+// A potion's brew, or dyed leather. The icon already carries the model's default
+// colour, so this lays the stack's real one over just the layer that takes it. The
+// mask is only applied once it has loaded: without one, an unmasked div would be a
+// solid colour square sitting over the item.
+function colorLayer(gui, id, color, x, y) {
+  const url = itemTintUrl(id);
+  if (!url) return null;
+  const node = gui.add(el("div", { class: "tint" }), x, y, 16, 16);
+  const probe = new Image();
+  probe.addEventListener("load", () => {
+    node.style.maskImage = `url("${url}")`;
+    node.style.webkitMaskImage = `url("${url}")`;
+    node.style.background = `#${(color & 0xffffff).toString(16).padStart(6, "0")}`;
+  }, { once: true });
+  probe.addEventListener("error", () => node.remove(), { once: true });
+  probe.src = url;
+  return node;
+}
+
 export function textWidth(text) {
   let width = 0;
   for (const char of text) width += (glyphWidths[char] ?? 5) + 1;
@@ -129,10 +148,13 @@ function drawItem(gui, item, x, y, key) {
 
   const icon = gui.add(el("img", { src: url, alt: "" }), x, y, 16, 16);
   // an item with no rendered icon (a bed, a banner…) falls back to a colour swatch
+  const brew = Number.isInteger(item.color) ? colorLayer(gui, item.id, item.color, x, y) : null;
   const sheen = item.enchanted ? glint(gui, url, x, y) : null;
   icon.addEventListener("error", () => {
     icon.replaceWith(swatch());
-    sheen?.remove();  // or it hangs over the swatch with nothing beneath it
+    // or they hang over the swatch with nothing beneath them
+    sheen?.remove();
+    brew?.remove();
   }, { once: true });
 
   if (item.count > 1) {

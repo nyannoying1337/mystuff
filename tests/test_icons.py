@@ -125,6 +125,21 @@ def build_jar(path: Path):
              "faces": {"west": {"texture": "#b"}, "east": {"texture": "#b"}}},
         ]})
 
+        # --- a potion: a tinted liquid layer under an untinted bottle. The tint type is
+        #     one that depends on the stack, so the page needs the shape separately.
+        item("test_potion", {"model": {"type": "minecraft:model", "model": "minecraft:item/test_potion",
+                                       "tints": [{"type": "minecraft:potion", "default": 0x385DC6}]}})
+        model("item/test_potion", {"parent": "item/generated",
+                                   "textures": {"layer0": "item/brew", "layer1": "item/bottle"}})
+        texture("item/brew", WHITE)
+        texture("item/bottle", GREEN)
+
+        # --- a grass-tinted block: also tinted, but by where it is, not by the stack
+        item("test_grass", {"model": {"type": "minecraft:model", "model": "minecraft:item/test_grass",
+                                      "tints": [{"type": "minecraft:grass", "temperature": 0.5, "downfall": 0.5}]}})
+        model("item/test_grass", {"parent": "item/generated", "textures": {"layer0": "item/blade"}})
+        texture("item/blade", WHITE)
+
         # --- a special type nothing supports (banners, beds, signs all land here)
         item("mystery", {"model": {"type": "minecraft:special", "base": "minecraft:item/mystery",
                                    "model": {"type": "minecraft:banner"}}})
@@ -277,5 +292,30 @@ assert row(with_depth_test(False, "crossed")) == {YELLOW}, \
     "fixture no longer exercises the bug: one plane should win outright without depth"
 assert row(with_depth_test(True, "crossed")) == {GREEN, YELLOW}, \
     f"both planes are in front somewhere along the middle row, got {row(with_depth_test(True, 'crossed'))}"
+
+# --- a stack's own colour is published as a separate shape.
+#     One icon per item id cannot show a healing potion red and night vision blue, so
+#     the icon keeps the model's default tint and the page lays the real colour over
+#     just the layers that take one. Only tints that depend on the stack qualify: a
+#     grass tint is a property of where a block is, and belongs baked into the icon.
+potion_mask = ba.render_tint_mask(assets, "test_potion")
+assert potion_mask is not None, "a potion's brew layer must be published for the page to tint"
+assert potion_mask.size == (ba.ICON, ba.ICON), potion_mask.size
+mask_colours = colours(potion_mask)
+assert nearest(mask_colours[0], [WHITE, GREEN]) == WHITE, \
+    f"the mask is the tinted layer alone, untinted — not the bottle over it: {mask_colours[:3]}"
+assert GREEN not in mask_colours, "the untinted bottle layer must not be in the mask"
+
+assert ba.render_tint_mask(assets, "test_grass") is None, \
+    "a grass tint comes from the world, not the stack; it belongs baked into the icon"
+assert ba.render_tint_mask(assets, "flat_thing") is None, "an untinted item has no mask"
+
+# the icon itself is unchanged: it still carries the default tint, so a viewer whose
+# agent sends no colour sees exactly what they saw before
+potion_icon = render("test_potion")
+assert potion_icon is not None
+default_tint = (0x38, 0x5D, 0xC6)
+assert nearest(colours(potion_icon)[0], [default_tint, GREEN, WHITE]) in (default_tint, GREEN), \
+    f"the icon keeps the model's default tint: {colours(potion_icon)[:3]}"
 
 print("ALL ICON TESTS PASSED")

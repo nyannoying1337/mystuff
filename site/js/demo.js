@@ -83,6 +83,10 @@ export function demoData(have = { frames: true, panorama: true }) {
         item("iron_ingot", 34, 9), item("gold_ingot", 11, 10), item("redstone", 48, 11),
         item("lapis_lazuli", 22, 12), item("coal", 61, 13), item("raw_copper", 27, 14),
         item("glass", 16, 20), item("wheat", 9, 21), item("bone", 14, 22),
+        // colours come from the stack, not the id: every potion is minecraft:potion
+        item("potion", 1, 23, { color: 0xF82423 }),          // healing, red
+        item("potion", 1, 24, { color: 0x1F1FA1 }),          // night vision, blue
+        item("leather_chestplate", 1, 25, { color: 0x4AA02C, damage: 12, max_damage: 81 }),
       ],
       armor: {
         head: item("diamond_helmet", 1, 0, { damage: 40, max_damage: 363 }),

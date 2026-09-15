@@ -40,6 +40,11 @@ A tour of the status page, card by card. Screenshots show made-up demo data.
 The real inventory screen: armor, offhand, main inventory and hotbar, with your skin in the preview.
 
 - **Items** show stack counts, durability bars and the enchantment glint.
+- **Potions and dyed leather** show their real colour. Every potion shares the item id
+  `minecraft:potion`, so one icon per id cannot tell healing from night vision — the mod
+  sends the stack's colour and the page lays it over just the layer that takes one.
+  Needs mod 1.4.0 or newer; an older jar sends no colour and the icon keeps the default,
+  which is what the game itself draws for a potion with nothing brewed into it.
 - **Tooltips** on hover (or tap) list the item's name, enchantments and durability.
 - **Logged out,** the card becomes "Logged out with" and keeps what you had.
 - **Custom item names** are only shown if you turn on `share_item_names` in the mod's settings, because they can contain anything.

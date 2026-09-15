@@ -21,6 +21,11 @@ export const assetsReady = Promise.all([
 // with a vanilla path ("create:copper_block"), which would show a confidently
 // wrong icon. Modded items get the barrier placeholder and keep their real name.
 export const itemUrl = (id) => `${ASSETS}/item/${isVanilla(id) ? shortId(id) : "barrier"}.png`;
+// Only the layers a stack's own colour applies to — a potion's brew, leather's dye.
+// build_assets.py writes one of these beside the icon for the few items that take one.
+// null for a modded id, for the same reason itemUrl sends one to the barrier: a modded
+// path can collide with a vanilla one and tint confidently the wrong shape.
+export const itemTintUrl = (id) => (isVanilla(id) ? `${ASSETS}/item/${shortId(id)}.tint.png` : null);
 export const spriteUrl = (name) => `${ASSETS}/hud/${name}.png`;
 
 export function itemName(item) {
