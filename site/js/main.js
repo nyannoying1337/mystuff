@@ -6,12 +6,13 @@
 // from redoing layout and images for the whole page on every push.
 import { assetsReady, glyphWidths } from "./assets.js";
 import {
-  advancementsPanel, chip, cursesPanel, gamePanel, itemIcon, mapPanel, modsPanel, panel, playtimePanel, statRows, statsPanel, worldPanel,
+  advancementsPanel, chip, cursesPanel, eventsPanel, gamePanel, itemIcon, mapPanel, modsPanel, panel, playtimePanel, shotsPanel, statRows, statsPanel, worldPanel,
 } from "./cards.js";
 import { SITE_NAME } from "./config.js";
 import { fitPixels, inventoryNode, reattachTooltip, toastNode, tooltipIsPinned, vitalsNode, TOAST_MS } from "./gui.js";
 import * as live from "./live.js";
 import { panoramaView } from "./panorama.js";
+import { loadShots, shotsView } from "./shots.js";
 import { dimensionName, duration, el, timeAgo } from "./util.js";
 
 const DEFAULT_STALE_MS = 90000;           // the Worker sends its own value with each status
@@ -28,6 +29,9 @@ const forgetButton = document.getElementById("forget-key");
 let lastData = null;
 let staleMs = DEFAULT_STALE_MS;
 let mapInfo = null;
+// Built once when the archive loads: the scrubber holds which frame you're on,
+// so rebuilding it on every status push would drag you back to the newest.
+let shots = null;
 
 // ---- sections ----------------------------------------------------------------------
 
@@ -268,6 +272,7 @@ function render(data) {
 
   // ---- right column ----
   const curses = Array.isArray(data.curses) && data.curses.length ? data.curses : null;
+  const events = Array.isArray(data.events) && data.events.length ? data.events : null;
   const mods = Array.isArray(player.mods) && player.mods.length ? player.mods : null;
   const playtime = Array.isArray(data.playtime) && data.playtime.some((day) => day.seconds >= 60) ? data.playtime : null;
   mapButton.hidden = !mapInfo;
@@ -275,6 +280,8 @@ function render(data) {
     online && !multiplayer && player.world ? section("world", player.world, () => worldPanel(player.world)) : null,
     (online && player.game) || Object.keys(system).length
       ? section("game", [system, online && player.game], () => gamePanel(player.game, system, online)) : null,
+    events ? section("events", events, () => eventsPanel(events)) : null,
+    shots ? section("shots", shots.count, () => shotsPanel(shots.node, shots.count)) : null,
     playtime ? section("playtime", playtime, () => playtimePanel(playtime)) : null,
     mapInfo ? section("map", [mapInfo, player.name, timeAgo(mapInfo.rendered_at)], () => mapPanel(mapInfo, player.name)) : null,
     curses ? section("curses", [curses, curses.map((curse) => timeAgo(curse.at))], () => cursesPanel(curses)) : null,
@@ -310,6 +317,13 @@ fetch("map/mc-status.json", { cache: "no-store" })
     if (mapInfo && lastData) render(lastData);
   })
   .catch(() => {});
+
+// The frame archive is published separately and may not exist yet.
+loadShots().then((archive) => {
+  if (!archive) return;
+  shots = { ...shotsView(archive), count: archive.frames.length };
+  if (lastData) render(lastData);
+});
 
 // "3 min ago" labels age locally; no requests
 setInterval(() => {

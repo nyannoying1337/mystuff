@@ -1,7 +1,7 @@
 // The dashboard cards. Each takes plain data and returns a DOM node.
 import { biomeName, entityName, itemName, itemUrl, spriteUrl } from "./assets.js";
 import {
-  clockTime, count, distance, duration, el, gib, plainNumber, shortId, timeAgo, titleCase,
+  clockTime, count, distance, duration, el, gib, plainNumber, shortId, timeAgo, timeOfDay, titleCase,
 } from "./util.js";
 
 // ---- building blocks -------------------------------------------------------------
@@ -256,6 +256,23 @@ export function advancementsPanel(adv) {
   ]);
 }
 
+// The timeline of a day. Text comes from the agent already written out, so the
+// panel only has to place it; el() sets it as textContent, never as markup.
+export function eventsPanel(events) {
+  const list = el("ol", { class: "event-list" });
+  for (const entry of events) {
+    const icon = itemIcon(entry.icon, "event-icon");
+    icon.addEventListener("error", () => { icon.src = itemUrl("barrier"); }, { once: true });
+    list.append(el("li", { class: `event event-${entry.kind}` }, [
+      el("time", { class: "event-at", datetime: new Date(entry.at).toISOString(), text: timeOfDay(entry.at) }),
+      icon,
+      el("span", { class: "event-text", text: entry.text }),
+    ]));
+  }
+  const note = `${events.length} event${events.length === 1 ? "" : "s"}`;
+  return panel("Today", [list], "", note);
+}
+
 export function statsPanel(stats, online) {
   const mobIcon = (id) => `${shortId(id)}_spawn_egg`;
   const hearts = (value) => `${count(Math.round((value ?? 0) / 20))} ♥`;
@@ -317,6 +334,10 @@ export function mapPanel(info, playerName) {
       : `A 3D map of the world, rendered ${timeAgo(info.rendered_at)}.` }),
     el("a", { class: "btn btn-green", href: "map/", text: "Open world map" }),
   ], "map-card");
+}
+
+export function shotsPanel(view, count) {
+  return panel("Looking back", [view], "shots-card", `${count} frame${count === 1 ? "" : "s"}`);
 }
 
 const CURSE_UNITS = { cpu_temp: " °C", gpu_temp: " °C", cpu_percent: "%", gpu_percent: "%", mem_percent: "%", uptime_hours: " h" };

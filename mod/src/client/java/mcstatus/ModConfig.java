@@ -13,6 +13,7 @@ final class ModConfig {
 	int stateIntervalTicks = 20;
 	boolean shareItemNames = false;
 	boolean shareMods = true;
+	boolean shareServerWorld = false;
 
 	static ModConfig load(Path path) {
 		Properties props = new Properties();
@@ -22,6 +23,7 @@ final class ModConfig {
 		props.setProperty("state_interval_ticks", String.valueOf(config.stateIntervalTicks));
 		props.setProperty("share_item_names", String.valueOf(config.shareItemNames));
 		props.setProperty("share_mods", String.valueOf(config.shareMods));
+		props.setProperty("share_server_world", String.valueOf(config.shareServerWorld));
 
 		if (Files.isRegularFile(path)) {
 			try (InputStream in = Files.newInputStream(path)) {
@@ -31,7 +33,8 @@ final class ModConfig {
 			}
 		} else {
 			try (OutputStream out = Files.newOutputStream(path)) {
-				props.store(out, "mc-status: share_item_names publishes custom item names, which can contain anything");
+				props.store(out, "mc-status: share_item_names publishes custom item names, which can contain anything; "
+					+ "share_server_world allows frames and coordinates from servers, where other players are in shot");
 			} catch (IOException err) {
 				McStatusClient.LOG.warn("could not write default config {}: {}", path, err.getMessage());
 			}
@@ -42,6 +45,7 @@ final class ModConfig {
 		config.stateIntervalTicks = Math.clamp(integer(props, "state_interval_ticks", 20), 5, 200);
 		config.shareItemNames = Boolean.parseBoolean(props.getProperty("share_item_names", "false").trim());
 		config.shareMods = Boolean.parseBoolean(props.getProperty("share_mods", "true").trim());
+		config.shareServerWorld = Boolean.parseBoolean(props.getProperty("share_server_world", "false").trim());
 		return config;
 	}
 

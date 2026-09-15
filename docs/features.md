@@ -11,6 +11,8 @@ A tour of the status page, card by card. Screenshots show made-up demo data.
 - [World](#world)
 - [The game](#the-game)
 - [Mods](#mods)
+- [Today](#today)
+- [Looking back](#looking-back)
 - [Play time](#play-time)
 - [After you log out](#after-you-log-out)
 - [The 3D map](#the-3d-map)
@@ -115,6 +117,53 @@ API.
 
 Turn it off with `share_mods` in the mod's settings.
 
+## Today
+
+The day's timeline, oldest first: when you started, what happened, and how long
+you played. The statistics card shows what is true now; this shows what happened
+and when.
+
+- **Sessions** — start and finish, with how long it ran. Recorded for servers
+  too, as "on a server": that you played is not the same as what you did.
+- **Advancements**, as you unlock them.
+- **Deaths**, off the counter, so a double death reads as one line.
+- **Dimension changes** — into the Nether, back to the Overworld.
+- **Milestones** on powers of ten: 100 · 1,000 · 10,000 · 100,000 mobs, 10 · 100
+  · 1,000 km travelled, 10 · 100 · 1,000 hours played. Blocks mined isn't here —
+  the statistics card already owns totals.
+
+Nothing appears twice, and the first run seeds quietly rather than opening with
+every milestone you passed years ago. Ten days are kept in `agent/events.json`;
+the last day is published. Sessions shorter than a minute are dropped.
+
+## Looking back
+
+A scrubber over the frames of the last few days: drag it, or click a thumbnail,
+and the picture and its caption follow. Clicking the picture opens it full size.
+
+The mod overwrites a single `latest.png` and the Worker keeps one frame, so
+nothing used to remember yesterday. Turning on `[shots] keep` starts an archive
+on your own machine: one frame at most every five minutes, written at two sizes —
+a 320 px thumbnail so the whole strip loads at once, and a 1280 px frame fetched
+only when you open one.
+
+One panorama a day is kept too: the last logout of that day, which is where you
+actually left off.
+
+`[shots] publish` pushes a ten-day window to the repo's `shots` branch, the same
+way `map/render.py` publishes tiles — force-pushed as a single commit, so
+re-publishing never piles image history into the repo. It happens once when you
+log out, in the background, not on every frame: a push to that branch redeploys
+the site.
+
+**Thirty days are kept locally and ten are published, and that difference
+matters.** Replacing the branch is a real delete — a frame that rolls out of the
+published window is in no commit and no history. The local archive is the only
+undo, which is why it keeps longer than the page shows.
+
+Frames from servers are off unless you turn on `share_server_world` in both the
+mod and the agent; see [privacy](privacy.md).
+
 ## Play time
 
 <img src="images/playtime.webp" alt="Play time per day" width="480">
@@ -205,6 +254,9 @@ More in [Privacy and security](privacy.md).
 | The game, play time | ✓ | ✓ | ✓ |
 | TPS | ✓ | | |
 | Mods | ✓ | ✓ | ✓ |
+| Today: sessions | ✓ | ✓ | ✓ |
+| Today: advancements, deaths, milestones | ✓ | | |
+| Looking back | ✓ | with `share_server_world` | ✓ |
 | Curses | ✓ | | recent ones |
 
 If the agent stops pushing for 90 seconds (PC off, agent closed), the page says so and keeps showing the last state.

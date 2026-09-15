@@ -18,6 +18,9 @@ interval_seconds = 10
 offline_interval_seconds = 60
 # Time in game per day is kept here (default: agent/playtime.json).
 # playtime_file = "~/mc-status-playtime.json"
+# The day's timeline is kept here (default: agent/events.json). Ten days are
+# stored; the last day is published.
+# events_file = "~/mc-status-events.json"
 
 [source]
 # "mod"  — singleplayer: the mc-status Fabric mod writes your state, and runs
@@ -44,6 +47,18 @@ player = "YourName"
 max_width = 1920
 quality = 82
 
+[shots]
+# Keep a thinned archive of the mod's frames, and publish a window of it to the
+# repo's `shots` branch for the timeline on the page. Needs git push access.
+keep = false
+publish = false
+# One frame kept per this many seconds, at most.
+every_seconds = 300
+# Where the local archive lives (default: agent/shots). Thirty days are kept
+# here; ten are published. The local copy is the only undo — publishing replaces
+# the branch wholesale, so what rolls out of the published window is gone.
+# directory = "~/mc-status-shots"
+
 [map]
 # When you log out, render the area around where you were and publish it to
 # the repo's `map` branch (see map/render.py). Needs Java 25+ and git push access.
@@ -65,6 +80,12 @@ publish = true
 # logout map still renders around your position: turn render_on_logout off if
 # that's a concern.
 hide_coordinates = false
+# Publish where you are, and frames of what you see, while on someone else's
+# server. Off by default: coordinates on a shared world are a route to your base,
+# and a frame can hold other players' builds and nametags. The mod has its own
+# share_server_world switch — both have to be on. Statistics and advancements
+# stay off regardless: the client can't read them on a server.
+share_server_world = false
 
 [cursed]
 # The machine reaches into the world. Off until you mean it: these run real

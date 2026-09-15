@@ -47,6 +47,12 @@ export function timeAgo(ms) {
   return `${Math.round(minutes / 1440)} days ago`;
 }
 
+// Wall-clock HH:MM in the viewer's timezone, for timeline entries.
+export const timeOfDay = (ms) => {
+  const when = new Date(ms);
+  return `${String(when.getHours()).padStart(2, "0")}:${String(when.getMinutes()).padStart(2, "0")}`;
+};
+
 // 0 ticks = 6:00 in the game's day
 export function clockTime(ticks) {
   const minutes = Math.floor((((ticks + 6000) % 24000) / 1000) * 60);

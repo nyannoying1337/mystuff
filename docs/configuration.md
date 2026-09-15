@@ -35,6 +35,7 @@ Created by `python setup.py` from [`agent/config.example.toml`](../agent/config.
 | `interval_seconds` | `10` | how often to push while you're in game |
 | `offline_interval_seconds` | `60` | how often to push while you're not |
 | `playtime_file` | `agent/playtime.json` | where time in game per day is kept |
+| `events_file` | `agent/events.json` | where the day's timeline is kept; ten days stored, the last day published |
 
 ### `[source]`
 
@@ -63,6 +64,19 @@ Without the mod there's no frame unless `screenshot.directory` is set. For logou
 | `directory` | | with RCON: a folder to take the newest image from. With the mod, its HUD-free frame is always used and F2 screenshots are never published |
 | `max_width` | `1920` | frames are scaled down to this width |
 | `quality` | `82` | JPEG quality of uploaded frames |
+
+### `[shots]`
+
+The frame archive behind the *Looking back* card. Thirty days are kept locally
+and ten are published — replacing the branch is a real delete, so the local copy
+is the only undo.
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `keep` | `false` | keep a thinned archive of the mod's frames on this machine |
+| `publish` | `false` | push a ten-day window to the `shots` branch when you log out |
+| `every_seconds` | `300` | at most one frame kept per this many seconds |
+| `directory` | `agent/shots` | where the local archive lives |
 
 ### `[map]`
 
@@ -136,6 +150,7 @@ Written in the game's `config` folder on first start. Restart the game after cha
 | `state_interval_ticks` | `20` | 5–200 | how often `state.json` is checked for changes (20 ticks = 1 s) |
 | `share_item_names` | `false` | | publish custom item names, which can contain anything |
 | `share_mods` | `true` | | publish the list of installed mods and their versions |
+| `share_server_world` | `false` | | allow frames and coordinates from servers, where other players are in shot |
 
 ## The server tool
 

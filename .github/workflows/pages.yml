@@ -1,9 +1,10 @@
 name: Deploy site
 
 on:
-  # `map` is force-pushed by map/render.py; a new render redeploys the site.
+  # `map` is force-pushed by map/render.py and `shots` by agent/archive.py;
+  # a new render or a new batch of frames redeploys the site.
   push:
-    branches: [main, map]
+    branches: [main, map, shots]
     paths-ignore: ['README.md', 'docs/**']  # docs aren't part of the site
   workflow_dispatch:
 
@@ -59,6 +60,17 @@ jobs:
             echo "map: $(find site/map -type f | wc -l) files"
           else
             echo "no map branch yet — deploying without /map"
+          fi
+
+      - name: Add the archived frames, if there are any
+        run: |
+          if git ls-remote --exit-code --heads origin shots > /dev/null; then
+            git fetch --depth 1 origin shots
+            mkdir -p site/shots
+            git archive FETCH_HEAD | tar -x -C site/shots
+            echo "shots: $(find site/shots -name '*.jpg' | wc -l) images"
+          else
+            echo "no shots branch yet — deploying without /shots"
           fi
 
       # Item icons and HUD sprites come from Mojang's client jar at deploy time,

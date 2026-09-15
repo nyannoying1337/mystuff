@@ -25,6 +25,11 @@ On someone else's server, the mod doesn't collect coordinates, world facts, stat
 - F2 screenshots (the mod's HUD-free frame is used instead);
 - custom item names, unless `share_item_names` is on;
 - your mod list, if you turn `share_mods` off;
+- anything from a server you join, unless `share_server_world` is on in both the
+  mod and the agent — and even then only where you are and what you see, never
+  the server's address;
+- that server's statistics and advancements at all: the client can't read them
+  without asking the server for them, and it never asks;
 - any field that isn't on the allowlist.
 
 ## Your choices
@@ -37,6 +42,7 @@ On someone else's server, the mod doesn't collect coordinates, world facts, stat
 | World name, biome, statistics, hardware names | shown, your own worlds only | edit `site/js/cards.js` |
 | Custom item names | hidden | `share_item_names` in the mod's settings |
 | Installed mods | shown | `share_mods` in the mod's settings |
+| Coordinates and frames on someone's server | hidden | `share_server_world`, in **both** the mod's settings and the agent's `[privacy]` |
 
 ## Who can watch
 

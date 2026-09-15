@@ -12,6 +12,8 @@ worker/.dev.vars
 .wrangler/
 worker/wrangler.generated.toml
 agent/playtime.json
+agent/events.json
+agent/shots/
 agent/*.json.tmp
 site/_preview/
 /server/

@@ -51,6 +51,13 @@ def hide_coordinates(config: dict) -> bool:
     return bool(config.get("privacy", {}).get("hide_coordinates", False))
 
 
+def share_server_world(config: dict) -> bool:
+    """Publish where you are, and frames of what you see, while on someone
+    else's server. Off by default: coordinates on a shared world are a route to
+    your base, and a frame can hold other players' builds and nametags."""
+    return bool(config.get("privacy", {}).get("share_server_world", False))
+
+
 def apply_privacy(config: dict, player: dict) -> dict:
     """privacy.hide_coordinates: no position, facing or death spot anywhere."""
     if hide_coordinates(config):
