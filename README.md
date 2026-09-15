@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nyannoying1337/mystuff/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/nyannoying1337/mystuff/actions/workflows/tests.yml/badge.svg"></a>
+  <a href="https://github.com/nyannoying1337/mc-status/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/nyannoying1337/mc-status/actions/workflows/tests.yml/badge.svg"></a>
   <img alt="Minecraft 26.2" src="https://img.shields.io/badge/Minecraft-26.2-62B47A">
   <img alt="Fabric" src="https://img.shields.io/badge/mod-Fabric-DBD0B4">
   <img alt="Runs on free tiers" src="https://img.shields.io/badge/hosting-%240%20free%20tiers-F38020">
@@ -92,9 +92,9 @@ Every card also works on a phone. **[Full tour of the page →](docs/features.md
 About 15 minutes, all on free plans. You need a GitHub account, a Cloudflare account, Python 3.11+, Node.js 20+, and Minecraft Java with Fabric.
 
 ```bash
-# 1. fork this repo on GitHub, then clone just main:
-git clone --single-branch https://github.com/<you>/<your-fork>.git
-cd <your-fork>
+# 1. press "Use this template" on GitHub, then clone what it made:
+git clone https://github.com/<you>/<your-repo>.git
+cd <your-repo>
 
 # 2. the wizard deploys the Worker, creates the keys, installs the agent and prints your invite link
 python setup.py

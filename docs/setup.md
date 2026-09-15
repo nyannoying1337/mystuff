@@ -22,25 +22,28 @@ About 15 minutes, all on free plans.
 | **Minecraft** | Java Edition 26.2 with [Fabric Loader](https://fabricmc.net/use/installer/) and [Fabric API](https://modrinth.com/mod/fabric-api) |
 | **Optional** | the [gh CLI](https://cli.github.com/), so the wizard can set repository variables and secrets itself; Java 25+ for the logout map (the Minecraft launcher's own Java is found automatically) |
 
-## Fork and deploy
+## Start your own and deploy
 
-### 1. Fork and clone
+### 1. Use the template, and clone it
 
-Fork this repository on GitHub, then clone your fork onto the PC you play on:
+Press **Use this template → Create a new repository**, then clone what it made
+onto the PC you play on:
 
 ```bash
-git clone --single-branch https://github.com/<you>/<your-fork>.git
-cd <your-fork>
+git clone https://github.com/<you>/<your-repo>.git
+cd <your-repo>
 ```
 
-`--single-branch` takes `main` only. The other branches hold published content
-rather than code — `map` the rendered world, `shots` the frame archive, `demo` the
-`?demo` imagery — and a fork inherits whatever the repository it was forked from
-had in them. You want your own, not someone else's; the tools below fill them in.
+The template copies `main` and nothing else, which is what you want: the other
+branches hold *published content* rather than code — `map` the rendered world,
+`shots` the frame archive, `demo` the `?demo` imagery — and they belong to
+whoever published them. Yours get filled in by the tools below. (If you fork
+instead, or clone this repository directly, add `--single-branch` to leave
+someone else's world behind.)
 
 ### 2. Build the mod once
 
-In your fork on GitHub: **Actions → Release mod → Run workflow**. It builds the jar,
+In your repository on GitHub: **Actions → Release mod → Run workflow**. It builds the jar,
 tags the version in `mod/gradle.properties`, and attaches the jar to a release where the
 wizard can download it. Pushing a tag like `v1.4.0` does the same thing.
 
@@ -64,7 +67,7 @@ It asks before each step, and it's safe to run again:
 3. **Secrets:** generates the push token and stores it as a Worker secret and in `agent/config.toml` (gitignored).
 4. **GitHub:** sets the repository variables if `gh` is installed, otherwise prints them.
 5. **The agent:** installs its Python packages into `agent/.venv` and starts it at login (a scheduled task on Windows, launchd on macOS, a systemd user service on Linux).
-6. **The mod:** downloads the jar from your fork's latest release into your `mods` folder.
+6. **The mod:** downloads the jar from your latest release into your `mods` folder.
 7. **Invite:** creates the invite key and prints your invite link.
 
 Secrets are handed straight to wrangler and never printed. `python setup.py --dry-run` shows everything it would do without changing anything.
@@ -141,15 +144,26 @@ Without the Cloudflare secrets the workflow skips itself (it still shows as succ
 4. `agent/.venv/bin/python agent/agent.py --dry-run`, then run it with `--log-file agent/agent.log`.
 
 **Mod**
-Take the jar from your fork's Releases, or build it with `cd mod && ./gradlew build` (Java 25). Put it in `.minecraft/mods` next to Fabric API.
+Take the jar from your Releases, or build it with `cd mod && ./gradlew build` (Java 25). Put it in `.minecraft/mods` next to Fabric API.
 
 ## Updating
 
-- **Pulling changes into your fork:** sync the fork on GitHub, `git pull`, then `python setup.py deploy` if `worker/` changed. The page redeploys by itself on push.
-- **The mod:** your fork's Releases page only changes when *you* publish to it — syncing the
-  fork does not do it. After pulling mod changes, bump `version=` in
-  `mod/gradle.properties`, then push a matching tag (`git tag v1.3.0 && git push origin v1.3.0`)
-  or run **Actions → Release mod → Run workflow**. Then download the new jar and replace the
+- **Pulling changes in:** a repository made from the template has no upstream link —
+  that is the trade for getting `main` and nothing else — so point one at it yourself,
+  once:
+
+  ```bash
+  git remote add upstream https://github.com/nyannoying1337/mc-status.git
+  git pull upstream main
+  ```
+
+  Then `python setup.py deploy` if `worker/` changed. The page redeploys by itself on
+  push. (A fork instead of a template copy has the **Sync fork** button, and then just
+  `git pull`.)
+- **The mod:** your Releases page only changes when *you* publish to it — pulling does
+  not do it. After pulling mod changes, bump `version=` in `mod/gradle.properties`,
+  then push a matching tag (`git tag v1.4.1 && git push origin v1.4.1`) or run
+  **Actions → Release mod → Run workflow**. Then download the new jar and replace the
   old one while the game is closed.
   The agent logs a warning when the jar it can see is older than the checkout, so
   check `agent/agent.log` if a card is missing rows you expected.
