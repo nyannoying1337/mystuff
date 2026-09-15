@@ -115,7 +115,29 @@ assert not list(staged.rglob("day.json")), list(staged.rglob("day.json"))
 assert (staged / "index.json").is_file()
 assert manifest["frames"], manifest
 
+# --- the file path carries the LOCAL day, which is what the page keys panoramas by
+first = json.loads((folder / "day.json").read_text())[0]
+assert first["file"][:10] == time.strftime("%Y-%m-%d", time.localtime(first["at"] / 1000)), first["file"]
+
 # --- publishing is off unless asked for
 assert archive.publish(config) is False
+
+# --- a missing remote is logged, not thrown
+broken = dict(config, shots=dict(config["shots"], publish=True, directory=str(tmp / "nothing-here")))
+assert archive.publish(broken, remote="no-such-remote") is False
+assert not (tmp / "nothing-here" / ".publish").exists()
+
+# --- and so is a staging failure. publish() runs in a daemon thread, where an
+#     escaping error dies silently, so this must reach the guard rather than the
+#     remote lookup — stage() raises before any git command runs, so nothing is
+#     ever pushed here.
+staging = dict(config, shots=dict(config["shots"], publish=True))
+real_stage = archive.stage
+archive.stage = lambda *a, **k: (_ for _ in ()).throw(OSError("disk full"))
+try:
+    assert archive.publish(staging) is False
+finally:
+    archive.stage = real_stage
+assert not (store / ".publish").exists(), "the staging directory should be cleaned up"
 
 print("ALL ARCHIVE TESTS PASSED")

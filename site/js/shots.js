@@ -18,7 +18,9 @@ export async function loadShots() {
   }
 }
 
-const dayOf = (at) => new Date(at).toISOString().slice(0, 10);
+// archive.py names day folders by local date, and the file path carries that
+// name — so read it from the path rather than recomputing it in UTC.
+const dayOf = (frame) => String(frame.file || "").slice(0, 10);
 
 function caption(frame) {
   const when = new Date(frame.at);
@@ -57,21 +59,35 @@ export function shotsView({ frames, panoramas }) {
   const panoLink = el("a", { class: "btn shot-pano", href: "#", text: "360° from this day" });
   panoLink.hidden = true;
 
+  // Dragging fires input continuously. The caption and the strip can follow every
+  // step for free; the full-size picture waits for the drag to settle, or one
+  // sweep of a long archive would ask for hundreds of 1280 px frames.
+  let pending = 0;
+  function showImage(frame) {
+    clearTimeout(pending);
+    pending = setTimeout(() => { image.src = `${SHOTS}/${frame.file}`; }, 120);
+  }
+
   function show(at) {
     current = Math.max(0, Math.min(frames.length - 1, at));
     const frame = frames[current];
-    image.src = `${SHOTS}/${frame.file}`;
+    showImage(frame);
     text.textContent = caption(frame);
     slider.value = String(current);
     for (const thumb of thumbs) thumb.classList.toggle("is-current", thumb.dataset.at === String(current));
     thumbs[current]?.scrollIntoView({ block: "nearest", inline: "center" });
 
-    const panorama = panoramas[dayOf(frame.at)];
+    const panorama = panoramas[dayOf(frame)];
     panoLink.hidden = !panorama;
     if (panorama) panoLink.href = `${SHOTS}/${panorama}`;
   }
 
   slider.addEventListener("input", () => show(Number(slider.value)));
+  // and immediately once the drag ends, so releasing never leaves it waiting
+  slider.addEventListener("change", () => {
+    clearTimeout(pending);
+    image.src = `${SHOTS}/${frames[current].file}`;
+  });
   image.addEventListener("click", () => window.open(image.src, "_blank", "noopener"));
 
   show(current);

@@ -103,20 +103,25 @@ final class StateWriter {
 		state.addProperty("xpp", player.experienceProgress);
 		state.addProperty("dimension", player.level().dimension().identifier().toString());
 
-		JsonArray position = new JsonArray();
-		position.add(Math.round(player.getX() * 10) / 10.0);
-		position.add(Math.round(player.getY() * 10) / 10.0);
-		position.add(Math.round(player.getZ() * 10) / 10.0);
-		state.add("position", position);
-		JsonArray rotation = new JsonArray();
-		rotation.add(Math.round(player.getYRot() * 10) / 10.0);
-		rotation.add(Math.round(player.getXRot() * 10) / 10.0);
-		state.add("rotation", rotation);
-
 		// The agent only renders maps and runs curses for singleplayer sessions.
 		// For servers nothing identifying is written — not even the address.
 		IntegratedServer server = client.getSingleplayerServer();
 		state.addProperty("mode", server != null ? "singleplayer" : "multiplayer");
+
+		// Where you are on a shared world is a route to your base, so on a server
+		// it isn't written at all unless you've said so. The agent has its own
+		// matching switch; this is the first of the two locks, not the only one.
+		if (server != null || config.shareServerWorld) {
+			JsonArray position = new JsonArray();
+			position.add(Math.round(player.getX() * 10) / 10.0);
+			position.add(Math.round(player.getY() * 10) / 10.0);
+			position.add(Math.round(player.getZ() * 10) / 10.0);
+			state.add("position", position);
+			JsonArray rotation = new JsonArray();
+			rotation.add(Math.round(player.getYRot() * 10) / 10.0);
+			rotation.add(Math.round(player.getXRot() * 10) / 10.0);
+			state.add("rotation", rotation);
+		}
 		if (server != null) {
 			state.addProperty("world_path", server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString());
 			state.add("world", world(client, server, player));

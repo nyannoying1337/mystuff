@@ -212,16 +212,18 @@ def publish(config: dict, remote: str = "origin") -> bool:
         log.warning("no git remote to publish shots to: %s", err)
         return False
 
-    work = archive_dir(config) / ".publish"
-    manifest = stage(config, work)
-    if not manifest["frames"]:
-        log.info("nothing archived yet — not publishing")
-        return False
-
     # GitHub only runs workflows that exist in the pushed branch, so the branch
     # carries a copy of the site deploy, the same way the map branch does.
     workflow = here / ".github" / "workflows" / "pages.yml"
+    work = archive_dir(config) / ".publish"
     try:
+        # Staging reads a tree the player can still be writing into: they may have
+        # rejoined and archived another frame, or the disk may be full. This runs
+        # in a daemon thread, where an escaping error is a silent death.
+        manifest = stage(config, work)
+        if not manifest["frames"]:
+            log.info("nothing archived yet — not publishing")
+            return False
         (work / ".nojekyll").touch()
         if workflow.is_file():
             (work / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
@@ -231,7 +233,7 @@ def publish(config: dict, remote: str = "origin") -> bool:
         _run(["git", "-c", "user.name=mc-status", "-c", "user.email=mc-status@localhost",
               "commit", "-q", "-m", f"{len(manifest['frames'])} frames"], work)
         _run(["git", "push", "--force", url, f"{BRANCH}:{BRANCH}"], work)
-    except (OSError, subprocess.SubprocessError) as err:
+    except (OSError, subprocess.SubprocessError, shutil.Error) as err:
         log.warning("could not publish shots: %s", err)
         return False
     finally:

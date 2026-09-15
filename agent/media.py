@@ -56,9 +56,10 @@ def sync_screenshot(config: dict, state: dict, mode: str | None = None) -> int |
 def sync_panorama(config: dict, state: dict, last_seen: dict | None) -> int | None:
     """After a singleplayer logout, upload the panorama taken just before it.
     Returns the panorama's time once it's on the Worker, for the status."""
-    if source_type(config) != "mod" or not last_seen:
-        return None
-    if last_seen.get("mode") != "singleplayer" and not share_server_world(config):
+    # Singleplayer only, and not because of a privacy switch: PanoramaCapture
+    # never takes one on a server, so the only thing a looser test could publish
+    # is an earlier singleplayer panorama labelled as a server logout.
+    if source_type(config) != "mod" or not last_seen or last_seen.get("mode") != "singleplayer":
         return None
     folder = mod_dir(config)
     try:
