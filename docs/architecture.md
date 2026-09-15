@@ -153,7 +153,7 @@ Plain HTML, CSS and ES modules served by GitHub Pages; no framework and no build
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
-| Deploy site | push to `main` or `map` | builds assets, writes `config.js`, publishes page and map to Pages |
+| Deploy site | push to `main`, `map`, `shots` or `demo` | builds assets, writes `config.js`, publishes the page with the map, frame archive and demo imagery to Pages |
 | Tests | push to `main`, pull requests | agent, curse, Worker and server tool tests; setup wizard dry run |
 | Build mod | changes under `mod/` | builds the jar |
 | Release mod | tags `v*`, or Run workflow | builds the jar and attaches it to a GitHub release, tagging `mod/gradle.properties`'s version when run by hand |
