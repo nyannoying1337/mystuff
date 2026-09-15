@@ -25,6 +25,7 @@ import requests
 
 import collect
 import cursed
+import events
 import media
 import playtime
 import presence
@@ -48,6 +49,7 @@ def run_once(config: dict, state: dict) -> bool:
 
     presence.track(config, state, player, raw, mode)
     payload["playtime"] = playtime.track(config, state, online, now)
+    payload["events"] = events.track(config, state, player, mode, now)
 
     if online:
         if cursed.allowed(config, raw):

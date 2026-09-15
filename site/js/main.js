@@ -6,7 +6,7 @@
 // from redoing layout and images for the whole page on every push.
 import { assetsReady, glyphWidths } from "./assets.js";
 import {
-  advancementsPanel, chip, cursesPanel, itemIcon, machinePanel, mapPanel, panel, playtimePanel, statRows, statsPanel, worldPanel,
+  advancementsPanel, chip, cursesPanel, eventsPanel, itemIcon, machinePanel, mapPanel, panel, playtimePanel, statRows, statsPanel, worldPanel,
 } from "./cards.js";
 import { SITE_NAME } from "./config.js";
 import { fitPixels, inventoryNode, reattachTooltip, toastNode, tooltipIsPinned, vitalsNode, TOAST_MS } from "./gui.js";
@@ -268,11 +268,13 @@ function render(data) {
 
   // ---- right column ----
   const curses = Array.isArray(data.curses) && data.curses.length ? data.curses : null;
+  const events = Array.isArray(data.events) && data.events.length ? data.events : null;
   const playtime = Array.isArray(data.playtime) && data.playtime.some((day) => day.seconds >= 60) ? data.playtime : null;
   mapButton.hidden = !mapInfo;
   setChildren(right, [
     online && !multiplayer && player.world ? section("world", player.world, () => worldPanel(player.world)) : null,
     Object.keys(system).length ? section("machine", [system, online && player.game], () => machinePanel(system, player.game, online)) : null,
+    events ? section("events", events, () => eventsPanel(events)) : null,
     playtime ? section("playtime", playtime, () => playtimePanel(playtime)) : null,
     mapInfo ? section("map", [mapInfo, player.name, timeAgo(mapInfo.rendered_at)], () => mapPanel(mapInfo, player.name)) : null,
     curses ? section("curses", [curses, curses.map((curse) => timeAgo(curse.at))], () => cursesPanel(curses)) : null,

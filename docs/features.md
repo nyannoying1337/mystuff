@@ -95,6 +95,25 @@ World name, day count and time, weather, biome, difficulty (or hardcore) and gam
 
 GPU load on Windows comes from the system's performance counters, so it works for any vendor.
 
+## Today
+
+The day's timeline, oldest first: when you started, what happened, and how long
+you played. The statistics card shows what is true now; this shows what happened
+and when.
+
+- **Sessions** — start and finish, with how long it ran. Recorded for servers
+  too, as "on a server": that you played is not the same as what you did.
+- **Advancements**, as you unlock them.
+- **Deaths**, off the counter, so a double death reads as one line.
+- **Dimension changes** — into the Nether, back to the Overworld.
+- **Milestones** on powers of ten: 100 · 1,000 · 10,000 · 100,000 mobs, 10 · 100
+  · 1,000 km travelled, 10 · 100 · 1,000 hours played. Blocks mined isn't here —
+  the statistics card already owns totals.
+
+Nothing appears twice, and the first run seeds quietly rather than opening with
+every milestone you passed years ago. Ten days are kept in `agent/events.json`;
+the last day is published. Sessions shorter than a minute are dropped.
+
 ## Play time
 
 <img src="images/playtime.webp" alt="Play time per day" width="480">

@@ -18,6 +18,9 @@ interval_seconds = 10
 offline_interval_seconds = 60
 # Time in game per day is kept here (default: agent/playtime.json).
 # playtime_file = "~/mc-status-playtime.json"
+# The day's timeline is kept here (default: agent/events.json). Ten days are
+# stored; the last day is published.
+# events_file = "~/mc-status-events.json"
 
 [source]
 # "mod"  — singleplayer: the mc-status Fabric mod writes your state, and runs
