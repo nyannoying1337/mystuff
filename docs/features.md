@@ -189,6 +189,25 @@ The frames, thumbnails and panorama behind both live in `site/demo/` and are
 committed, so a fresh clone shows the same thing this page does — nothing is
 generated at deploy time and nothing is fetched.
 
+**Filling it with your own world.** The shipped imagery is a placeholder. To swap
+in real captures, point the archive at a world you don't mind showing:
+
+1. `[shots] keep = true` in `agent/config.toml`, and `every_seconds = 60` — the
+   default of 300 means ten minutes of play is two frames, and the scrubber wants
+   eight. Then `python setup.py restart`.
+2. Play a throwaway singleplayer world for ten minutes, moving around so the
+   frames differ, then **Save & Quit** — the pause menu is what writes a panorama.
+3. `python setup.py demo-assets`, then commit `site/demo/`.
+
+It takes eight frames spread across the archive rather than the eight newest, so
+the scrubber shows the day going by instead of eight near-identical minutes, and
+re-encodes everything to WebP at the sizes the page uses.
+
+**It copies images only.** The archive's `day.json` — the file that holds
+coordinates — is never read, and the demo page keeps its own invented positions
+and timestamps. So the demo can't publish where you actually play, even if you
+point this at a world you care about.
+
 ## Play time
 
 <img src="images/playtime.webp" alt="Play time per day" width="480">

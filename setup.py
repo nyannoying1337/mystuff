@@ -298,6 +298,96 @@ WantedBy=default.target
     say(f"Installed {unit}")
 
 
+DEMO_DIR = ROOT / "site" / "demo"
+DEMO_FRAMES = 8
+DEMO_FULL_WIDTH, DEMO_THUMB_WIDTH = 640, 320
+DEMO_PANORAMA_WIDTH = 1536  # a 6:1 strip; panorama.js slices it into six faces
+DEMO_BUDGET = 400 * 1024  # docs/images is already half the tracked repo; keep this modest
+
+
+def _demo_days(root: Path) -> list[Path]:
+    return sorted(d for d in root.iterdir()
+                  if d.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", d.name))
+
+
+def _spread(items: list, count: int) -> list:
+    """`count` items spread evenly across the list, ends included.
+
+    The newest frames are minutes apart and look nearly identical; a demo wants the
+    scrubber to show the day going by.
+    """
+    if len(items) <= count:
+        return items
+    return [items[round(i * (len(items) - 1) / (count - 1))] for i in range(count)]
+
+
+def build_demo_assets() -> None:
+    """Fill site/demo/ from your own frame archive, so ?demo showcases a real world.
+
+    Images only. The demo page keeps its own invented coordinates and timestamps, so
+    what lands here can't say where you actually play — the archive's day.json, which
+    is the file that holds positions, is never read.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        say("Pillow isn't installed. Run this with the agent's Python:")
+        say(f"  {AGENT / '.venv'}/bin/python setup.py demo-assets")
+        return
+
+    config = load_config()
+    raw = config.get("shots", {}).get("directory")
+    root = Path(os.path.expandvars(raw)).expanduser() if raw else AGENT / "shots"
+    if not root.is_dir():
+        say(f"No frame archive at {root}.")
+        say("Set [shots] keep = true in agent/config.toml, restart the agent, and play a while.")
+        return
+
+    frames = sorted(path for day in _demo_days(root)
+                    for path in day.glob("*.jpg") if not path.name.endswith(".t.jpg"))
+    if len(frames) < DEMO_FRAMES:
+        say(f"Only {len(frames)} frame(s) in {root}; the demo scrubber wants {DEMO_FRAMES}.")
+        say("[shots] every_seconds defaults to 300, so ten minutes is two frames. Set it to")
+        say("60, run `python setup.py restart`, and play for ten minutes.")
+        return
+    chosen = _spread(frames, DEMO_FRAMES)
+
+    panoramas = sorted((root / "pano").glob("*.jpg")) if (root / "pano").is_dir() else []
+    if not panoramas:
+        say("No panorama in the archive yet — one is written when you Save & Quit a")
+        say("singleplayer world. ?demo=offline will keep the old one until then.")
+
+    def write(image, path: Path, width: int) -> int:
+        if image.width > width:
+            image = image.resize((width, round(image.height * width / image.width)), Image.LANCZOS)
+        if DRY_RUN:
+            return 0
+        image.convert("RGB").save(path, format="WEBP", quality=80, method=6)
+        return path.stat().st_size
+
+    if not DRY_RUN:
+        DEMO_DIR.mkdir(parents=True, exist_ok=True)
+    total = 0
+    for index, source in enumerate(chosen):
+        with Image.open(source) as image:
+            total += write(image, DEMO_DIR / f"frame-{index}.webp", DEMO_FULL_WIDTH)
+            total += write(image, DEMO_DIR / f"frame-{index}.t.webp", DEMO_THUMB_WIDTH)
+    if panoramas:
+        with Image.open(panoramas[-1]) as image:
+            total += write(image, DEMO_DIR / "panorama.webp", DEMO_PANORAMA_WIDTH)
+
+    if DRY_RUN:
+        say(f"  (dry run) would write {len(chosen)} frames + thumbnails"
+            + (" and a panorama" if panoramas else "") + f" to {DEMO_DIR.relative_to(ROOT)}")
+        return
+    say(f"Wrote {len(chosen) * 2 + len(panoramas[-1:])} files to "
+        f"{DEMO_DIR.relative_to(ROOT)} ({total // 1024} KB).")
+    if total > DEMO_BUDGET:
+        say(f"That's over the {DEMO_BUDGET // 1024} KB this is meant to stay under. They're")
+        say("committed to the repo, so trim them before pushing.")
+    say("Check them with ?demo and ?demo=offline, then commit site/demo/.")
+
+
 WINDOWS_TASK = "mc-status agent"
 LAUNCHD_LABEL = "io.github.mc-status.agent"
 SYSTEMD_UNIT = "mc-status-agent.service"
@@ -513,7 +603,7 @@ def main() -> int:
     global DRY_RUN, ASSUME_YES
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", nargs="?", default="guided",
-                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart", "restart", "server"])
+                        choices=["guided", "invite", "token", "deploy", "worker-config", "autostart", "restart", "server", "demo-assets"])
     parser.add_argument("--site-url")
     parser.add_argument("--site-name")
     parser.add_argument("--server-name", help="for `server`: the name shown on the admin page")
@@ -540,6 +630,8 @@ def main() -> int:
         install_autostart()
     elif args.command == "restart":
         restart_agent()
+    elif args.command == "demo-assets":
+        build_demo_assets()
     elif args.command == "server":
         new_server(api_url, args.site_url or load_config().get("site", {}).get("url", ""), args.server_name)
     return 0

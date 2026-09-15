@@ -67,6 +67,11 @@ INVENTORY_SCREEN = ("gui/container/inventory.png", (0, 0, 176, 166))
 GENERATED = {"item/generated", "builtin/generated"}
 # Level.getShade(): flat per direction, not per screen position.
 SHADE = {"up": 1.0, "down": 0.5, "north": 0.8, "south": 0.8, "west": 0.6, "east": 0.6}
+# Depth-test tolerance. Faces this close are coplanar as far as a 48px icon is
+# concerned — the thinnest element Minecraft models use is ~0.002 in these units.
+DEPTH_EPS = 1e-6
+OPAQUE = 250  # below this a pixel is see-through enough to not occlude
+NEAR_ENOUGH_TO_NOTHING = float("-inf")
 
 
 # ---------------------------------------------------------------- jar access
@@ -321,6 +326,10 @@ def render_block(assets: Assets, model: dict, tints: list) -> Image.Image | None
             faces.append((depth, name, face, screen, element.get("shade", True), uv_box))
 
     icon = Image.new("RGBA", (ICON, ICON))
+    # Painter's order stays: it is still right for translucency and for coplanar ties,
+    # where the later face should win. The depth buffer only ever rejects a pixel that
+    # is provably behind one already drawn. Larger z is nearer, as the sort assumes.
+    zbuf = [NEAR_ENOUGH_TO_NOTHING] * (ICON * ICON)
     drawn = False
     for depth, name, face, screen, shade, uv_box in sorted(faces, key=lambda f: f[0]):
         ref = resolve_texture(model["textures"], face.get("texture", ""))
@@ -339,7 +348,7 @@ def render_block(assets: Assets, model: dict, tints: list) -> Image.Image | None
             color = tint_color(assets, tints[face["tintindex"]]) or color
         texture = multiply(texture, color, brightness)
 
-        (X0, Y0, _), (X1, Y1, _), _, (X3, Y3, _) = screen
+        (X0, Y0, Z0), (X1, Y1, Z1), _, (X3, Y3, Z3) = screen
         (U0, V0), (U1, V1), _, (U3, V3) = [(u * scale, v * scale) for u, v in uv]
         det = (X1 - X0) * (Y3 - Y0) - (X3 - X0) * (Y1 - Y0)
         if abs(det) < 1e-6:
@@ -361,7 +370,32 @@ def render_block(assets: Assets, model: dict, tints: list) -> Image.Image | None
         mask = Image.new("L", (ICON, ICON))
         ImageDraw.Draw(mask).polygon([(p[0], p[1]) for p in screen], fill=255)
         alpha = Image.composite(warped.getchannel("A"), Image.new("L", (ICON, ICON)), mask)
-        warped.putalpha(alpha)
+
+        # Depth varies across the face exactly as u and v do, so the same coefficients
+        # give a depth plane. Sorting by centroid can't say which of two crossing faces
+        # is in front at a given pixel — with equal centroids it draws one over the
+        # other entirely — and this can.
+        cz = coefficients(Z0, Z1, Z3)
+        box = alpha.getbbox()
+        if box is None:
+            continue
+        alpha_px, keep = alpha.load(), Image.new("L", (ICON, ICON))
+        keep_px = keep.load()
+        left, top, right, bottom = box
+        for y in range(top, bottom):
+            row, base = y * ICON, cz[1] * y + cz[2]
+            for x in range(left, right):
+                a = alpha_px[x, y]
+                if not a:
+                    continue
+                z = cz[0] * x + base
+                if z >= zbuf[row + x] - DEPTH_EPS:
+                    keep_px[x, y] = a
+                    if a >= OPAQUE:  # only a solid pixel may hide what is behind it
+                        zbuf[row + x] = z
+        if keep.getbbox() is None:
+            continue  # every pixel of this face is behind something already drawn
+        warped.putalpha(keep)
         icon.alpha_composite(warped)
         drawn = True
     return icon if drawn else None

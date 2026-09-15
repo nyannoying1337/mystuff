@@ -39,3 +39,4 @@ jobs:
         run: |
           python setup.py --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev
           python setup.py server --dry-run --yes --site-url https://example.github.io/mc-status/ --worker-url https://mc-status.example.workers.dev
+          python setup.py demo-assets --dry-run --yes
